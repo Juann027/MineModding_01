@@ -104,7 +104,9 @@ public final class PoliticalHud {
         List<Component> political = new ArrayList<>();
         political.add(label("Cargo: ", data.office().displayName()));
         political.add(label("Popularidade: ", String.valueOf(data.popularity())));
+        // "atual/meta" só quando o próximo cargo exige XP (evita o confuso "0/0" para Vereador).
         String xpText = data.office().next()
+                .filter(next -> next.minPoliticalXp() > 0)
                 .map(next -> data.politicalXp() + "/" + next.minPoliticalXp())
                 .orElse(String.valueOf(data.politicalXp()));
         political.add(label("XP político: ", xpText));

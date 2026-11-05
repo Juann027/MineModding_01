@@ -36,6 +36,8 @@ public final class ElectionManager {
     public static final int MAX_RACES = 2;
     private static final int TICKS_PER_SECOND = 20;
     private static final int PERIODIC_SYNC_TICKS = 5 * TICKS_PER_SECOND;
+    /** Fração do tempo de apuração usada para revelar os votos aos poucos. */
+    private static final double COUNTING_REVEAL_FRACTION = 0.8;
 
     private ElectionManager() {
     }
@@ -446,14 +448,19 @@ public final class ElectionManager {
         return lines;
     }
 
-    /** Quantos votos já foram "apurados" (revelação gradual proporcional ao tempo de apuração). */
+    /**
+     * Quantos votos já foram "apurados". A revelação é gradual e termina em
+     * {@link #COUNTING_REVEAL_FRACTION} do tempo de apuração, para o placar final ficar
+     * alguns segundos na tela antes do anúncio do resultado.
+     */
     private static int revealedBallots(ElectionSavedData data, ElectionRace race) {
         int total = race.ballots().size();
         if (data.phase() != ElectionPhase.COUNTING || data.phaseTotalTicks() <= 0) {
             return 0;
         }
         int elapsed = data.phaseTotalTicks() - data.ticksRemaining();
-        int revealed = (int) Math.ceil(total * (elapsed / (double) data.phaseTotalTicks()));
+        double revealWindow = data.phaseTotalTicks() * COUNTING_REVEAL_FRACTION;
+        int revealed = (int) Math.floor(total * (elapsed / revealWindow));
         return Math.max(0, Math.min(total, revealed));
     }
 
