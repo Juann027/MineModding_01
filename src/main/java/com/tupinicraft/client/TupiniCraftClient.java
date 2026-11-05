@@ -1,0 +1,23 @@
+package com.tupinicraft.client;
+
+import com.tupinicraft.TupiniCraft;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.common.NeoForge;
+
+/** Ponto de entrada exclusivo do cliente (não é carregado no servidor dedicado). */
+@Mod(value = TupiniCraft.MOD_ID, dist = Dist.CLIENT)
+public final class TupiniCraftClient {
+    public TupiniCraftClient(IEventBus modBus) {
+        modBus.addListener(PoliticalHud::registerLayers);
+        NeoForge.EVENT_BUS.addListener(TupiniCraftClient::onLoggingOut);
+    }
+
+    private static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        ClientPoliticalCache.clear();
+        ClientElectionCache.clear();
+        AnnouncementOverlay.clear();
+    }
+}
