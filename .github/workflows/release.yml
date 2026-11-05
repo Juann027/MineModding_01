@@ -5,7 +5,7 @@ name: Release
 # mod_version e faça merge na main (ou envie uma tag v<versão>).
 on:
   push:
-    branches: [main, claude/magical-cerf-4spwhd]
+    branches: [main]
     tags: ['v*']
 
 permissions:

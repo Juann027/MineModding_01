@@ -5,9 +5,9 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
 
 ## Como jogar (instalar no seu Minecraft)
 
-1. **Pegue o jar do mod** (`tupinicraft-0.1.0.jar`), de um destes jeitos:
-   - GitHub → aba **Actions** → execução mais recente do workflow **Build** → artefato **tupinicraft-jar** (é um .zip com o jar dentro; precisa estar logado no GitHub); ou
-   - compile você mesmo: `./gradlew build` (Windows: `gradlew.bat build`) → o jar sai em `build/libs/`.
+1. **Baixe o jar do mod** na página de [Releases](https://github.com/Juann027/MineModding_01/releases/latest)
+   (arquivo `tupinicraft-<versão>.jar` em *Assets*), ou compile você mesmo com `./gradlew build`
+   (Windows: `gradlew.bat build`) → o jar sai em `build/libs/`.
 2. **Instale o NeoForge 21.1.x para Minecraft 1.21.1**: baixe o instalador em <https://neoforged.net>, execute e escolha "Install client".
 3. Abra o launcher do Minecraft uma vez com o perfil **NeoForge** (isso cria a pasta `mods`).
 4. Copie o jar para a pasta `mods`:
@@ -42,6 +42,9 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
 Cargos: `desempregado`, `vereador`, `deputado_estadual`, `prefeito`, `deputado_federal`, `senador`, `governador`, `presidente`.
 
 ## Desenvolvimento
+
+Para lançar uma nova versão: aumente `mod_version` em `gradle.properties` e faça merge na `main`;
+o workflow **Release** compila e publica o jar automaticamente (se a versão ainda não tiver release).
 
 ```bash
 ./gradlew build       # compila e roda os testes de regras
