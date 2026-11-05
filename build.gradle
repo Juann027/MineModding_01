@@ -199,6 +199,8 @@ def rulesTest = tasks.register('rulesTest', JavaExec) {
     mainClass = 'com.tupinicraft.RulesSelfTest'
 }
 tasks.named('check') { dependsOn rulesTest }
+// O source set de teste contém só o RulesSelfTest (executado por rulesTest), sem testes JUnit.
+tasks.named('test', Test) { failOnNoDiscoveredTests = false }
 
 // Permite digitar comandos no console do servidor de desenvolvimento (usado também pelo
 // teste de fumaça do servidor dedicado no CI).
