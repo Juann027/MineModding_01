@@ -21,7 +21,9 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
 - O **servidor** precisa de NeoForge 21.1.x (use o mesmo instalador com "Install server") e do jar em `mods/`.
 - **Todos os jogadores** precisam do mesmo jar do mod no cliente.
 - Comandos de administração (`/brasil admin ...`) exigem OP nível 2 (`/op <jogador>` no console).
-- Configurações (eleições automáticas, durações): `world/serverconfig/tupinicraft-server.toml`.
+- Configurações padrão: `config/tupinicraft-server.toml` do servidor. Administradores podem mudar valores no
+  próprio mundo com `/brasil admin config set` (veja abaixo); essas mudanças ficam salvas no mundo e têm
+  prioridade sobre o arquivo.
 
 ## Comandos
 
@@ -30,16 +32,32 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
 | `/brasil perfil` | Origem, cargo, XP político, popularidade e próximo cargo |
 | `/brasil origem` | Sua origem regional |
 | `/brasil eleicao status` | Fase, cargos em disputa, candidatos e tempo restante |
-| `/brasil eleicao candidatar` | Inscreve você para o seu próximo cargo (se cumprir os requisitos) |
-| `/brasil eleicao votar <jogador>` | Vota (ou use a Urna Eletrônica com o botão direito) |
-| `/brasil admin eleicao iniciar <cargo> [cargo2]` | Inicia uma eleição (1 ou 2 cargos) |
+| `/brasil eleicao candidatar [cargo]` | Inscreve você no seu próximo cargo, no seu domicílio eleitoral (ou reeleição) |
+| `/brasil eleicao votar <candidato>` | Vota (ou use a Urna Eletrônica com o botão direito) |
+| `/brasil mandatos [território]` | Mandatos vigentes, ou todas as cadeiras de um território (ex.: `es`, `vitoria`) |
+| `/brasil admin eleicao iniciar <cargo> [território] [cargo2 território2]` | Inicia uma eleição (ex.: `prefeito vitoria`) |
 | `/brasil admin eleicao avancar` / `cancelar` | Pula para a próxima fase / cancela |
 | `/brasil admin xp add\|set <jogador> <qtd>` | Ajusta XP político |
 | `/brasil admin popularidade add\|set <jogador> <qtd>` | Ajusta popularidade |
 | `/brasil admin cargo set <jogador> <cargo>` | Define o cargo (ignora requisitos; para testes) |
 | `/brasil admin origem set <jogador> <uf>` | Define a origem (ex.: `MA`) |
+| `/brasil admin mandato encerrar <território> <cargo>` | Encerra um mandato (cadeira fica vaga) |
+| `/brasil admin config list [prefixo]` | Lista as configurações e de onde vem o valor (mundo ou arquivo) |
+| `/brasil admin config get <chave>` | Mostra uma configuração |
+| `/brasil admin config set <chave> <valor>` | Muda no mundo (ex.: `mandato.senador 60`, `eleicao.intervalo_gerais 45`) |
+| `/brasil admin config reset <chave>` | Volta ao valor do arquivo |
 
 Cargos: `desempregado`, `vereador`, `deputado_estadual`, `prefeito`, `deputado_federal`, `senador`, `governador`, `presidente`.
+
+### Territórios e mandatos
+
+- Presidente governa o **Brasil**; Governador, Senador e Deputados, um **estado**; Prefeito e Vereador, um **município**
+  (por enquanto, as 27 capitais).
+- Cada jogador disputa no seu **domicílio eleitoral**, que vem da origem: o próprio estado e a capital dele.
+- Quem vence toma posse da cadeira por um mandato (padrão 30 min, Senador 45 min). Mandatos vencidos deixam a cadeira vaga.
+- Quando faltam candidatos, **aldeões** (NPCs) entram na disputa e podem ocupar cadeiras.
+- Exercendo mandato, o jogador ganha **pontos de habilidade** pelo tempo online (padrão: 1 a cada 10 min).
+- As eleições automáticas seguem dois calendários: **gerais** e **municipais**.
 
 ## Desenvolvimento
 

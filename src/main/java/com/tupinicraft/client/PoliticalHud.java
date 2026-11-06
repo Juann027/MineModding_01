@@ -5,7 +5,6 @@ import com.tupinicraft.election.ElectionManager;
 import com.tupinicraft.election.ElectionPhase;
 import com.tupinicraft.network.ElectionSyncPayload;
 import com.tupinicraft.player.PoliticalData;
-import com.tupinicraft.politics.PoliticalOffice;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -75,15 +74,13 @@ public final class PoliticalHud {
         minecraft.gui.rightHeight += XP_BAR_RESERVED_HEIGHT;
     }
 
-    /** Progresso do XP político entre o requisito do cargo atual e o do próximo cargo. */
+    /** Progresso do XP político entre o requisito do cargo atual e o do próximo (valores do servidor). */
     static float xpProgress(PoliticalData data) {
-        PoliticalOffice current = data.office();
-        PoliticalOffice next = current.next().orElse(null);
-        if (next == null) {
+        int to = ClientPoliticalCache.nextOfficeMinXp();
+        if (to < 0) {
             return 1.0F;
         }
-        int from = current.minPoliticalXp();
-        int to = next.minPoliticalXp();
+        int from = ClientPoliticalCache.currentOfficeMinXp();
         if (to <= from) {
             return data.politicalXp() >= to ? 1.0F : 0.0F;
         }
@@ -105,10 +102,8 @@ public final class PoliticalHud {
         political.add(label("Cargo: ", data.office().displayName()));
         political.add(label("Popularidade: ", String.valueOf(data.popularity())));
         // "atual/meta" só quando o próximo cargo exige XP (evita o confuso "0/0" para Vereador).
-        String xpText = data.office().next()
-                .filter(next -> next.minPoliticalXp() > 0)
-                .map(next -> data.politicalXp() + "/" + next.minPoliticalXp())
-                .orElse(String.valueOf(data.politicalXp()));
+        int nextMinXp = ClientPoliticalCache.nextOfficeMinXp();
+        String xpText = nextMinXp > 0 ? data.politicalXp() + "/" + nextMinXp : String.valueOf(data.politicalXp());
         political.add(label("XP político: ", xpText));
         y = drawPanel(graphics, font, political, y) + SCREEN_MARGIN;
 
@@ -128,21 +123,22 @@ public final class PoliticalHud {
         lines.add(Component.literal("ELEIÇÃO: " + phase.displayName() + " (")
                 .append(ElectionManager.formatTime(ClientElectionCache.displayTicksRemaining()) + ")")
                 .withStyle(ChatFormatting.GOLD));
-        for (ElectionSyncPayload.RaceView race : state.races()) {
-            PoliticalOffice office = race.politicalOffice();
+        for (int index = 0; index < state.races().size(); index++) {
+            ElectionSyncPayload.RaceView race = state.races().get(index);
             switch (phase) {
-                case REGISTRATION -> lines.add(Component.literal(office.displayName() + ": "
+                case REGISTRATION -> lines.add(Component.literal(race.label() + ": "
                         + race.candidates().size() + " candidato(s)").withStyle(ChatFormatting.WHITE));
-                case VOTING -> lines.add(Component.literal(office.displayName() + ": ")
+                case VOTING -> lines.add(Component.literal(race.label() + ": ")
                         .withStyle(ChatFormatting.WHITE)
-                        .append(state.hasVotedFor(office)
+                        .append(state.hasVotedIn(index)
                                 ? Component.literal("voto registrado ✔").withStyle(ChatFormatting.GREEN)
                                 : Component.literal("use a Urna!").withStyle(ChatFormatting.YELLOW)));
                 case COUNTING -> {
-                    lines.add(Component.literal(office.displayName() + " — apurados " + race.revealedBallots()
+                    lines.add(Component.literal(race.label() + " — apurados " + race.revealedBallots()
                             + "/" + race.totalBallots()).withStyle(ChatFormatting.WHITE));
                     for (ElectionSyncPayload.CandidateView candidate : race.candidates()) {
-                        lines.add(label("  " + candidate.name() + ": ", Math.max(0, candidate.shownScore()) + " pts"));
+                        lines.add(label("  " + candidate.name() + (candidate.npc() ? " [aldeão]" : "") + ": ",
+                                Math.max(0, candidate.shownScore()) + " pts"));
                     }
                 }
                 default -> {

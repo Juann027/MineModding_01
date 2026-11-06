@@ -1,5 +1,6 @@
 package com.tupinicraft.election;
 
+import com.tupinicraft.mandate.SeatKey;
 import com.tupinicraft.politics.PoliticalOffice;
 
 import java.util.ArrayList;
@@ -7,18 +8,48 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Disputa por um cargo dentro de uma eleição (uma eleição tem uma ou duas disputas). */
+/**
+ * Disputa por uma cadeira (cargo + território) dentro de uma eleição (uma eleição tem uma ou duas disputas).
+ * A pontuação mínima e a faixa de popularidade dos NPCs são fixadas quando a disputa é criada.
+ */
 public final class ElectionRace {
-    private final PoliticalOffice office;
+    private final SeatKey seat;
+    private final int minimumScore;
+    private final int npcPopularityMin;
+    private final int npcPopularityMax;
     private final List<Candidate> candidates = new ArrayList<>();
     private final List<Ballot> ballots = new ArrayList<>();
 
-    public ElectionRace(PoliticalOffice office) {
-        this.office = office;
+    public ElectionRace(SeatKey seat, int minimumScore, int npcPopularityMin, int npcPopularityMax) {
+        this.seat = seat;
+        this.minimumScore = minimumScore;
+        this.npcPopularityMin = Math.max(0, npcPopularityMin);
+        this.npcPopularityMax = Math.max(this.npcPopularityMin, npcPopularityMax);
+    }
+
+    public SeatKey seat() {
+        return seat;
     }
 
     public PoliticalOffice office() {
-        return office;
+        return seat.office();
+    }
+
+    public String territoryId() {
+        return seat.territoryId();
+    }
+
+    /** Pontuação mínima de vitória (popularidade mínima do cargo + margem), fixada na criação. */
+    public int minimumScore() {
+        return minimumScore;
+    }
+
+    public int npcPopularityMin() {
+        return npcPopularityMin;
+    }
+
+    public int npcPopularityMax() {
+        return npcPopularityMax;
     }
 
     /** Lista mutável, em ordem de inscrição. */
@@ -45,5 +76,9 @@ public final class ElectionRace {
 
     public boolean hasVoted(UUID voter) {
         return ballots.stream().anyMatch(b -> b.voter().equals(voter));
+    }
+
+    public long playerCandidateCount() {
+        return candidates.stream().filter(c -> !c.npc()).count();
     }
 }

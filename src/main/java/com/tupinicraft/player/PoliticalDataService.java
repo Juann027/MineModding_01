@@ -1,6 +1,8 @@
 package com.tupinicraft.player;
 
+import com.tupinicraft.config.ServerSettings;
 import com.tupinicraft.network.PoliticalDataSyncPayload;
+import com.tupinicraft.politics.PoliticalOffice;
 import com.tupinicraft.registry.ModAttachments;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -21,7 +23,24 @@ public final class PoliticalDataService {
         sync(player);
     }
 
+    /** Grava sem sincronizar (para contadores internos atualizados com frequência, ex.: tempo de mandato). */
+    public static void setSilently(ServerPlayer player, PoliticalData data) {
+        player.setData(ModAttachments.POLITICAL_DATA, data);
+    }
+
     public static void sync(ServerPlayer player) {
-        PacketDistributor.sendToPlayer(player, new PoliticalDataSyncPayload(get(player)));
+        PoliticalData data = get(player);
+        int currentMinXp = ServerSettings.minPoliticalXp(player.server, data.office());
+        int nextMinXp = data.office().next()
+                .map((PoliticalOffice next) -> ServerSettings.minPoliticalXp(player.server, next))
+                .orElse(-1);
+        PacketDistributor.sendToPlayer(player, new PoliticalDataSyncPayload(data, currentMinXp, nextMinXp));
+    }
+
+    /** Ressincroniza todos (ex.: após mudar requisitos pela configuração). */
+    public static void syncAll(net.minecraft.server.MinecraftServer server) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            sync(player);
+        }
     }
 }

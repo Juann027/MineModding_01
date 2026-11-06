@@ -2,7 +2,9 @@ package com.tupinicraft;
 
 import com.mojang.logging.LogUtils;
 import com.tupinicraft.command.BrasilCommands;
+import com.tupinicraft.config.BrasilServerConfig;
 import com.tupinicraft.election.ElectionManager;
+import com.tupinicraft.mandate.MandateService;
 import com.tupinicraft.network.ModNetwork;
 import com.tupinicraft.player.PlayerEventHandler;
 import com.tupinicraft.registry.ModAttachments;
@@ -31,7 +33,7 @@ public final class TupiniCraft {
         modBus.addListener(ModItems::addToCreativeTabs);
         modBus.addListener(ModNetwork::register);
 
-        container.registerConfig(ModConfig.Type.SERVER, TupiniConfig.SPEC);
+        container.registerConfig(ModConfig.Type.SERVER, BrasilServerConfig.SPEC);
 
         NeoForge.EVENT_BUS.addListener(BrasilCommands::register);
         NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onLogin);
@@ -42,6 +44,7 @@ public final class TupiniCraft {
 
     private static void onServerTick(ServerTickEvent.Post event) {
         ElectionManager.tick(event.getServer());
+        MandateService.tick(event.getServer());
     }
 
     public static ResourceLocation id(String path) {

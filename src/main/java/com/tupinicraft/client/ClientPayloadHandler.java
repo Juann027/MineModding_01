@@ -14,7 +14,7 @@ public final class ClientPayloadHandler {
     }
 
     public static void handlePoliticalData(PoliticalDataSyncPayload payload) {
-        ClientPoliticalCache.set(payload.data());
+        ClientPoliticalCache.set(payload);
     }
 
     public static void handleElectionSync(ElectionSyncPayload payload) {

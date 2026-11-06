@@ -17,10 +17,10 @@ import java.util.UUID;
  * a cada 5 s durante inscrição/votação e a cada 1 s durante a apuração.
  *
  * @param ticksRemaining  tempo restante no momento do envio (o cliente só usa para exibição)
- * @param votedOffices    ordinais dos cargos em que ESTE jogador já votou
+ * @param votedRaces      índices (em {@code races}) das disputas em que ESTE jogador já votou
  */
 public record ElectionSyncPayload(int phase, int ticksRemaining, int phaseTotalTicks,
-                                  List<RaceView> races, List<Integer> votedOffices) implements CustomPacketPayload {
+                                  List<RaceView> races, List<Integer> votedRaces) implements CustomPacketPayload {
     public static final Type<ElectionSyncPayload> TYPE = new Type<>(TupiniCraft.id("election_sync"));
 
     public static final StreamCodec<ByteBuf, ElectionSyncPayload> STREAM_CODEC = StreamCodec.composite(
@@ -28,7 +28,7 @@ public record ElectionSyncPayload(int phase, int ticksRemaining, int phaseTotalT
             ByteBufCodecs.VAR_INT, ElectionSyncPayload::ticksRemaining,
             ByteBufCodecs.VAR_INT, ElectionSyncPayload::phaseTotalTicks,
             RaceView.STREAM_CODEC.apply(ByteBufCodecs.list()), ElectionSyncPayload::races,
-            ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), ElectionSyncPayload::votedOffices,
+            ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), ElectionSyncPayload::votedRaces,
             ElectionSyncPayload::new);
 
     public static final ElectionSyncPayload INACTIVE =
@@ -38,8 +38,8 @@ public record ElectionSyncPayload(int phase, int ticksRemaining, int phaseTotalT
         return ElectionPhase.byOrdinal(phase);
     }
 
-    public boolean hasVotedFor(PoliticalOffice office) {
-        return votedOffices.contains(office.ordinal());
+    public boolean hasVotedIn(int raceIndex) {
+        return votedRaces.contains(raceIndex);
     }
 
     @Override
@@ -48,12 +48,14 @@ public record ElectionSyncPayload(int phase, int ticksRemaining, int phaseTotalT
     }
 
     /**
+     * @param label           rótulo pronto da cadeira, ex.: "Prefeito (São Paulo)"
      * @param revealedBallots votos já apurados (somente na apuração; 0 nas outras fases)
      * @param totalBallots    total de votos (somente na apuração; 0 nas outras fases, voto secreto)
      */
-    public record RaceView(int office, List<CandidateView> candidates, int revealedBallots, int totalBallots) {
+    public record RaceView(int office, String label, List<CandidateView> candidates, int revealedBallots, int totalBallots) {
         public static final StreamCodec<ByteBuf, RaceView> STREAM_CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_INT, RaceView::office,
+                ByteBufCodecs.STRING_UTF8, RaceView::label,
                 CandidateView.STREAM_CODEC.apply(ByteBufCodecs.list()), RaceView::candidates,
                 ByteBufCodecs.VAR_INT, RaceView::revealedBallots,
                 ByteBufCodecs.VAR_INT, RaceView::totalBallots,
@@ -65,13 +67,17 @@ public record ElectionSyncPayload(int phase, int ticksRemaining, int phaseTotalT
         }
     }
 
-    /** @param shownScore pontuação parcial revelada na apuração, ou -1 fora da apuração */
-    public record CandidateView(UUID id, String name, int popularity, int shownScore) {
+    /**
+     * @param shownScore pontuação parcial revelada na apuração, ou -1 fora da apuração
+     * @param npc        candidato aldeão
+     */
+    public record CandidateView(UUID id, String name, int popularity, int shownScore, boolean npc) {
         public static final StreamCodec<ByteBuf, CandidateView> STREAM_CODEC = StreamCodec.composite(
                 UUIDUtil.STREAM_CODEC, CandidateView::id,
                 ByteBufCodecs.STRING_UTF8, CandidateView::name,
                 ByteBufCodecs.VAR_INT, CandidateView::popularity,
                 ByteBufCodecs.INT, CandidateView::shownScore,
+                ByteBufCodecs.BOOL, CandidateView::npc,
                 CandidateView::new);
     }
 }
