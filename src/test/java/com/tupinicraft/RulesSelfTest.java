@@ -7,6 +7,8 @@ import com.tupinicraft.origin.*;
 import com.tupinicraft.politics.*;
 import com.tupinicraft.territory.*;
 import java.util.*;
+import com.tupinicraft.player.OfficeProgress;
+import com.tupinicraft.player.SkillProgression;
 
 /**
  * Testes das regras puras (origens, cargos, peso do voto e apuração), sem dependências externas.
@@ -46,8 +48,8 @@ public class RulesSelfTest {
         check(ok, "ordem dos cargos");
         int[][] req = {{0,10},{50,30},{150,60},{300,100},{500,160},{800,240},{1200,350}};
         ok = true;
-        for (int i = 0; i < 7; i++) ok &= order[i+1].defaultMinPoliticalXp()==req[i][0] && order[i+1].defaultMinPopularity()==req[i][1];
-        check(ok, "requisitos padrao dos cargos");
+        for (int i = 0; i < 7; i++) ok &= order[i+1].defaultMinPoliticalXp()==req[i][0] && order[i+1].defaultReferencePopularity()==req[i][1];
+        check(ok, "XP minimo e popularidade de referencia padrao dos cargos");
         check(PoliticalOffice.PRESIDENTE.next().isEmpty(), "presidente sem proximo");
         check(PoliticalOffice.DESEMPREGADO.next().orElseThrow()==PoliticalOffice.VEREADOR, "desempregado->vereador");
         check(PoliticalOffice.byId("DEPUTADO_ESTADUAL").orElseThrow()==PoliticalOffice.DEPUTADO_ESTADUAL, "byId");
@@ -61,6 +63,9 @@ public class RulesSelfTest {
         check(ConfigKeys.byPath("mandato.vereador").orElseThrow().defaultValue()==30, "config mandato.vereador = 30");
         check(ConfigKeys.byPath("eleicao.intervalo_gerais").isPresent() && ConfigKeys.byPath("skills.minutos_por_ponto").isPresent(), "chaves dos exemplos existem");
         check(ConfigKeys.byPath("progressao.xp_min.prefeito").orElseThrow().defaultValue()==150, "xp_min.prefeito = 150");
+        check(ConfigKeys.byPath("progressao.popularidade_min.prefeito").isEmpty()
+              && ConfigKeys.byPath("eleicao.popularidade_referencia.prefeito").orElseThrow().defaultValue()==60,
+              "popularidade nao e requisito de candidatura (so referencia da pontuacao minima)");
         check(ConfigKeys.byPath("nao.existe").isEmpty(), "chave inexistente");
         Set<String> paths = new HashSet<>();
         ok = true;
@@ -162,6 +167,66 @@ public class RulesSelfTest {
         check(race.hasVoted(voter), "votou -> hasVoted");
         check(race.findCandidateByName("a").isPresent(), "busca por nome case-insensitive");
 
+        // ---------------------------------------------------------------- candidatura direta (sem progressao)
+        int presidentXp = ConfigKeys.MIN_POLITICAL_XP.get(PoliticalOffice.PRESIDENTE).defaultValue();
+        check(presidentXp == 1200, "XP minimo padrao de Presidente = 1200");
+        // Jogador Desempregado, popularidade 0, XP suficiente: pode concorrer DIRETAMENTE a Presidente.
+        check(CandidacyRules.check(true, 1200, presidentXp, false, true).isEmpty(),
+              "Desempregado com XP 1200 e popularidade 0 pode se candidatar direto a Presidente");
+        check(CandidacyRules.check(true, 1199, presidentXp, false, true).orElseThrow()==CandidacyRules.Problem.INSUFFICIENT_XP,
+              "Desempregado com XP 1199 nao pode se candidatar a Presidente (XP e o unico requisito)");
+        ok = true;
+        for (PoliticalOffice office : PoliticalOffice.values()) {
+            if (!office.isElective()) continue;
+            int minXp = ConfigKeys.MIN_POLITICAL_XP.get(office).defaultValue();
+            ok &= CandidacyRules.check(true, minXp, minXp, false, true).isEmpty();
+        }
+        check(ok, "qualquer cargo e acessivel diretamente com o XP minimo (sem cargo anterior)");
+        check(CandidacyRules.check(false, 5000, presidentXp, false, true).orElseThrow()==CandidacyRules.Problem.OUTSIDE_DOMICILE,
+              "fora do domicilio eleitoral e recusado");
+        check(CandidacyRules.check(true, 5000, presidentXp, true, false).orElseThrow()==CandidacyRules.Problem.REELECTION_DISABLED
+              && CandidacyRules.check(true, 5000, presidentXp, true, true).isEmpty(), "reeleicao consecutiva configuravel");
+        // Desempregado (popularidade 0) vence a Presidencia contra um NPC so com votos: popularidade so pesa no resultado.
+        int presMin = ConfigKeys.REFERENCE_POPULARITY.get(PoliticalOffice.PRESIDENTE).defaultValue()
+                + ConfigKeys.WIN_MARGIN.defaultValue();
+        Candidate desempregado = cand("Desempregado", 0);
+        Candidate npcPres = new Candidate(UUID.randomUUID(), "NPC", 350, true, 0);
+        List<Ballot> manyVotes = new ArrayList<>();
+        for (int i = 0; i < 4; i++) manyVotes.add(vote("eleitor" + i, desempregado, 200, rules));
+        r = ElectionTally.decide(presMin, List.of(desempregado, npcPres), manyVotes, 20);
+        check(r.outcome()==ElectionTally.Outcome.WINNER && r.winner().get().name().equals("Desempregado") && r.bestScore()==400,
+              "Desempregado com popularidade 0 vence Presidente pelos votos (400 x 350)");
+        r = ElectionTally.decide(presMin, List.of(desempregado, npcPres), List.of(), 20);
+        check(r.outcome()==ElectionTally.Outcome.BELOW_MINIMUM, "sem votos, popularidade baixa nao alcanca o minimo (popularidade influencia o resultado)");
+
+        // ---------------------------------------------------------------- habilidades por cargo
+        Map<PoliticalOffice, OfficeProgress> progress = Map.of();
+        for (int i = 0; i < 120; i++) progress = SkillProgression.addOnlineSecond(progress, PoliticalOffice.VEREADOR, 60).progress();
+        check(SkillProgression.skillPoints(progress, PoliticalOffice.VEREADOR)==2, "2 min de mandato de Vereador = 2 pontos");
+        for (int i = 0; i < 90; i++) progress = SkillProgression.addOnlineSecond(progress, PoliticalOffice.PREFEITO, 60).progress();
+        check(SkillProgression.skillPoints(progress, PoliticalOffice.PREFEITO)==1 && progress.get(PoliticalOffice.PREFEITO).onlineSeconds()==30,
+              "pontos de Prefeito sao separados dos de Vereador");
+        check(SkillProgression.skillPoints(progress, PoliticalOffice.VEREADOR)==2, "pontos de Vereador mantidos apos mandato em outro cargo");
+        for (int i = 0; i < 60; i++) progress = SkillProgression.addOnlineSecond(progress, PoliticalOffice.VEREADOR, 60).progress();
+        check(SkillProgression.skillPoints(progress, PoliticalOffice.VEREADOR)==3, "ao voltar a Vereador os pontos anteriores continuam e somam");
+        SkillProgression.Tick tick = SkillProgression.addOnlineSecond(Map.of(), PoliticalOffice.SENADOR, 1);
+        check(tick.gainedPoint() && tick.progress().get(PoliticalOffice.SENADOR).skillPoints()==1, "tick sinaliza ponto ganho");
+
+        // ---------------------------------------------------------------- NPCs obedecem a configuracao
+        ok = true;
+        Random rnd = new Random(7);
+        ElectionRules npcRules = new ElectionRules(20, 50, 5, true, 2, 2, 1, 4, 1200, 300);
+        for (int i = 0; i < 500; i++) {
+            for (Candidate c : NpcCandidateFactory.create(2, 60, 140, npcRules, List.of(), rnd)) {
+                ok &= c.npc() && c.popularity() >= 60 && c.popularity() <= 140 && c.simulatedSupport() >= 1 && c.simulatedSupport() <= 4;
+            }
+        }
+        check(ok, "1000 NPCs: popularidade e apoio sempre dentro das faixas configuradas");
+        Candidate fixed = NpcCandidateFactory.create(1, 77, 77, new ElectionRules(20, 50, 5, true, 2, 2, 3, 3, 1200, 300), List.of(), rnd).get(0);
+        check(fixed.popularity()==77 && fixed.simulatedSupport()==3, "faixa fixa (min = max) respeitada exatamente");
+        ElectionRace npcRace = new ElectionRace(new SeatKey("tupinicraft:sp", PoliticalOffice.GOVERNADOR, 1), 270, 500, 100);
+        check(npcRace.npcPopularityMin()==500 && npcRace.npcPopularityMax()==500, "faixa invertida e normalizada (max >= min)");
+
         // Mandatos
         MandateRegistry registry = new MandateRegistry();
         SeatKey gov = new SeatKey("tupinicraft:es", PoliticalOffice.GOVERNADOR, 1);
@@ -194,6 +259,52 @@ public class RulesSelfTest {
         boolean rejected;
         try { new SeatKey("tupinicraft:es", PoliticalOffice.DESEMPREGADO, 1); rejected = false; } catch (IllegalArgumentException ex) { rejected = true; }
         check(rejected, "Desempregado nao tem cadeira");
+
+        // Uma cadeira vigente por jogador
+        MandateRegistry one = new MandateRegistry();
+        UUID bob = UUID.randomUUID();
+        SeatKey depPi = new SeatKey("tupinicraft:pi", PoliticalOffice.DEPUTADO_ESTADUAL, 1);
+        SeatKey prefTer = new SeatKey("tupinicraft:teresina", PoliticalOffice.PREFEITO, 1);
+        check(one.inaugurate(depPi, new Mandate(Occupant.player(bob, "Bob"), 0, 1000, Optional.empty(), Optional.empty()), 0, true),
+              "Bob toma posse como Deputado Estadual");
+        check(!one.inaugurate(prefTer, new Mandate(Occupant.player(bob, "Bob"), 10, 1000, Optional.empty(), Optional.empty()), 10, true),
+              "Bob nao pode ocupar duas cadeiras vigentes ao mesmo tempo");
+        check(one.activeSeatOf(bob, 10, true).orElseThrow().equals(depPi), "cadeira vigente de Bob");
+        one.vacate(depPi);
+        check(one.inaugurate(prefTer, new Mandate(Occupant.player(bob, "Bob"), 20, 1000, Optional.empty(), Optional.empty()), 20, true),
+              "apos encerrar a anterior, Bob pode assumir outra cadeira");
+        check(one.inaugurate(depPi, new Mandate(Occupant.npc(UUID.randomUUID(), "NPC"), 30, 1000, Optional.empty(), Optional.empty()), 30, true),
+              "NPCs nao sao limitados pela regra de cadeira por jogador");
+        check(one.activeSeatOf(bob, 2000, true).isEmpty(), "mandato expirado nao conta como cadeira vigente");
+
+        // ---------------------------------------------------------------- dados da v0.1.0 preservados
+        // NBT exatamente como a v0.1.0 gravava o attachment tupinicraft:political_data.
+        net.minecraft.nbt.CompoundTag legacy = new net.minecraft.nbt.CompoundTag();
+        legacy.putString("origin", "MA");
+        legacy.putString("office", "vereador");
+        legacy.putInt("political_xp", 60);
+        legacy.putInt("popularity", 75);
+        com.tupinicraft.player.PoliticalData loaded = com.tupinicraft.player.PoliticalData.CODEC
+                .parse(net.minecraft.nbt.NbtOps.INSTANCE, legacy).getOrThrow();
+        check(loaded.origin().orElseThrow()==RegionalOrigin.MA && loaded.office()==PoliticalOffice.VEREADOR
+              && loaded.politicalXp()==60 && loaded.popularity()==75 && loaded.officeProgress().isEmpty(),
+              "dados da v0.1.0 (origem, cargo, XP, popularidade) carregam sem perda");
+        net.minecraft.nbt.Tag saved = com.tupinicraft.player.PoliticalData.CODEC
+                .encodeStart(net.minecraft.nbt.NbtOps.INSTANCE, loaded.withOfficeProgress(Map.of(PoliticalOffice.PREFEITO, new OfficeProgress(3, 42))))
+                .getOrThrow();
+        com.tupinicraft.player.PoliticalData roundTrip = com.tupinicraft.player.PoliticalData.CODEC
+                .parse(net.minecraft.nbt.NbtOps.INSTANCE, saved).getOrThrow();
+        net.minecraft.nbt.CompoundTag savedTag = (net.minecraft.nbt.CompoundTag) saved;
+        check(roundTrip.skillPoints(PoliticalOffice.PREFEITO)==3 && roundTrip.officeProgress().get(PoliticalOffice.PREFEITO).onlineSeconds()==42
+              && savedTag.getString("office").equals("vereador") && savedTag.getInt("political_xp")==60,
+              "novo formato salva/carrega progresso por cargo e mantem os campos da v0.1.0");
+        net.minecraft.nbt.CompoundTag weird = legacy.copy();
+        weird.putString("office", "imperador");
+        weird.putString("origin", "XX");
+        com.tupinicraft.player.PoliticalData tolerant = com.tupinicraft.player.PoliticalData.CODEC
+                .parse(net.minecraft.nbt.NbtOps.INSTANCE, weird).getOrThrow();
+        check(tolerant.office()==PoliticalOffice.DESEMPREGADO && tolerant.origin().isEmpty() && tolerant.politicalXp()==60,
+              "valores desconhecidos nao apagam o resto dos dados");
 
         System.out.println(passed + " passed, " + failures + " failed");
         System.exit(failures == 0 ? 0 : 1);

@@ -56,7 +56,7 @@ public final class ConfigKeys {
     public static final ConfigKey MAX_VOTE_WEIGHT = add(ConfigKey.integer("eleicao.peso_maximo", 5, 1, 1000,
             "Peso máximo permitido por voto."));
     public static final ConfigKey WIN_MARGIN = add(ConfigKey.integer("eleicao.margem_vitoria", 30, 0, MAX_STAT,
-            "Pontuação mínima de vitória = popularidade mínima do cargo + margem."));
+            "Pontuação mínima de vitória = popularidade de referência do cargo + margem."));
 
     // ------------------------------------------------------------------ mandatos
     public static final Map<PoliticalOffice, ConfigKey> TERM_MINUTES = perOffice("mandato.%s",
@@ -74,15 +74,17 @@ public final class ConfigKeys {
 
     // ------------------------------------------------------------------ progressão
     public static final Map<PoliticalOffice, ConfigKey> MIN_POLITICAL_XP = perOffice("progressao.xp_min.%s",
-            PoliticalOffice::defaultMinPoliticalXp, 0, MAX_STAT, "XP político mínimo para se candidatar a %s.");
-    public static final Map<PoliticalOffice, ConfigKey> MIN_POPULARITY = perOffice("progressao.popularidade_min.%s",
-            PoliticalOffice::defaultMinPopularity, 0, MAX_STAT, "Popularidade mínima para se candidatar a %s.");
+            PoliticalOffice::defaultMinPoliticalXp, 0, MAX_STAT,
+            "XP político mínimo para se candidatar a %s (único requisito de candidatura; não exige cargo anterior).");
+    public static final Map<PoliticalOffice, ConfigKey> REFERENCE_POPULARITY = perOffice("eleicao.popularidade_referencia.%s",
+            PoliticalOffice::defaultReferencePopularity, 0, MAX_STAT,
+            "Popularidade de referência de %s: pontuação mínima de vitória = referência + margem. Não é requisito de candidatura.");
 
     // ------------------------------------------------------------------ NPCs (por cargo)
     public static final Map<PoliticalOffice, ConfigKey> NPC_POPULARITY_MIN = perOffice("npc.popularidade_min.%s",
-            PoliticalOffice::defaultMinPopularity, 0, MAX_STAT, "Popularidade mínima gerada para candidatos NPCs a %s.");
+            PoliticalOffice::defaultReferencePopularity, 0, MAX_STAT, "Popularidade mínima gerada para candidatos NPCs a %s.");
     public static final Map<PoliticalOffice, ConfigKey> NPC_POPULARITY_MAX = perOffice("npc.popularidade_max.%s",
-            office -> office.defaultMinPopularity() * 2 + 20, 0, MAX_STAT, "Popularidade máxima gerada para candidatos NPCs a %s.");
+            office -> office.defaultReferencePopularity() * 2 + 20, 0, MAX_STAT, "Popularidade máxima gerada para candidatos NPCs a %s.");
 
     static {
         pair(NPC_SUPPORT_MIN, NPC_SUPPORT_MAX);

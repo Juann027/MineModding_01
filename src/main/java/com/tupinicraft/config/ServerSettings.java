@@ -4,6 +4,8 @@ import com.tupinicraft.election.ElectionRules;
 import com.tupinicraft.politics.PoliticalOffice;
 import net.minecraft.server.MinecraftServer;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -74,17 +76,51 @@ public final class ServerSettings {
         return office.isElective() ? getInt(server, ConfigKeys.MIN_POLITICAL_XP.get(office)) : 0;
     }
 
-    public static int minPopularity(MinecraftServer server, PoliticalOffice office) {
-        return office.isElective() ? getInt(server, ConfigKeys.MIN_POPULARITY.get(office)) : 0;
+    /** XP político suficiente para concorrer ao cargo (único requisito pessoal de candidatura). */
+    public static boolean hasRequiredXp(MinecraftServer server, PoliticalOffice office, int politicalXp) {
+        return office.isElective() && politicalXp >= minPoliticalXp(server, office);
     }
 
-    public static boolean meetsRequirements(MinecraftServer server, PoliticalOffice office, int politicalXp, int popularity) {
-        return politicalXp >= minPoliticalXp(server, office) && popularity >= minPopularity(server, office);
+    /** Popularidade de referência do cargo (só entra na pontuação mínima de vitória). */
+    public static int referencePopularity(MinecraftServer server, PoliticalOffice office) {
+        return office.isElective() ? getInt(server, ConfigKeys.REFERENCE_POPULARITY.get(office)) : 0;
     }
 
     /** Pontuação mínima de vitória de uma disputa criada agora. */
     public static int minimumWinningScore(MinecraftServer server, PoliticalOffice office) {
-        return minPopularity(server, office) + getInt(server, ConfigKeys.WIN_MARGIN);
+        return referencePopularity(server, office) + getInt(server, ConfigKeys.WIN_MARGIN);
+    }
+
+    /** Cargos que o XP atual já permite disputar. */
+    public static List<PoliticalOffice> unlockedOffices(MinecraftServer server, int politicalXp) {
+        List<PoliticalOffice> unlocked = new ArrayList<>();
+        for (PoliticalOffice office : PoliticalOffice.values()) {
+            if (hasRequiredXp(server, office, politicalXp)) {
+                unlocked.add(office);
+            }
+        }
+        return unlocked;
+    }
+
+    /** Próximo cargo a ser desbloqueado por XP (menor XP mínimo acima do XP atual). */
+    public static Optional<PoliticalOffice> nextUnlock(MinecraftServer server, int politicalXp) {
+        PoliticalOffice best = null;
+        for (PoliticalOffice office : PoliticalOffice.values()) {
+            if (office.isElective() && minPoliticalXp(server, office) > politicalXp
+                    && (best == null || minPoliticalXp(server, office) < minPoliticalXp(server, best))) {
+                best = office;
+            }
+        }
+        return Optional.ofNullable(best);
+    }
+
+    /** Maior XP mínimo já alcançado (base da barra de XP político). */
+    public static int xpFloor(MinecraftServer server, int politicalXp) {
+        int floor = 0;
+        for (PoliticalOffice office : unlockedOffices(server, politicalXp)) {
+            floor = Math.max(floor, minPoliticalXp(server, office));
+        }
+        return floor;
     }
 
     public static long termTicks(MinecraftServer server, PoliticalOffice office) {

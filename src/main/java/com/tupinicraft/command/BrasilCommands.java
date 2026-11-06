@@ -91,7 +91,6 @@ public final class BrasilCommands {
         source.sendSuccess(() -> line("Cargo: ", data.office().displayName()), false);
         source.sendSuccess(() -> line("XP político: ", String.valueOf(data.politicalXp())), false);
         source.sendSuccess(() -> line("Popularidade: ", String.valueOf(data.popularity())), false);
-        source.sendSuccess(() -> line("Pontos de habilidade: ", String.valueOf(data.skillPoints())), false);
 
         List<SeatView> mandates = MandateService.queries(server).getMandatesOf(player.getUUID());
         for (SeatView seat : mandates) {
@@ -99,19 +98,27 @@ public final class BrasilCommands {
                     + ElectionManager.formatTime(seat.remainingTicks().orElse(0)) + ")"), false);
         }
 
-        Optional<PoliticalOffice> next = data.office().next();
-        if (next.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("Você chegou ao topo da carreira política!")
-                    .withStyle(ChatFormatting.GREEN), false);
+        // Pontos de habilidade ficam guardados por cargo e continuam disponíveis ao voltar ao cargo.
+        if (data.officeProgress().isEmpty()) {
+            source.sendSuccess(() -> line("Pontos de habilidade: ", "nenhum ainda (ganhos exercendo mandatos)"), false);
         } else {
-            PoliticalOffice target = next.get();
-            boolean ready = ServerSettings.meetsRequirements(server, target, data.politicalXp(), data.popularity());
-            String domicile = data.origin().map(origin -> " em " + Territories.domicile(target, origin).name()).orElse("");
-            source.sendSuccess(() -> line("Próximo cargo: ", target.displayName() + domicile + " (XP "
-                    + ServerSettings.minPoliticalXp(server, target) + ", popularidade "
-                    + ServerSettings.minPopularity(server, target) + ")")
-                    .append(Component.literal(ready ? " — requisitos atendidos, vença uma eleição!" : " — requisitos pendentes")
-                            .withStyle(ready ? ChatFormatting.GREEN : ChatFormatting.RED)), false);
+            String points = data.officeProgress().entrySet().stream()
+                    .map(entry -> entry.getKey().displayName() + " " + entry.getValue().skillPoints())
+                    .collect(java.util.stream.Collectors.joining(", "));
+            source.sendSuccess(() -> line("Pontos de habilidade: ", points), false);
+        }
+
+        // Sem progressão sequencial: qualquer cargo com XP suficiente pode ser disputado (popularidade não é requisito).
+        List<PoliticalOffice> unlocked = ServerSettings.unlockedOffices(server, data.politicalXp());
+        source.sendSuccess(() -> line("Pode disputar: ", unlocked.isEmpty() ? "nenhum cargo"
+                : unlocked.stream().map(PoliticalOffice::displayName).collect(java.util.stream.Collectors.joining(", "))), false);
+        Optional<PoliticalOffice> next = ServerSettings.nextUnlock(server, data.politicalXp());
+        if (next.isPresent()) {
+            source.sendSuccess(() -> line("Próximo desbloqueio: ", next.get().displayName() + " com "
+                    + ServerSettings.minPoliticalXp(server, next.get()) + " de XP político"), false);
+        } else {
+            source.sendSuccess(() -> Component.literal("Você já pode disputar qualquer cargo, inclusive Presidente!")
+                    .withStyle(ChatFormatting.GREEN), false);
         }
         return 1;
     }

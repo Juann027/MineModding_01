@@ -11,8 +11,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  * Servidor → cliente: dados políticos do próprio jogador (HUD), com os requisitos de XP efetivos
  * (o cliente não conhece a configuração do servidor).
  *
- * @param currentOfficeMinXp XP mínimo do cargo atual (0 para Desempregado)
- * @param nextOfficeMinXp    XP mínimo do próximo cargo, ou -1 se não houver próximo
+ * @param currentOfficeMinXp maior XP mínimo de cargo já alcançado (base da barra de XP)
+ * @param nextOfficeMinXp    XP mínimo do próximo cargo a desbloquear por XP, ou -1 se todos já estão liberados
  */
 public record PoliticalDataSyncPayload(PoliticalData data, int currentOfficeMinXp, int nextOfficeMinXp)
         implements CustomPacketPayload {

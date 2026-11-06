@@ -6,7 +6,9 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Cargos políticos em ordem de progressão (progressão fictícia de RPG).
+ * Cargos políticos, do mais local ao mais alto. A ordem é só de exibição: <b>não há progressão
+ * sequencial</b>; qualquer jogador pode concorrer a qualquer cargo se tiver o XP político mínimo.
+ * {@link #next()}/{@link #previous()} servem apenas para navegação/exibição.
  * <p>
  * Os requisitos aqui são apenas os <b>valores padrão</b> do arquivo de configuração. Em jogo, leia
  * sempre os valores efetivos por {@code ServerSettings} (TOML + overrides administrativos do mundo).
@@ -14,7 +16,7 @@ import java.util.Optional;
  * O {@link #id()} é o identificador persistido e usado nos comandos; não o renomeie.
  */
 public enum PoliticalOffice {
-    //  id, nome exibido, XP mín. padrão, popularidade mín. padrão, mandato padrão (min), jurisdição
+    //  id, nome exibido, XP mín. padrão, popularidade de referência padrão, mandato padrão (min), jurisdição
     DESEMPREGADO("desempregado", "Desempregado", 0, 0, 0, null),
     VEREADOR("vereador", "Vereador", 0, 10, 30, TerritoryType.MUNICIPALITY),
     DEPUTADO_ESTADUAL("deputado_estadual", "Deputado Estadual", 50, 30, 30, TerritoryType.STATE),
@@ -27,16 +29,16 @@ public enum PoliticalOffice {
     private final String id;
     private final String displayName;
     private final int defaultMinPoliticalXp;
-    private final int defaultMinPopularity;
+    private final int defaultReferencePopularity;
     private final int defaultTermMinutes;
     private final TerritoryType jurisdiction;
 
-    PoliticalOffice(String id, String displayName, int defaultMinPoliticalXp, int defaultMinPopularity,
+    PoliticalOffice(String id, String displayName, int defaultMinPoliticalXp, int defaultReferencePopularity,
                     int defaultTermMinutes, TerritoryType jurisdiction) {
         this.id = id;
         this.displayName = displayName;
         this.defaultMinPoliticalXp = defaultMinPoliticalXp;
-        this.defaultMinPopularity = defaultMinPopularity;
+        this.defaultReferencePopularity = defaultReferencePopularity;
         this.defaultTermMinutes = defaultTermMinutes;
         this.jurisdiction = jurisdiction;
     }
@@ -49,14 +51,17 @@ public enum PoliticalOffice {
         return displayName;
     }
 
-    /** Padrão do TOML para o XP político mínimo de candidatura. */
+    /** Padrão do TOML para o XP político mínimo de candidatura (único requisito para concorrer). */
     public int defaultMinPoliticalXp() {
         return defaultMinPoliticalXp;
     }
 
-    /** Padrão do TOML para a popularidade mínima de candidatura. */
-    public int defaultMinPopularity() {
-        return defaultMinPopularity;
+    /**
+     * Padrão do TOML para a popularidade de referência do cargo, usada só na pontuação mínima de vitória
+     * (referência + margem). Popularidade NÃO é requisito de candidatura.
+     */
+    public int defaultReferencePopularity() {
+        return defaultReferencePopularity;
     }
 
     /** Padrão do TOML para a duração do mandato, em minutos. */

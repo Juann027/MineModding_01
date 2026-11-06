@@ -10,7 +10,10 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Persistência dos mandatos (data/tupinicraft_mandates.dat no Overworld).
@@ -20,6 +23,8 @@ public final class MandateSavedData extends SavedData {
     private static final String FILE_NAME = TupiniCraft.MOD_ID + "_mandates";
 
     private final MandateRegistry registry = new MandateRegistry();
+    /** Mudanças de cargo de jogadores que estavam offline (posse ou fim de mandato), aplicadas no login. */
+    private final Map<UUID, PoliticalOffice> pendingOfficeUpdates = new LinkedHashMap<>();
 
     public static MandateSavedData get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(
@@ -29,6 +34,10 @@ public final class MandateSavedData extends SavedData {
     /** Altere apenas via {@link MandateService} e marque {@link #setDirty()}. */
     MandateRegistry registry() {
         return registry;
+    }
+
+    Map<UUID, PoliticalOffice> pendingOfficeUpdates() {
+        return pendingOfficeUpdates;
     }
 
     @Override
@@ -55,6 +64,15 @@ public final class MandateSavedData extends SavedData {
             last.add(entry);
         });
         tag.put("last_occupants", last);
+
+        ListTag pending = new ListTag();
+        pendingOfficeUpdates.forEach((player, office) -> {
+            CompoundTag entry = new CompoundTag();
+            entry.putUUID("player", player);
+            entry.putString("office", office.id());
+            pending.add(entry);
+        });
+        tag.put("pending_office_updates", pending);
         return tag;
     }
 
@@ -87,6 +105,14 @@ public final class MandateSavedData extends SavedData {
             Optional<SeatKey> key = readKey(entry);
             if (key.isPresent() && entry.hasUUID("occupant_id")) {
                 data.registry.restoreLastOccupant(key.get(), entry.getUUID("occupant_id"));
+            }
+        }
+        ListTag pending = tag.getList("pending_office_updates", Tag.TAG_COMPOUND);
+        for (int i = 0; i < pending.size(); i++) {
+            CompoundTag entry = pending.getCompound(i);
+            Optional<PoliticalOffice> office = PoliticalOffice.byId(entry.getString("office"));
+            if (entry.hasUUID("player") && office.isPresent()) {
+                data.pendingOfficeUpdates.put(entry.getUUID("player"), office.get());
             }
         }
         return data;

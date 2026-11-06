@@ -137,7 +137,7 @@ public final class ElectionManager {
 
     /**
      * Escolhe até 2 cadeiras vagas para o calendário: primeiro as que algum jogador online pode disputar
-     * (próximo cargo, no seu domicílio eleitoral); senão uma cadeira vaga qualquer do calendário,
+     * (XP suficiente, no seu domicílio eleitoral); senão uma cadeira vaga qualquer do calendário,
      * que será disputada por aldeões.
      */
     private static List<SeatKey> pickAutomaticSeats(MinecraftServer server, ElectionCalendar calendar) {
@@ -147,12 +147,14 @@ public final class ElectionManager {
             if (data.origin().isEmpty()) {
                 continue;
             }
-            data.office().next()
-                    .filter(next -> calendar.offices().contains(next))
-                    .filter(next -> ServerSettings.meetsRequirements(server, next, data.politicalXp(), data.popularity()))
-                    .map(next -> new SeatKey(Territories.domicile(next, data.origin().get()).id(), next, 1))
-                    .filter(seat -> MandateService.isVacant(server, seat))
-                    .ifPresent(options::add);
+            for (PoliticalOffice office : calendar.offices()) {
+                if (ServerSettings.hasRequiredXp(server, office, data.politicalXp())) {
+                    SeatKey seat = new SeatKey(Territories.domicile(office, data.origin().get()).id(), office, 1);
+                    if (MandateService.isVacant(server, seat)) {
+                        options.add(seat);
+                    }
+                }
+            }
         }
         Random random = new Random(server.overworld().getRandom().nextLong());
         if (options.isEmpty()) {
@@ -330,45 +332,14 @@ public final class ElectionManager {
         endElection(server, data);
     }
 
-    /** Posse na cadeira disputada e, para jogadores, promoção do cargo pessoal. */
+    /** Posse na cadeira disputada; para jogadores, o cargo passa a ser o da cadeira (ver MandateService). */
     private static void takeOffice(MinecraftServer server, ElectionSavedData data, ElectionRace race, Candidate winner) {
         Occupant occupant = winner.npc() ? Occupant.npc(winner.id(), winner.name()) : Occupant.player(winner.id(), winner.name());
         if (!MandateService.inaugurate(server, race.seat(), occupant, Optional.ofNullable(data.electionId()))) {
             TupiniCraft.LOGGER.warn("Posse recusada em {}: cadeira já ocupada.", race.seat().asString());
             announce(server, Component.literal(winner.name() + " não pôde tomar posse: a cadeira de " + raceLabel(race)
                     + " já estava ocupada."));
-            return;
         }
-        if (winner.npc()) {
-            return;
-        }
-        ServerPlayer player = server.getPlayerList().getPlayer(winner.id());
-        if (player == null) {
-            data.pendingPromotions().put(winner.id(), race.office());
-            data.setDirty();
-            TupiniCraft.LOGGER.info("{} venceu offline; promoção a {} pendente.", winner.name(), race.office().id());
-            return;
-        }
-        applyPromotion(player, race.office());
-    }
-
-    private static void applyPromotion(ServerPlayer player, PoliticalOffice office) {
-        PoliticalData current = PoliticalDataService.get(player);
-        if (current.office() == office) {
-            player.sendSystemMessage(Component.literal("Parabéns! Você foi reeleito " + office.displayName() + ".")
-                    .withStyle(ChatFormatting.GOLD));
-            return;
-        }
-        // Só promove a partir do cargo imediatamente anterior (o cargo pode ter sido alterado por admin).
-        if (current.office().next().orElse(null) != office) {
-            player.sendSystemMessage(Component.literal("Você venceu para " + office.displayName()
-                    + ", mas seu cargo atual (" + current.office().displayName()
-                    + ") mudou durante a eleição. Promoção de cargo não aplicada.").withStyle(ChatFormatting.RED));
-            return;
-        }
-        PoliticalDataService.set(player, current.withOffice(office));
-        player.sendSystemMessage(Component.literal("Parabéns! Você agora é " + office.displayName() + ".")
-                .withStyle(ChatFormatting.GOLD));
     }
 
     private static void endElection(MinecraftServer server, ElectionSavedData data) {
@@ -382,9 +353,9 @@ public final class ElectionManager {
     // ================================================================== ações de jogador
 
     /**
-     * Candidatura. Sem cargo informado, usa a primeira disputa em que o jogador pode concorrer.
-     * Regras: domicílio eleitoral (origem), próximo cargo da carreira (ou reeleição para a cadeira
-     * que ocupou por último, se permitido), XP e popularidade mínimos.
+     * Candidatura direta: qualquer jogador (inclusive Desempregado) pode concorrer a qualquer cargo em disputa,
+     * desde que esteja no seu domicílio eleitoral e tenha o XP político mínimo. Popularidade não é requisito.
+     * Sem cargo informado, usa a primeira disputa em que o jogador pode concorrer.
      */
     public static Outcome register(ServerPlayer player, Optional<PoliticalOffice> requested) {
         MinecraftServer server = player.server;
@@ -431,34 +402,19 @@ public final class ElectionManager {
     private static Optional<String> eligibilityProblem(MinecraftServer server, UUID playerId, PoliticalData political,
                                                        RegionalOrigin origin, ElectionRace race) {
         PoliticalOffice office = race.office();
-        String label = raceLabel(race);
         Territory domicile = Territories.domicile(office, origin);
-        if (!domicile.id().equals(race.territoryId())) {
-            return Optional.of(label + ": seu domicílio eleitoral para " + office.displayName() + " é " + domicile.name() + ".");
-        }
-        boolean progression = political.office().next().orElse(null) == office;
-        boolean reelection = political.office() == office
-                && MandateService.lastOccupant(server, race.seat()).map(playerId::equals).orElse(false);
-        if (!progression && !reelection) {
-            if (political.office() == office) {
-                return Optional.of(label + ": você só pode disputar o mesmo cargo como reeleição da cadeira que ocupou.");
-            }
-            return Optional.of(label + ": seu próximo cargo é "
-                    + political.office().next().map(PoliticalOffice::displayName).orElse("nenhum") + ".");
-        }
-        if (reelection && !ServerSettings.getBool(server, ConfigKeys.CONSECUTIVE_REELECTION)) {
-            return Optional.of(label + ": reeleição consecutiva está desativada neste servidor.");
-        }
         int minXp = ServerSettings.minPoliticalXp(server, office);
-        if (political.politicalXp() < minXp) {
-            return Optional.of(label + ": XP político insuficiente (você tem " + political.politicalXp() + ", precisa de " + minXp + ").");
-        }
-        int minPopularity = ServerSettings.minPopularity(server, office);
-        if (political.popularity() < minPopularity) {
-            return Optional.of(label + ": popularidade insuficiente (você tem " + political.popularity()
-                    + ", precisa de " + minPopularity + ").");
-        }
-        return Optional.empty();
+        boolean lastOccupant = MandateService.lastOccupant(server, race.seat()).map(playerId::equals).orElse(false);
+        Optional<CandidacyRules.Problem> problem = CandidacyRules.check(
+                domicile.id().equals(race.territoryId()), political.politicalXp(), minXp,
+                lastOccupant, ServerSettings.getBool(server, ConfigKeys.CONSECUTIVE_REELECTION));
+        String label = raceLabel(race);
+        return problem.map(p -> switch (p) {
+            case OUTSIDE_DOMICILE -> label + ": seu domicílio eleitoral para " + office.displayName() + " é " + domicile.name() + ".";
+            case INSUFFICIENT_XP -> label + ": XP político insuficiente (você tem " + political.politicalXp()
+                    + ", precisa de " + minXp + ").";
+            case REELECTION_DISABLED -> label + ": reeleição consecutiva está desativada neste servidor.";
+        });
     }
 
     public static Outcome castVote(ServerPlayer voter, UUID candidateId) {
@@ -512,10 +468,11 @@ public final class ElectionManager {
 
     public static void onPlayerLogin(ServerPlayer player) {
         ElectionSavedData data = ElectionSavedData.get(player.server);
-        PoliticalOffice pending = data.pendingPromotions().remove(player.getUUID());
-        if (pending != null) {
+        // Promoções pendentes salvas pela v0.1.0 (sem cadeira) continuam sendo aplicadas como eram.
+        PoliticalOffice legacyPending = data.pendingPromotions().remove(player.getUUID());
+        if (legacyPending != null) {
             data.setDirty();
-            applyPromotion(player, pending);
+            PoliticalDataService.set(player, PoliticalDataService.get(player).withOffice(legacyPending));
         }
         if (data.phase() == ElectionPhase.VOTING) {
             giveUrna(player);
@@ -571,9 +528,8 @@ public final class ElectionManager {
                 + " — tempo restante: " + formatTime(data.ticksRemaining())).withStyle(ChatFormatting.GOLD));
         for (ElectionRace race : data.races()) {
             PoliticalOffice office = race.office();
-            lines.add(Component.literal(raceLabel(race) + " (requisitos: XP " + ServerSettings.minPoliticalXp(server, office)
-                    + ", popularidade " + ServerSettings.minPopularity(server, office) + "; pontuação mínima "
-                    + race.minimumScore() + ")").withStyle(ChatFormatting.YELLOW));
+            lines.add(Component.literal(raceLabel(race) + " (requisito: XP " + ServerSettings.minPoliticalXp(server, office)
+                    + "; pontuação mínima " + race.minimumScore() + ")").withStyle(ChatFormatting.YELLOW));
             if (race.candidates().isEmpty()) {
                 lines.add(Component.literal("  Nenhum candidato inscrito.").withStyle(ChatFormatting.GRAY));
             }

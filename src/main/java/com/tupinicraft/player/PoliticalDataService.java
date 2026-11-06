@@ -30,11 +30,12 @@ public final class PoliticalDataService {
 
     public static void sync(ServerPlayer player) {
         PoliticalData data = get(player);
-        int currentMinXp = ServerSettings.minPoliticalXp(player.server, data.office());
-        int nextMinXp = data.office().next()
+        // Barra de XP: do maior XP mínimo já alcançado até o próximo cargo desbloqueável por XP.
+        int floorXp = ServerSettings.xpFloor(player.server, data.politicalXp());
+        int nextUnlockXp = ServerSettings.nextUnlock(player.server, data.politicalXp())
                 .map((PoliticalOffice next) -> ServerSettings.minPoliticalXp(player.server, next))
                 .orElse(-1);
-        PacketDistributor.sendToPlayer(player, new PoliticalDataSyncPayload(data, currentMinXp, nextMinXp));
+        PacketDistributor.sendToPlayer(player, new PoliticalDataSyncPayload(data, floorXp, nextUnlockXp));
     }
 
     /** Ressincroniza todos (ex.: após mudar requisitos pela configuração). */

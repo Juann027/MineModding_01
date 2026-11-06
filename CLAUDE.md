@@ -42,12 +42,12 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
 | Pacote | Responsabilidade |
 |---|---|
 | `origin` | `RegionalOrigin` (27 UFs: nome, sigla, gentílico, macrorregião), `Macroregion`, `OriginService` (sorteio/atribuição). |
-| `player` | `PoliticalData` (record imutável + Codec + StreamCodec), `PoliticalDataService` (único ponto de leitura/escrita + sync), eventos de jogador. |
-| `politics` | `PoliticalOffice`: ordem dos cargos, jurisdição (país/estado/município) e **valores padrão** do TOML. |
+| `player` | `PoliticalData` (record imutável + Codec + StreamCodec), `OfficeProgress`/`SkillProgression` (habilidades por cargo, puros), `PoliticalDataService` (único ponto de leitura/escrita + sync), eventos de jogador. |
+| `politics` | `PoliticalOffice`: cargos (ordem só de exibição), jurisdição (país/estado/município) e **valores padrão** do TOML. |
 | `config` | `ConfigKeys` (tabela única de chaves, limites e padrões), `BrasilServerConfig` (TOML SERVER gerado da tabela), `ConfigOverridesSavedData` (overrides do mundo), `ServerSettings` (**único ponto de leitura** dos valores efetivos). |
 | `territory` | `Territories`: catálogo imutável (Brasil, 27 UFs, 27 capitais) com IDs estáveis e domicílio eleitoral. |
 | `mandate` | Cadeiras (`SeatKey`), mandatos, `MandateRegistry` (regra de 1 ocupante), `MandateQueries` (API de consulta), `PoliticalMapSnapshot`, `MandateSavedData`, `MandateService` (posse, expiração, pontos de habilidade). |
-| `election` | Máquina de estados, calendários, `ElectionRules` (regras congeladas por eleição), `ElectionSavedData`, `ElectionManager` (regras no servidor), `ElectionTally` e `NpcCandidateFactory` (puros), item da urna. |
+| `election` | Máquina de estados, calendários, `CandidacyRules` (elegibilidade, pura), `ElectionRules` (regras congeladas por eleição), `ElectionSavedData`, `ElectionManager` (regras no servidor), `ElectionTally` e `NpcCandidateFactory` (puros), item da urna. |
 | `network` | Payloads (`CustomPacketPayload` + `StreamCodec`) e registro em `RegisterPayloadHandlersEvent`. |
 | `client` | Entrada `@Mod(dist = CLIENT)`, caches visuais, camadas de HUD, faixa de avisos, tela da urna. |
 | `command` | Brigadier (`/brasil ...`) registrado em `RegisterCommandsEvent`. |
@@ -79,6 +79,17 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
   pontuação mínima e faixa de NPCs na criação; votos guardam o peso no momento do voto. Mandatos guardam o fim
   previsto na posse. Mudanças de configuração valem só para as próximas eleições/mandatos; o intervalo dos
   calendários vale a partir do próximo ciclo.
+- **Carreira política (sem progressão sequencial):** qualquer jogador, inclusive Desempregado, pode concorrer a
+  qualquer cargo; o **único requisito pessoal é o XP político mínimo** (`progressao.xp_min.<cargo>`), mais o
+  domicílio eleitoral. **Popularidade não é requisito**: só pesa na pontuação e no peso do voto
+  (`eleicao.popularidade_referencia.<cargo>` entra só na pontuação mínima de vitória). Não reintroduza checagens
+  de "cargo anterior" (`PoliticalOffice.next()` é só para exibição).
+- **Cargo × mandato:** o cargo do jogador acompanha o mandato vigente. Na posse vira o cargo da cadeira; ao perder
+  ou terminar o mandato volta a **Desempregado**, mantendo XP, popularidade e o progresso de habilidades por cargo
+  (`PoliticalData.officeProgress`), que volta a valer se ele reassumir o cargo. Um jogador ocupa **no máximo uma
+  cadeira vigente** (`MandateRegistry`); ao tomar posse de outra, renuncia à anterior (`MandateService.inaugurate`).
+  Mudanças de cargo de jogadores offline ficam pendentes em `MandateSavedData` e são aplicadas no login.
+  Títulos de cargo da v0.1.0 (sem cadeira) são preservados.
 - **Territórios e mandatos:** a origem do jogador define só o **domicílio eleitoral** (`Territories.domicile`); o que
   ele governa fica nas cadeiras (`MandateRegistry`). Identifique ocupantes por UUID do jogador ou ID do NPC, nunca
   pelo nome. Consultas e o snapshot do mapa são derivados do registro (não crie cópias persistentes). Mandatos
@@ -99,8 +110,10 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
 ## Testes
 
 - Regras puras (`politics`, `origin`, `territory`, `config/ConfigKey(s)`, `mandate` exceto `*SavedData`/`MandateService`,
-  `ElectionTally`, `ElectionRules`, `ElectionRace`, `NpcCandidateFactory`) não importam classes do Minecraft e são
-  cobertas por `RulesSelfTest`. Ao mudar fórmulas, chaves ou territórios, atualize esse teste.
+  `CandidacyRules`, `ElectionTally`, `ElectionRules`, `ElectionRace`, `NpcCandidateFactory`, `SkillProgression`) não
+  importam classes do Minecraft e são cobertas por `RulesSelfTest`. Ao mudar fórmulas, chaves ou territórios,
+  atualize esse teste. O source set de teste tem as dependências do Minecraft (`addModdingDependenciesTo`), usadas
+  para validar a compatibilidade dos dados salvos (ex.: NBT da v0.1.0 via `PoliticalData.CODEC`).
 - O teste de fumaça do CI cobre: override persistente após reinício, reset para o TOML, rejeição de valores
   inválidos, aldeões completando disputas, prazo congelado de eleição ativa e consulta de mandatos.
 - Fluxos multiplayer (candidatura, urna, HUD) exigem teste manual com 2+ clientes (`runClient` + servidor).

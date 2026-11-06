@@ -32,7 +32,7 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
 | `/brasil perfil` | Origem, cargo, XP político, popularidade e próximo cargo |
 | `/brasil origem` | Sua origem regional |
 | `/brasil eleicao status` | Fase, cargos em disputa, candidatos e tempo restante |
-| `/brasil eleicao candidatar [cargo]` | Inscreve você no seu próximo cargo, no seu domicílio eleitoral (ou reeleição) |
+| `/brasil eleicao candidatar [cargo]` | Inscreve você numa disputa do seu domicílio eleitoral (basta ter o XP político mínimo) |
 | `/brasil eleicao votar <candidato>` | Vota (ou use a Urna Eletrônica com o botão direito) |
 | `/brasil mandatos [território]` | Mandatos vigentes, ou todas as cadeiras de um território (ex.: `es`, `vitoria`) |
 | `/brasil admin eleicao iniciar <cargo> [território] [cargo2 território2]` | Inicia uma eleição (ex.: `prefeito vitoria`) |
@@ -49,6 +49,15 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
 
 Cargos: `desempregado`, `vereador`, `deputado_estadual`, `prefeito`, `deputado_federal`, `senador`, `governador`, `presidente`.
 
+### Carreira política
+
+- Não existe "subir um cargo de cada vez". Qualquer jogador, mesmo **Desempregado**, pode concorrer
+  **direto a qualquer cargo**, até Presidente, desde que tenha o **XP político mínimo** do cargo.
+- **Popularidade não é requisito.** Ela aumenta a sua pontuação na apuração e o peso do seu voto.
+- Ao vencer, você assume o cargo. Quando o mandato termina, ou se você perde a cadeira, volta a ser Desempregado,
+  mas mantém o XP, a popularidade e os pontos de habilidade daquele cargo. Eles voltam a valer se você reassumir o cargo.
+- Cada jogador ocupa **uma cadeira por vez**. Ao vencer outra eleição, você renuncia à cadeira anterior.
+
 ### Territórios e mandatos
 
 - Presidente governa o **Brasil**; Governador, Senador e Deputados, um **estado**; Prefeito e Vereador, um **município**
@@ -56,7 +65,7 @@ Cargos: `desempregado`, `vereador`, `deputado_estadual`, `prefeito`, `deputado_f
 - Cada jogador disputa no seu **domicílio eleitoral**, que vem da origem: o próprio estado e a capital dele.
 - Quem vence toma posse da cadeira por um mandato (padrão 30 min, Senador 45 min). Mandatos vencidos deixam a cadeira vaga.
 - Quando faltam candidatos, **aldeões** (NPCs) entram na disputa e podem ocupar cadeiras.
-- Exercendo mandato, o jogador ganha **pontos de habilidade** pelo tempo online (padrão: 1 a cada 10 min).
+- Exercendo mandato, o jogador ganha **pontos de habilidade daquele cargo** pelo tempo online (padrão: 1 a cada 10 min).
 - As eleições automáticas seguem dois calendários: **gerais** e **municipais**.
 
 ## Desenvolvimento

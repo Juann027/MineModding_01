@@ -75,6 +75,7 @@ public final class ElectionSavedData extends SavedData {
         return races;
     }
 
+    /** Promoções pendentes gravadas pela v0.1.0 (preservadas e aplicadas no login). Não use em código novo. */
     public Map<UUID, PoliticalOffice> pendingPromotions() {
         return pendingPromotions;
     }

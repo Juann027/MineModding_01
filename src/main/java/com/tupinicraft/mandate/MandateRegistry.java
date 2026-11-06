@@ -10,8 +10,9 @@ import java.util.UUID;
  * Armazenamento autoritativo dos mandatos (uma entrada por cadeira com histórico mínimo).
  * Classe pura; a persistência fica em {@code MandateSavedData}.
  * <p>
- * Regra central: uma cadeira tem no máximo um ocupante. A posse só é aceita se a cadeira estiver vaga
- * (sem mandato ou com mandato expirado).
+ * Regras centrais: uma cadeira tem no máximo um ocupante, e um jogador ocupa no máximo uma cadeira
+ * vigente por vez. A posse só é aceita se a cadeira estiver vaga (sem mandato ou com mandato expirado)
+ * e, para jogadores, se ele não tiver outro mandato vigente (quem chama deve encerrar o anterior antes).
  */
 public final class MandateRegistry {
     private final Map<SeatKey, Mandate> mandates = new LinkedHashMap<>();
@@ -33,11 +34,15 @@ public final class MandateRegistry {
     }
 
     /**
-     * Dá posse a um ocupante. Falha (retorna false) se a cadeira já tem mandato vigente,
-     * impedindo dois ocupantes simultâneos.
+     * Dá posse a um ocupante. Falha (retorna false) se a cadeira já tem mandato vigente (dois ocupantes)
+     * ou se o jogador já ocupa outra cadeira vigente.
      */
     public boolean inaugurate(SeatKey key, Mandate mandate, long now, boolean expirationEnabled) {
         if (!isVacant(key, now, expirationEnabled)) {
+            return false;
+        }
+        if (mandate.occupant().type() == OccupantType.PLAYER
+                && activeSeatOf(mandate.occupant().id(), now, expirationEnabled).isPresent()) {
             return false;
         }
         Mandate previous = mandates.put(key, mandate);
@@ -45,6 +50,18 @@ public final class MandateRegistry {
             lastOccupants.put(key, previous.occupant().id());
         }
         return true;
+    }
+
+    /** Cadeira vigente ocupada por um jogador (no máximo uma). */
+    public Optional<SeatKey> activeSeatOf(UUID playerId, long now, boolean expirationEnabled) {
+        for (Map.Entry<SeatKey, Mandate> entry : mandates.entrySet()) {
+            Mandate mandate = entry.getValue();
+            if (mandate.occupant().type() == OccupantType.PLAYER && mandate.occupant().id().equals(playerId)
+                    && mandate.isActive(now, expirationEnabled)) {
+                return Optional.of(entry.getKey());
+            }
+        }
+        return Optional.empty();
     }
 
     /** Encerra o mandato da cadeira (fim do prazo ou ação administrativa). */
