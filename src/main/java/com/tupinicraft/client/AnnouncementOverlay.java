@@ -14,7 +14,8 @@ import java.util.List;
 
 /**
  * Faixa de avisos eleitorais no topo da tela (substitui o chat para os anúncios da eleição).
- * Os avisos entram numa fila e são exibidos um de cada vez.
+ * Os avisos entram numa fila e são exibidos um de cada vez. A posição vem de {@link AnnouncementLayout}:
+ * nunca cobre os painéis do canto superior direito ({@link PoliticalHud}) nem as barras de chefe.
  */
 public final class AnnouncementOverlay {
     private static final long DISPLAY_MILLIS = 5000L;
@@ -43,6 +44,8 @@ public final class AnnouncementOverlay {
     }
 
     static void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
+        // Lido em todo frame (mesmo sem aviso) para não reaproveitar a medida de um frame antigo.
+        int bossBarBottom = BossBarArea.consumeBottom();
         long now = Util.getMillis();
         long duration = QUEUE.isEmpty() ? DISPLAY_MILLIS : FAST_DISPLAY_MILLIS;
         if (current != null && now - shownAtMillis > duration) {
@@ -56,26 +59,36 @@ public final class AnnouncementOverlay {
             return;
         }
 
-        Font font = Minecraft.getInstance().font;
-        int maxWidth = Math.min(MAX_TEXT_WIDTH, graphics.guiWidth() - 20);
-        List<FormattedCharSequence> lines = font.split(current, maxWidth);
-        int textWidth = 0;
-        for (FormattedCharSequence line : lines) {
-            textWidth = Math.max(textWidth, font.width(line));
-        }
-        int boxWidth = textWidth + PADDING * 2;
-        int boxHeight = lines.size() * font.lineHeight + PADDING * 2;
-        int x = (graphics.guiWidth() - boxWidth) / 2;
-        // Abaixo da área das barras de chefe e acima da mira.
-        int y = Math.max(36, graphics.guiHeight() / 6);
+        Minecraft minecraft = Minecraft.getInstance();
+        Font font = minecraft.font;
+        Component message = current;
+        AnnouncementLayout.Placement placement = AnnouncementLayout.place(
+                graphics.guiWidth(), graphics.guiHeight(), bossBarBottom,
+                PoliticalHud.panelBounds(minecraft, graphics.guiWidth()),
+                MAX_TEXT_WIDTH, PADDING,
+                maxWidth -> boxSize(font, font.split(message, maxWidth)));
+        List<FormattedCharSequence> lines = font.split(message, placement.maxTextWidth());
+        AnnouncementLayout.Rect box = placement.box();
+        int x = box.left();
+        int y = box.top();
+        int boxWidth = box.width();
+        int boxHeight = box.height();
 
         graphics.fill(x, y, x + boxWidth, y + boxHeight, 0xB0000000);
         graphics.fill(x, y, x + boxWidth, y + 1, 0xFFFFDF00);
         graphics.fill(x, y + boxHeight - 1, x + boxWidth, y + boxHeight, 0xFF009C3B);
         for (int i = 0; i < lines.size(); i++) {
             FormattedCharSequence line = lines.get(i);
-            int lineX = (graphics.guiWidth() - font.width(line)) / 2;
+            int lineX = x + (boxWidth - font.width(line)) / 2;
             graphics.drawString(font, line, lineX, y + PADDING + i * font.lineHeight, 0xFFFFFFFF, true);
         }
+    }
+
+    private static int[] boxSize(Font font, List<FormattedCharSequence> lines) {
+        int textWidth = 0;
+        for (FormattedCharSequence line : lines) {
+            textWidth = Math.max(textWidth, font.width(line));
+        }
+        return new int[]{textWidth + PADDING * 2, lines.size() * font.lineHeight + PADDING * 2};
     }
 }

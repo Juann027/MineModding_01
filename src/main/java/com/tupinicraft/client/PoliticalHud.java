@@ -94,9 +94,32 @@ public final class PoliticalHud {
 
     private static void renderPanels(GuiGraphics graphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
+        for (Panel panel : layoutPanels(minecraft, graphics.guiWidth())) {
+            drawPanel(graphics, minecraft.font, panel);
+        }
+    }
+
+    /**
+     * Áreas ocupadas pelos painéis do canto superior direito neste frame (vazio se não forem desenhados).
+     * Usado pela faixa de avisos para não cobri-los.
+     */
+    static List<AnnouncementLayout.Rect> panelBounds(Minecraft minecraft, int guiWidth) {
+        List<AnnouncementLayout.Rect> bounds = new ArrayList<>();
+        for (Panel panel : layoutPanels(minecraft, guiWidth)) {
+            bounds.add(panel.bounds());
+        }
+        return bounds;
+    }
+
+    private record Panel(List<Component> lines, AnnouncementLayout.Rect bounds) {
+    }
+
+    /** Monta os painéis (texto + posição) sem desenhar; mesma lógica para o desenho e para a faixa. */
+    private static List<Panel> layoutPanels(Minecraft minecraft, int guiWidth) {
+        List<Panel> panels = new ArrayList<>(2);
         PoliticalData data = ClientPoliticalCache.get();
         if (data == null || minecraft.player == null || minecraft.getDebugOverlay().showDebugScreen()) {
-            return;
+            return panels;
         }
         Font font = minecraft.font;
         int y = topOffsetBelowEffects(minecraft);
@@ -110,12 +133,15 @@ public final class PoliticalHud {
                 .map(next -> data.politicalXp() + "/" + next.minPoliticalXp())
                 .orElse(String.valueOf(data.politicalXp()));
         political.add(label("XP político: ", xpText));
-        y = drawPanel(graphics, font, political, y) + SCREEN_MARGIN;
+        Panel politicalPanel = layoutPanel(font, political, guiWidth, y);
+        panels.add(politicalPanel);
+        y = politicalPanel.bounds().bottom() + SCREEN_MARGIN;
 
         List<Component> election = electionLines();
         if (!election.isEmpty()) {
-            drawPanel(graphics, font, election, y);
+            panels.add(layoutPanel(font, election, guiWidth, y));
         }
+        return panels;
     }
 
     private static List<Component> electionLines() {
@@ -152,20 +178,26 @@ public final class PoliticalHud {
         return lines;
     }
 
-    /** Desenha um painel alinhado à direita e devolve o y logo abaixo dele. */
-    private static int drawPanel(GuiGraphics graphics, Font font, List<Component> lines, int y) {
+    /** Calcula um painel alinhado à direita começando em {@code y}. */
+    private static Panel layoutPanel(Font font, List<Component> lines, int guiWidth, int y) {
         int width = 0;
         for (Component line : lines) {
             width = Math.max(width, font.width(line));
         }
         width += PANEL_PADDING * 2;
         int height = lines.size() * LINE_HEIGHT + PANEL_PADDING * 2 - 2;
-        int x = graphics.guiWidth() - width - SCREEN_MARGIN;
-        graphics.fill(x, y, x + width, y + height, PANEL_BACKGROUND);
+        int x = guiWidth - width - SCREEN_MARGIN;
+        return new Panel(lines, new AnnouncementLayout.Rect(x, y, x + width, y + height));
+    }
+
+    private static void drawPanel(GuiGraphics graphics, Font font, Panel panel) {
+        AnnouncementLayout.Rect r = panel.bounds();
+        graphics.fill(r.left(), r.top(), r.right(), r.bottom(), PANEL_BACKGROUND);
+        List<Component> lines = panel.lines();
         for (int i = 0; i < lines.size(); i++) {
-            graphics.drawString(font, lines.get(i), x + PANEL_PADDING, y + PANEL_PADDING + i * LINE_HEIGHT, 0xFFFFFFFF, false);
+            graphics.drawString(font, lines.get(i), r.left() + PANEL_PADDING, r.top() + PANEL_PADDING + i * LINE_HEIGHT,
+                    0xFFFFFFFF, false);
         }
-        return y + height;
     }
 
     /** Os ícones de efeitos vanilla ocupam o topo direito; o painel desce para não cobri-los. */

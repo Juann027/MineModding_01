@@ -1,5 +1,7 @@
 package com.tupinicraft;
 
+import com.tupinicraft.client.AnnouncementLayout;
+import com.tupinicraft.client.AnnouncementLayout.Rect;
 import com.tupinicraft.election.*;
 import com.tupinicraft.origin.*;
 import com.tupinicraft.politics.*;
@@ -108,7 +110,61 @@ public class RulesSelfTest {
         check(race.hasVoted(voter), "votou -> hasVoted");
         check(race.findCandidateByName("a").isPresent(), "busca por nome case-insensitive");
 
+        layoutTests();
+
         System.out.println(passed + " passed, " + failures + " failed");
         System.exit(failures == 0 ? 0 : 1);
+    }
+
+    // Faixa de avisos: fonte simulada de 6 px por caractere, 9 px por linha, padding 5.
+    static AnnouncementLayout.Measure text(int chars) {
+        return maxWidth -> {
+            int perLine = Math.max(1, maxWidth / 6);
+            int lines = (chars + perLine - 1) / perLine;
+            return new int[]{Math.min(chars, perLine) * 6 + 10, lines * 9 + 10};
+        };
+    }
+    static boolean clear(Rect box, List<Rect> obstacles) {
+        for (Rect o : obstacles) if (box.intersects(o, 0)) return false;
+        return true;
+    }
+
+    static void layoutTests() {
+        // 1280x720 com guiScale 2 -> GUI 640x360; aviso longo (~56 caracteres).
+        AnnouncementLayout.Measure longText = text(56);
+        Rect none = AnnouncementLayout.place(640, 360, 0, List.of(), 280, 5, longText).box();
+        check(none.top() == 60 && Math.abs((none.left() + none.right()) - 640) <= 1, "faixa centralizada sem obstaculos");
+
+        List<Rect> panels = List.of(new Rect(478, 2, 638, 32), new Rect(450, 34, 638, 80));
+        AnnouncementLayout.Placement p = AnnouncementLayout.place(640, 360, 0, panels, 280, 5, longText);
+        check(clear(p.box(), panels), "faixa nao cobre o painel da eleicao");
+        check(p.box().top() == 60 && p.box().right() <= 450 - AnnouncementLayout.GAP, "faixa vai para a esquerda do painel");
+        check(p.maxTextWidth() == 280, "largura cheia mantida quando cabe ao lado");
+
+        Rect boss = AnnouncementLayout.place(640, 360, 74, List.of(), 280, 5, longText).box();
+        check(boss.top() >= 74 + AnnouncementLayout.GAP, "faixa abaixo das barras de chefe");
+
+        // Tela estreita: nao sobra largura legivel ao lado do painel -> desce para baixo dele.
+        List<Rect> wide = List.of(new Rect(120, 2, 318, 90));
+        Rect below = AnnouncementLayout.place(320, 240, 0, wide, 280, 5, longText).box();
+        check(clear(below, wide) && below.top() >= 90 + AnnouncementLayout.GAP, "faixa abaixo do painel sem espaco lateral");
+
+        // Aleatorio: nunca cobre painel algum e nunca sai da tela na horizontal.
+        Random random = new Random(42);
+        boolean ok = true;
+        for (int i = 0; i < 2000 && ok; i++) {
+            int gw = 200 + random.nextInt(800), gh = 150 + random.nextInt(400);
+            List<Rect> obs = new ArrayList<>();
+            int y = 2;
+            for (int k = random.nextInt(3); k > 0; k--) {
+                int w = 40 + random.nextInt(gw / 2), h = 12 + random.nextInt(gh / 3);
+                obs.add(new Rect(gw - 2 - w, y, gw - 2, y + h));
+                y += h + 2;
+            }
+            Rect b = AnnouncementLayout.place(gw, gh, random.nextInt(3) * 19, obs, 280, 5, text(5 + random.nextInt(120))).box();
+            ok = clear(b, obs) && b.left() >= 0 && b.right() <= gw;
+            if (!ok) System.out.println("  caso " + i + ": " + gw + "x" + gh + " " + obs + " -> " + b);
+        }
+        check(ok, "faixa nunca sobrepoe paineis (aleatorio)");
     }
 }

@@ -73,12 +73,15 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
   Votos são secretos: não repasse o resultado do voto aos admins (`notifyAdmins = false`).
 - **HUD:** apenas `RegisterGuiLayersEvent` + `GuiGraphics` (sem texturas de UI). Respeitar ícones de efeitos (topo
   direito), F3 e `gui.leftHeight/rightHeight` (a barra de XP político empurra corações/fome para cima).
+  A faixa de avisos é posicionada por `AnnouncementLayout` (cálculo puro): nunca cobre os painéis da direita
+  (`PoliticalHud.panelBounds`) nem as barras de chefe (medidas por `BossBarArea` via
+  `CustomizeGuiOverlayEvent.BossEventProgress`, sem desenhar). Painel novo no HUD → incluir em `panelBounds`.
 - **Comandos admin** ficam sob `/brasil admin` com `hasPermission(2)`. Validar entradas e retornar mensagens claras.
 - **Extensões futuras:** benefícios por origem entram em `OriginService.applyOriginEffects` (hoje vazio).
   Ainda fora do escopo: partidos, skill trees, buffs de origem, dimensões, NPCs, economia, missões.
 
 ## Testes
 
-- Regras puras (`politics`, `origin`, `ElectionTally`, `ElectionRace`) não importam classes do Minecraft e são
+- Regras puras (`politics`, `origin`, `ElectionTally`, `ElectionRace`, `client.AnnouncementLayout`) não importam classes do Minecraft e são
   cobertas por `RulesSelfTest`. Ao mudar fórmulas/requisitos, atualize esse teste.
 - Fluxos multiplayer (candidatura, urna, HUD) exigem teste manual com 2+ clientes (`runClient` + servidor).
