@@ -1,8 +1,10 @@
 package com.tupinicraft.player;
 
+import com.tupinicraft.economy.WalletService;
 import com.tupinicraft.election.ElectionManager;
 import com.tupinicraft.mandate.MandateService;
 import com.tupinicraft.origin.OriginService;
+import com.tupinicraft.skilltree.SkillTreeService;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
@@ -18,6 +20,7 @@ public final class PlayerEventHandler {
             ElectionManager.onPlayerLogin(player);
             MandateService.onPlayerLogin(player);
             PoliticalDataService.sync(player);
+            WalletService.onPlayerLogin(player);
         }
     }
 
@@ -25,6 +28,7 @@ public final class PlayerEventHandler {
         if (event.getEntity() instanceof ServerPlayer player) {
             OriginService.applyOriginEffects(player);
             PoliticalDataService.sync(player);
+            SkillTreeService.onRespawn(player);
         }
     }
 

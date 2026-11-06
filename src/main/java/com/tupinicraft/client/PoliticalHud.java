@@ -1,6 +1,7 @@
 package com.tupinicraft.client;
 
 import com.tupinicraft.TupiniCraft;
+import com.tupinicraft.economy.Money;
 import com.tupinicraft.election.ElectionManager;
 import com.tupinicraft.election.ElectionPhase;
 import com.tupinicraft.network.ElectionSyncPayload;
@@ -23,7 +24,7 @@ import java.util.List;
  * <ul>
  *   <li>barra de XP político logo acima da barra de XP vanilla (só quando ela existe, isto é,
  *       fora do Criativo e do Espectador);</li>
- *   <li>painel discreto no canto superior direito (cargo, popularidade, XP) e, se houver,
+ *   <li>painel discreto no canto superior direito (cargo, popularidade, XP, saldo) e, se houver,
  *       o painel da eleição logo abaixo.</li>
  * </ul>
  * Lê apenas os caches do cliente; não envia pacotes.
@@ -132,6 +133,10 @@ public final class PoliticalHud {
         int nextMinXp = ClientPoliticalCache.nextOfficeMinXp();
         String xpText = nextMinXp > 0 ? data.politicalXp() + "/" + nextMinXp : String.valueOf(data.politicalXp());
         political.add(label("XP político: ", xpText));
+        long balance = ClientPoliticalCache.balance();
+        if (balance >= 0) {
+            political.add(label("Saldo: ", Money.format(balance)));
+        }
         Panel politicalPanel = layoutPanel(font, political, guiWidth, y);
         panels.add(politicalPanel);
         y = politicalPanel.bounds().bottom() + SCREEN_MARGIN;

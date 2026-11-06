@@ -72,6 +72,10 @@ public final class ConfigKeys {
     public static final ConfigKey MINUTES_PER_SKILL_POINT = add(ConfigKey.integer("skills.minutos_por_ponto", 10, 1, MAX_MINUTES,
             "Minutos online exercendo mandato para ganhar 1 ponto de habilidade."));
 
+    // ------------------------------------------------------------------ economia
+    public static final ConfigKey STARTING_BALANCE = add(ConfigKey.integer("economia.saldo_inicial", 1000, 0, 1_000_000_000,
+            "Reais fictícios que cada jogador recebe uma única vez, no primeiro login (para comprar habilidades)."));
+
     // ------------------------------------------------------------------ progressão
     public static final Map<PoliticalOffice, ConfigKey> MIN_POLITICAL_XP = perOffice("progressao.xp_min.%s",
             PoliticalOffice::defaultMinPoliticalXp, 0, MAX_STAT,

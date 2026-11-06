@@ -1,6 +1,6 @@
 {
   "name": "Resistência do Sertão (teste)",
-  "comment": "§7Regional - Nordeste (teste): +4 de vida máxima.\n§eCusto: R$ 800 · só para origem no Nordeste\n§fComprar: /brasil skills comprar tupinicraft:regional_nordeste_sertao",
+  "comment": "§7Regional - Nordeste (teste): +4 de vida máxima.\n§eCusto: R$ 800 · só para origem no Nordeste\n§aClique no ícone para comprar.",
   "type": "passive",
   "category": "tupinicraft:regional_nordeste",
   "icon": "minecraft:cactus",

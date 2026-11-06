@@ -31,6 +31,12 @@ public final class SkillLibBackend implements SkillBackend {
     }
 
     @Override
+    public String displayName(ResourceLocation skillId) {
+        Skill skill = SkillDataManager.getInstance().getSkill(skillId);
+        return skill == null || skill.getName() == null || skill.getName().isBlank() ? skillId.getPath() : skill.getName();
+    }
+
+    @Override
     public List<ResourceLocation> prerequisites(ResourceLocation skillId) {
         Skill skill = SkillDataManager.getInstance().getSkill(skillId);
         return skill == null ? List.of() : List.copyOf(skill.getPrerequisites());
@@ -70,6 +76,11 @@ public final class SkillLibBackend implements SkillBackend {
                 }
             }
         }
+        ModNetwork.syncSkillData(player);
+    }
+
+    @Override
+    public void resync(ServerPlayer player) {
         ModNetwork.syncSkillData(player);
     }
 

@@ -1,6 +1,6 @@
 {
   "name": "Militância (teste)",
-  "comment": "§7Partidária - partido_teste (teste): +2 de armadura.\n§eCusto: R$ 300 · só filiados ao partido_teste\n§fComprar: /brasil skills comprar tupinicraft:partido_teste_militancia",
+  "comment": "§7Partidária - partido_teste (teste): +2 de armadura.\n§eCusto: R$ 300 · só filiados ao partido_teste\n§aClique no ícone para comprar.",
   "type": "passive",
   "category": "tupinicraft:partido_teste",
   "icon": "minecraft:white_banner",

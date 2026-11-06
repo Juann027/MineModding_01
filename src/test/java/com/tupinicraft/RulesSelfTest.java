@@ -323,6 +323,12 @@ public class RulesSelfTest {
     }
 
     static void skillTreeTests() {
+        net.minecraft.nbt.CompoundTag walletTag = new net.minecraft.nbt.CompoundTag();
+        walletTag.putLong("balance", 400L);
+        com.tupinicraft.economy.Wallet oldWallet = com.tupinicraft.economy.Wallet.CODEC.parse(net.minecraft.nbt.NbtOps.INSTANCE, walletTag).getOrThrow();
+        check(oldWallet.balance()==400 && !oldWallet.starterGranted(), "carteira da v0.3.0 carrega com saldo e sem saldo inicial recebido");
+        check(oldWallet.withBalance(10).equals(new com.tupinicraft.economy.Wallet(10, false)), "withBalance preserva a marca do saldo inicial");
+        check(ConfigKeys.byPath("economia.saldo_inicial").orElseThrow().defaultValue()==1000, "saldo inicial padrao R$ 1.000");
         check(Money.format(4500).equals("R$ 4.500") && Money.format(0).equals("R$ 0") && Money.format(1234567).equals("R$ 1.234.567"),
               "formato de dinheiro em reais ficticios (R$ 4.500)");
 
@@ -394,6 +400,7 @@ public class RulesSelfTest {
             check(allRegions && allOffices, "subcategorias: 5 macrorregioes e 7 cargos");
             Map<SkillTreeKind, Integer> kinds = new EnumMap<>(SkillTreeKind.class);
             boolean valid = true;
+            boolean priceShown = true;
             try (var files = java.nio.file.Files.list(base.resolve("skills"))) {
                 for (var file : files.toList()) {
                     String id = "tupinicraft:" + file.getFileName().toString().replace(".json", "");
@@ -409,9 +416,16 @@ public class RulesSelfTest {
                     }
                     SkillRule rule = SkillRuleParser.parse(id, skill).orElseThrow();
                     kinds.merge(rule.kind(), 1, Integer::sum);
+                    // A descrição exibida no painel do SkillLib mostra o preço real e ensina a comprar pelo clique.
+                    String comment = skill.get("comment").getAsString();
+                    String price = rule.kind() == SkillTreeKind.OFFICE
+                            ? rule.officePointCost() + " ponto" : Money.format(rule.moneyCost());
+                    priceShown &= comment.contains("Custo: " + price) && comment.contains("Clique no ícone para comprar")
+                            && !comment.contains("/brasil");
                 }
             }
             check(valid, "skills de teste com campos obrigatorios do SkillLib e categoria existente");
+            check(priceShown, "descricao de cada skill mostra o custo real do bloco tupinicraft e a compra pelo clique");
             check(kinds.size()==4 && kinds.values().stream().allMatch(n -> n == 1), "uma skill de teste por categoria: " + kinds);
         } catch (java.io.IOException e) {
             check(false, "ler datapack de skills: " + e);

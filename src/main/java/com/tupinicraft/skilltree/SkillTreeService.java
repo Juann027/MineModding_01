@@ -5,6 +5,7 @@ import com.tupinicraft.config.ServerSettings;
 import com.tupinicraft.economy.Money;
 import com.tupinicraft.economy.WalletService;
 import com.tupinicraft.mandate.MandateService;
+import com.tupinicraft.network.SkillNoticePayload;
 import com.tupinicraft.player.OfficeProgress;
 import com.tupinicraft.player.PoliticalData;
 import com.tupinicraft.player.PoliticalDataService;
@@ -16,6 +17,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -26,7 +28,8 @@ import java.util.Optional;
  * suspensão/restauração automática dos efeitos conforme os requisitos (região, partido, mandato).
  */
 public final class SkillTreeService {
-    private static final int TICKS_PER_SECOND = ServerSettings.TICKS_PER_SECOND;
+    /** Frequência da checagem de requisitos (4x por segundo): um efeito sem requisito some em até 0,25 s. */
+    private static final int ENFORCE_INTERVAL_TICKS = ServerSettings.TICKS_PER_SECOND / 4;
 
     private SkillTreeService() {
     }
@@ -104,7 +107,38 @@ public final class SkillTreeService {
             }
         }
         TupiniCraft.LOGGER.info("{} comprou a skill {}", player.getGameProfile().getName(), skillId);
-        return Outcome.ok("Habilidade desbloqueada: " + skillId + " (" + cost(rule) + "). Abra o painel do SkillLib (tecla K) para ativá-la.");
+        return Outcome.ok("Habilidade desbloqueada: " + skillId + " (" + cost(rule) + "). Ligue e desligue no painel do SkillLib (tecla K).");
+    }
+
+    /**
+     * Compra pedida pelo painel do SkillLib (clique numa skill bloqueada): compra, já ativa se couber e
+     * responde com uma notificação na tela.
+     */
+    public static void purchaseFromPanel(ServerPlayer player, ResourceLocation skillId) {
+        String id = skillId.toString();
+        Outcome outcome = purchase(player, id);
+        if (!outcome.success()) {
+            notify(player, false, "Não foi possível comprar", outcome.message());
+            return;
+        }
+        SkillBackend backend = SkillBackends.get();
+        String price = SkillRules.get(id).map(SkillTreeService::cost).orElse("");
+        if (backend.canActivateMore(player)) {
+            backend.setActive(player, skillId, true);
+            notify(player, true, "Habilidade comprada e ativada", Component.literal(skillName(id) + " — " + price));
+        } else {
+            notify(player, true, "Habilidade comprada", Component.literal(skillName(id)
+                    + " — limite de skills ativas atingido; desative outra para ativá-la."));
+        }
+    }
+
+    private static String skillName(String skillId) {
+        return SkillBackends.get().displayName(ResourceLocation.parse(skillId));
+    }
+
+    private static void notify(ServerPlayer player, boolean success, String title, Component message) {
+        PacketDistributor.sendToPlayer(player, new SkillNoticePayload(success,
+                Component.literal(title).withStyle(success ? ChatFormatting.GREEN : ChatFormatting.RED), message));
     }
 
     private static boolean changeOfficePoints(ServerPlayer player, PoliticalOffice office, int delta) {
@@ -120,10 +154,10 @@ public final class SkillTreeService {
         return true;
     }
 
-    /** Uma vez por segundo: suspende efeitos sem requisito e restaura os suspensos quando o requisito volta. */
+    /** 4x por segundo: suspende efeitos sem requisito e restaura os suspensos quando o requisito volta. */
     public static void tick(MinecraftServer server) {
         SkillBackend backend = SkillBackends.get();
-        if (!backend.available() || server.getTickCount() % TICKS_PER_SECOND != 0 || SkillRules.all().isEmpty()) {
+        if (!backend.available() || server.getTickCount() % ENFORCE_INTERVAL_TICKS != 0 || SkillRules.all().isEmpty()) {
             return;
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -146,13 +180,16 @@ public final class SkillTreeService {
             if (active && !allowed) {
                 backend.setActive(player, id, false);
                 updated = updated.with(rule.skillId(), true);
-                player.sendSystemMessage(Component.literal("Habilidade suspensa: " + rule.skillId() + " ("
-                        + requirementText(rule) + "). O progresso continua salvo.").withStyle(ChatFormatting.YELLOW));
+                Component reason = Component.literal(skillName(rule.skillId()) + ": " + requirementText(rule)
+                        + ". O progresso continua salvo.");
+                player.sendSystemMessage(Component.literal("Habilidade suspensa — ").append(reason).withStyle(ChatFormatting.YELLOW));
+                notify(player, false, "Habilidade suspensa", reason);
             } else if (suspended && allowed) {
                 if (!active && backend.canActivateMore(player)) {
                     backend.setActive(player, id, true);
                     player.sendSystemMessage(Component.literal("Habilidade restaurada: " + rule.skillId() + ".")
                             .withStyle(ChatFormatting.GREEN));
+                    notify(player, true, "Habilidade restaurada", Component.literal(skillName(rule.skillId())));
                 }
                 updated = updated.with(rule.skillId(), false);
             }
@@ -181,7 +218,7 @@ public final class SkillTreeService {
     private static String describe(SkillGate.Problem problem, SkillRule rule, SkillPlayerContext context) {
         return switch (problem) {
             case WRONG_REGION -> "Esta habilidade é da região " + rule.region().orElseThrow().displayName()
-                    + "; sua origem é de " + context.macroregion().map(r -> r.displayName()).orElse("lugar nenhum") + ".";
+                    + "; sua origem é da região " + context.macroregion().map(r -> r.displayName()).orElse("nenhuma") + ".";
             case NOT_IN_PARTY -> "Esta habilidade é do partido " + rule.party().orElseThrow() + "; você "
                     + context.party().map(p -> "é filiado a " + p).orElse("não é filiado a nenhum partido") + ".";
             case INSUFFICIENT_XP -> "XP político insuficiente: você tem " + context.politicalXp() + ", precisa de "
@@ -192,6 +229,14 @@ public final class SkillTreeService {
                     + " insuficientes: você tem " + context.pointsOf(rule.office().orElseThrow()) + ", custa "
                     + rule.officePointCost() + " (ganhos exercendo o mandato online).";
         };
+    }
+
+    /**
+     * Ao renascer: o SkillLib 1.4.0 sincroniza durante a clonagem do jogador, antes do cliente trocar de
+     * entidade, e o painel passa a mostrar as skills compradas como bloqueadas. Reenviamos depois do respawn.
+     */
+    public static void onRespawn(ServerPlayer player) {
+        SkillBackends.get().resync(player);
     }
 
     /** Usado no perfil e na lista; true se o SkillLib está ativo neste servidor. */

@@ -1,6 +1,6 @@
 {
   "name": "Jeitinho Brasileiro (teste)",
-  "comment": "§7Pessoal (teste): +10% de velocidade.\n§eCusto: R$ 500\n§fComprar: /brasil skills comprar tupinicraft:pessoal_jeitinho",
+  "comment": "§7Pessoal (teste): +10% de velocidade.\n§eCusto: R$ 500\n§aClique no ícone para comprar.",
   "type": "passive",
   "category": "tupinicraft:pessoais",
   "icon": "minecraft:feather",

@@ -33,17 +33,19 @@ Regras:
 |---|---|---|---|---|
 | GeckoLib 4 | 4.9.3 | `software.bernie.geckolib:geckolib-neoforge-1.21.1` | `https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/` | **obrigatória** no cliente e no servidor |
 | SmartBrainLib | 1.16.11 | `net.tslat.smartbrainlib:SmartBrainLib-neoforge-1.21.1` | `https://dl.cloudsmith.io/public/tslat/sbl/maven/` | **obrigatória** no cliente e no servidor |
-| SkillLib (Yvliux) | 1.4.0 | `maven.modrinth:skilllib` | `https://api.modrinth.com/maven` (Maven oficial do Modrinth) | **opcional** (ver bloqueio abaixo) |
+| SkillLib (Yvliux) | 1.4.0 | `maven.modrinth:skilllib` | `https://api.modrinth.com/maven` (Maven oficial do Modrinth) | **obrigatória** no cliente e no servidor |
+| KubeJS | 2101.7.2-build.381 | `maven.modrinth:kubejs` | Maven do Modrinth | **obrigatória** (só porque o SkillLib 1.4.0 exige; ver abaixo) |
+| Rhino | 2101.2.8-build.91+Rhino-1.21 | `maven.modrinth:rhino` | Maven do Modrinth | **obrigatória** (dependência do KubeJS) |
 
-- Versões ficam em `gradle.properties`; `neoforge.mods.toml` declara as dependências (GeckoLib `[4.9.3,5)`,
-  SmartBrainLib `[1.16.11,)` obrigatórias; SkillLib `[1.4.0,)` opcional). Não use GeckoLib 5 (é para 1.21.4+).
-- **Bloqueio do SkillLib 1.4.0:** o jar publicado (único disponível; o GitHub só tem o código 1.3.6, sem releases)
-  quebra ao iniciar sem KubeJS (`NoClassDefFoundError: dev/latvian/mods/kubejs/event/KubeEvent`): o
-  `SkillLib.onServerStarting` chama a API do KubeJS direto, e o `isLoaded("kubejs")` não evita a verificação da
-  classe pela JVM. Por isso o SkillLib é **opcional** e o código dele é `compileOnly`. Para usá-lo hoje é
-  preciso instalar também KubeJS `2101.7.2-build.381`, Rhino `2101.2.8-build.91+Rhino-1.21` e Better Advanced
-  Tooltips `2101.1.0-build.5` (todos no Modrinth). No desenvolvimento: `./gradlew runServer -PwithSkillLib`
-  (ou `runClient`) adiciona os quatro só no ambiente local (`localRuntime`), sem ir para o jar do mod.
+- Versões ficam em `gradle.properties`; `neoforge.mods.toml` declara todas como obrigatórias (GeckoLib `[4.9.3,5)`,
+  SmartBrainLib `[1.16.11,)`, SkillLib `[1.4.0,1.5)`, KubeJS `[2101.7.2-build.381,)`, Rhino `[2101.2.8-build.91,)`;
+  a versão do mod Rhino não tem o sufixo `+Rhino-1.21` do Maven). Não use GeckoLib 5 (é para 1.21.4+).
+- **SkillLib 1.4.0 exige KubeJS:** o jar publicado (único disponível; o GitHub só tem o código 1.3.6, sem releases)
+  quebra ao iniciar sem KubeJS (`NoClassDefFoundError: dev/latvian/mods/kubejs/event/KubeEvent`), pois
+  `SkillLib.onServerStarting` chama a API do KubeJS direto. Por decisão do dono do repositório, SkillLib, KubeJS e
+  Rhino são **obrigatórios** para os jogadores. O KubeJS já embute o Better Advanced Tooltips (jar-in-jar). No
+  Gradle: SkillLib é `implementation`; KubeJS e Rhino são `localRuntime` (só para `runClient`/`runServer`; o código
+  do TupiniCraft não os usa). O `SkillBackend.NONE` continua como proteção, mas o mod não carrega sem o SkillLib.
 - Nunca copie classes das bibliotecas para dentro do mod; use só as APIs públicas.
 
 ## Stack e limites
@@ -65,8 +67,8 @@ Regras:
 ```
 
 O CI (`.github/workflows/build.yml`) roda `./gradlew build` e depois
-`.github/scripts/server-smoke-test.sh`, que sobe o servidor dedicado duas vezes e verifica
-carregamento sem classes de cliente e persistência de uma eleição ativa após reinício.
+`.github/scripts/server-smoke-test.sh`, que sobe o servidor dedicado duas vezes (com todas as bibliotecas) e verifica
+carregamento sem classes de cliente, das skills e persistência de uma eleição ativa após reinício.
 
 > Em sessões de nuvem do Claude Code o `maven.neoforged.net` e os servidores da Mojang podem estar
 > bloqueados pela política de rede; nesse caso valide a compilação pelo CI do GitHub.
@@ -96,7 +98,7 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
 | `command` | Brigadier (`/brasil ...`) registrado em `RegisterCommandsEvent`. |
 | `registry` | `DeferredRegister` de itens, entidades e attachment types. |
 | `skilltree` | Lado TupiniCraft das árvores: `SkillRule`/`SkillRuleParser`/`SkillGate` (puros), `SkillRules` (lê o bloco `"tupinicraft"` dos JSON de skill), `SkillBackend` (fronteira com a biblioteca), `SkillTreeService` (compra e suspensão), `SkillTreeState`. |
-| `compat.skilllib` | `SkillLibBackend`: único lugar que importa `cn.skilllib.*`; só carregado se o SkillLib estiver instalado. |
+| `compat.skilllib` | `SkillLibBackend`: único lugar do servidor que importa `cn.skilllib.*`. No cliente, só `client.compat.SkillPanelPurchaseHook`. |
 | `economy` | `Wallet` (saldo em reais fictícios por jogador), `WalletService` (único ponto de débito/crédito), `Money` (formato `R$ 4.500`). |
 | `party` | `PartyAffiliation` (filiação; hoje só por comando de teste). |
 | `entity` | Entidades (lógica de servidor). Hoje só o mob de teste `CaboEleitoralEntity` (GeckoLib + SmartBrainLib). |
@@ -165,19 +167,32 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
   - Donos dos dados: **SkillLib** = definição, interface, desbloqueio, ativação, nível e sincronização dessas
     informações (attachment dele). **TupiniCraft** = dinheiro, filiação, mandato, pontos por cargo, custo e a
     decisão de quem pode comprar e manter cada efeito. Não duplique o estado de desbloqueio.
-  - Compra só pelo servidor (`/brasil skills comprar`), que valida, cobra e chama `SkillLibAPI.unlockSkill`.
+  - **Compra pelo painel do SkillLib (tecla K):** clicar numa skill bloqueada do namespace `tupinicraft` envia
+    `SkillPurchaseRequestPayload` (cliente → servidor; `client.compat.SkillPanelPurchaseHook`, via
+    `ScreenEvent.MouseButtonPressed.Pre`). O SkillLib 1.4.0 ignora cliques em skills bloqueadas e não tem API para
+    isso; o gancho lê o campo privado `hoveredSkill` da `SkillScreen` por reflexão (sem copiar classes) e se desliga
+    sozinho, com aviso no log, se o campo mudar. Por isso a faixa do SkillLib é `[1.4.0,1.5)`: ao subir de versão,
+    teste o clique. O servidor (`SkillTreeService.purchaseFromPanel`) valida, cobra, chama `SkillLibAPI.unlockSkill`,
+    já ativa a skill e responde com `SkillNoticePayload` (toast, visível por cima do painel). `/brasil skills comprar`
+    continua como alternativa.
+  - A descrição (`comment`) de cada skill mostra `Custo: <preço>` igual ao bloco `"tupinicraft"` e
+    "Clique no ícone para comprar." (validado pelo `rulesTest`).
     Skills pessoais, regionais e partidárias custam dinheiro; as de cargo custam pontos **daquele cargo**
     (`OfficeProgress.skillPoints`). XP político pode ser exigido, mas **nunca é consumido**.
-  - A cada segundo o `SkillTreeService` desativa efeitos cujo requisito deixou de valer (região, partido,
-    mandato vigente) e os religa quando o requisito volta (`SkillTreeState.suspended`). O progresso nunca é apagado.
-  - Limitações do SkillLib 1.4.0: a interface só liga/desliga skills já desbloqueadas (não compra); não há
+  - Quatro vezes por segundo o `SkillTreeService` desativa efeitos cujo requisito deixou de valer (região, partido,
+    mandato vigente) e os religa quando o requisito volta (`SkillTreeState.suspended`), avisando por toast. O progresso
+    nunca é apagado. Ao renascer, o servidor reenvia os dados do SkillLib (`SkillTreeService.onRespawn`): o SkillLib
+    sincroniza durante a clonagem e o painel mostraria as skills compradas como bloqueadas.
+  - Limitações do SkillLib 1.4.0: a interface só liga/desliga skills já desbloqueadas (a compra é o gancho acima); não há
     eventos para vetar a ativação nem para esconder categorias por jogador (todas aparecem; o bloqueio é no
     servidor); não há moedas nem custos nativos; o README cita operações antigas: em `skilllib:attribute_modifier`
     use `add_value`, `add_multiplied_base` ou `add_multiplied_total`. Mantenha `resetOnDeath=false` no
     `skilllib-server.toml`, senão o SkillLib apaga as skills na morte. Atributos 1.21.1: `minecraft:generic.*`.
 - **Economia (contrato, ainda sem fontes de renda):** a única moeda é `Wallet` (attachment, por UUID, copiado na
   morte, alterado só por `WalletService`). Skills e a futura economia (Pix fictício etc.) devem usar só ela.
-  Hoje o saldo só muda por `/brasil admin teste dinheiro`.
+  Cada jogador recebe `economia.saldo_inicial` (padrão R$ 1.000) uma única vez no login (`Wallet.starterGranted`;
+  carteiras da v0.3.0 recebem na próxima entrada). Fora isso, o saldo só muda por compras e por
+  `/brasil admin teste dinheiro`. O saldo vai ao HUD por `WalletSyncPayload` a cada mudança e no login.
 - **Partidos (ainda não existem):** `PartyAffiliation` guarda a filiação; só `/brasil admin teste partido` a altera.
   Perder mandato não mexe na filiação; sair do partido só suspende as skills partidárias.
 - **Mobs (GeckoLib + SmartBrainLib):**
@@ -197,7 +212,7 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
   bosses e missões.
 - **Como adicionar uma skill:** crie `data/tupinicraft/skilllib/skills/<id>.json` no formato do SkillLib, com
   `category` numa subcategoria existente e o bloco `"tupinicraft"`; rode `./gradlew build` (o `rulesTest` valida os
-  arquivos) e teste com `-PwithSkillLib`.
+  arquivos) e teste o clique de compra no painel com `runClient` + `runServer`.
 - **Como adicionar um mob:** registre o `EntityType` em `ModEntities` (+ atributos), crie a classe em `entity`, os três
   recursos GeckoLib e o renderer em `client.render` (registrado em `TupiniCraftClient`).
 
@@ -211,5 +226,5 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
   para validar a compatibilidade dos dados salvos (ex.: NBT da v0.1.0 via `PoliticalData.CODEC`).
 - O teste de fumaça do CI cobre: override persistente após reinício, reset para o TOML, rejeição de valores
   inválidos, aldeões completando disputas, prazo congelado de eleição ativa, consulta de mandatos, mob de teste
-  invocado no servidor dedicado e, numa terceira inicialização com `-PwithSkillLib`, o carregamento das skills.
+  invocado no servidor dedicado e o carregamento das 4 skills pelo SkillLib (presente em todas as inicializações).
 - Fluxos multiplayer (candidatura, urna, HUD) exigem teste manual com 2+ clientes (`runClient` + servidor).
