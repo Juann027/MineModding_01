@@ -1,0 +1,62 @@
+name: Release
+
+# Publica uma Release no GitHub com o jar do mod quando a versão (mod_version em
+# gradle.properties) ainda não tem release. Para lançar uma nova versão: aumente
+# mod_version e faça merge na main (ou envie uma tag v<versão>).
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ler versão
+        id: version
+        run: |
+          VERSION=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
+          TAG="v$VERSION"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$TAG" ]; then
+            echo "::error::A tag $GITHUB_REF_NAME não bate com mod_version=$VERSION"
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release $TAG já existe; nada a fazer."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup JDK 21
+        if: steps.version.outputs.exists == 'false'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        if: steps.version.outputs.exists == 'false'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build com Gradle
+        if: steps.version.outputs.exists == 'false'
+        run: ./gradlew build
+
+      - name: Criar Release
+        if: steps.version.outputs.exists == 'false'
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" build/libs/*.jar \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "TupiniCraft ${{ steps.version.outputs.tag }} (Minecraft 1.21.1 / NeoForge)" \
+            --notes-file .github/release-notes.md
