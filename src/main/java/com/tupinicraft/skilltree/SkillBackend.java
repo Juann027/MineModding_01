@@ -16,6 +16,11 @@ public interface SkillBackend {
 
     boolean skillExists(ResourceLocation skillId);
 
+    /** Nome de exibição definido no JSON da skill (ou o caminho do id, se não houver). */
+    default String displayName(ResourceLocation skillId) {
+        return skillId.getPath();
+    }
+
     List<ResourceLocation> prerequisites(ResourceLocation skillId);
 
     boolean isUnlocked(ServerPlayer player, ResourceLocation skillId);
@@ -27,6 +32,10 @@ public interface SkillBackend {
 
     /** Ativa/desativa (removendo os efeitos ao desativar) e sincroniza com o cliente. */
     void setActive(ServerPlayer player, ResourceLocation skillId, boolean active);
+
+    /** Reenvia ao cliente os dados de skill do jogador (o painel do SkillLib fica desatualizado após renascer). */
+    default void resync(ServerPlayer player) {
+    }
 
     /** Ainda cabe mais uma skill ativa (limite do SkillLib)? */
     boolean canActivateMore(ServerPlayer player);

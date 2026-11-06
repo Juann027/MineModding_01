@@ -2,6 +2,7 @@ package com.tupinicraft.network;
 
 import com.tupinicraft.client.ClientPayloadHandler;
 import com.tupinicraft.election.ElectionManager;
+import com.tupinicraft.skilltree.SkillTreeService;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -29,8 +30,20 @@ public final class ModNetwork {
                 (payload, context) -> ClientPayloadHandler.handleAnnouncement(payload));
         registrar.playToClient(OpenUrnaPayload.TYPE, OpenUrnaPayload.STREAM_CODEC,
                 (payload, context) -> ClientPayloadHandler.handleOpenUrna());
+        registrar.playToClient(WalletSyncPayload.TYPE, WalletSyncPayload.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandler.handleWallet(payload));
+        registrar.playToClient(SkillNoticePayload.TYPE, SkillNoticePayload.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandler.handleSkillNotice(payload));
 
         registrar.playToServer(CastVotePayload.TYPE, CastVotePayload.STREAM_CODEC, ModNetwork::handleCastVote);
+        registrar.playToServer(SkillPurchaseRequestPayload.TYPE, SkillPurchaseRequestPayload.STREAM_CODEC,
+                ModNetwork::handleSkillPurchase);
+    }
+
+    private static void handleSkillPurchase(SkillPurchaseRequestPayload payload, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player) {
+            SkillTreeService.purchaseFromPanel(player, payload.skillId());
+        }
     }
 
     private static void handleCastVote(CastVotePayload payload, IPayloadContext context) {

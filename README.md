@@ -9,13 +9,18 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
    (arquivo `tupinicraft-<versão>.jar` em *Assets*), ou compile você mesmo com `./gradlew build`
    (Windows: `gradlew.bat build`) → o jar sai em `build/libs/`.
 2. **Instale o NeoForge 21.1.x para Minecraft 1.21.1**: baixe o instalador em <https://neoforged.net>, execute e escolha "Install client".
-   Baixe também as bibliotecas **obrigatórias** (coloque na mesma pasta `mods`):
-   - **GeckoLib 4.9.3** para NeoForge 1.21.1 (Modrinth ou CurseForge, "GeckoLib");
-   - **SmartBrainLib 1.16.11** para NeoForge 1.21.1 (Modrinth ou CurseForge, "SmartBrainLib").
+   Baixe também os 5 mods **obrigatórios**, todos para NeoForge 1.21.1 (coloque na mesma pasta `mods`).
+   Estão no Modrinth (links abaixo) e também podem ser procurados pelo nome no CurseForge:
 
-   **Opcional (árvores de habilidades):** SkillLib 1.4.0. Hoje ele só funciona com **KubeJS 2101.7.2**, **Rhino 2101.2.8**
-   e **Better Advanced Tooltips 2101.1.0** instalados também (limitação do próprio SkillLib). Sem eles o mod
-   funciona normalmente, só sem as árvores.
+   | Mod | Versão | Para quê | Download |
+   |---|---|---|---|
+   | GeckoLib | 4.9.3 | animações dos mobs | <https://modrinth.com/mod/geckolib> |
+   | SmartBrainLib | 1.16.11 | IA dos mobs | <https://modrinth.com/mod/smartbrainlib> |
+   | SkillLib | 1.4.0 | árvores de habilidades (tecla **K**) | <https://modrinth.com/mod/skilllib> |
+   | KubeJS | 2101.7.2 | exigido pelo SkillLib | <https://modrinth.com/mod/kubejs> |
+   | Rhino | 2101.2.8 | exigido pelo KubeJS | <https://modrinth.com/mod/rhino> |
+
+   Se faltar algum, o jogo mostra na tela de carregamento qual é.
 3. Abra o launcher do Minecraft uma vez com o perfil **NeoForge** (isso cria a pasta `mods`).
 4. Copie o jar para a pasta `mods`:
    - Windows: `%APPDATA%\.minecraft\mods`
@@ -26,7 +31,7 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
 ### Multiplayer
 
 - O **servidor** precisa de NeoForge 21.1.x (use o mesmo instalador com "Install server") e dos mesmos jars em `mods/`
-  (TupiniCraft, GeckoLib e SmartBrainLib; e, se quiser as árvores, o SkillLib com o KubeJS e suas dependências).
+  (TupiniCraft e os 5 mods obrigatórios acima).
 - **Todos os jogadores** precisam dos mesmos mods no cliente.
 - Comandos de administração (`/brasil admin ...`) exigem OP nível 2 (`/op <jogador>` no console).
 - Configurações padrão: `config/tupinicraft-server.toml` do servidor. Administradores podem mudar valores no
@@ -42,8 +47,7 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
 | `/brasil eleicao status` | Fase, cargos em disputa, candidatos e tempo restante |
 | `/brasil eleicao candidatar [cargo]` | Inscreve você numa disputa do seu domicílio eleitoral (basta ter o XP político mínimo) |
 | `/brasil eleicao votar <candidato>` | Vota (ou use a Urna Eletrônica com o botão direito) |
-| `/brasil skills` | Árvores de habilidades: saldo, partido, mandato e o estado de cada skill (painel do SkillLib: tecla **K**) |
-| `/brasil skills comprar <skill>` | Compra uma skill (dinheiro, ou pontos do cargo nas skills de cargo) |
+| `/brasil skills` | (Opcional) lista as skills no chat; o normal é usar o painel da tecla **K** |
 | `/brasil mandatos [território]` | Mandatos vigentes, ou todas as cadeiras de um território (ex.: `es`, `vitoria`) |
 | `/brasil admin eleicao iniciar <cargo> [território] [cargo2 território2]` | Inicia uma eleição (ex.: `prefeito vitoria`) |
 | `/brasil admin eleicao avancar` / `cancelar` | Pula para a próxima fase / cancela |
@@ -71,20 +75,27 @@ Cargos: `desempregado`, `vereador`, `deputado_estadual`, `prefeito`, `deputado_f
   mas mantém o XP, a popularidade e os pontos de habilidade daquele cargo. Eles voltam a valer se você reassumir o cargo.
 - Cada jogador ocupa **uma cadeira por vez**. Ao vencer outra eleição, você renuncia à cadeira anterior.
 
-### Árvores de habilidades (com SkillLib)
+### Árvores de habilidades (tecla K)
 
-Quatro árvores, todas no painel do SkillLib (tecla **K**):
+Aperte **K** para abrir o painel do SkillLib. Quatro árvores:
 - **Pessoais:** para todos.
 - **Regionais:** uma por macrorregião; vale a da sua origem.
 - **Partidárias:** do partido em que você está filiado.
 - **Cargos políticos:** uma por cargo.
 
 Como funcionam:
-- **Compra:** com `/brasil skills comprar`. As pessoais, regionais e partidárias custam **dinheiro** (reais fictícios); as de cargo custam **pontos daquele cargo**, ganhos exercendo o mandato online. O XP político pode ser exigido, mas nunca é gasto.
-- **Ativação:** depois de comprar, ligue a skill clicando nela no painel.
+- **Compra:** passe o mouse na skill para ver o preço e **clique nela**. Ela é comprada e já ativada; uma
+  notificação no canto da tela confirma ou explica o motivo da recusa. As pessoais, regionais e partidárias custam
+  **dinheiro** (reais fictícios); as de cargo custam **pontos daquele cargo**, ganhos exercendo o mandato online.
+  O XP político pode ser exigido, mas nunca é gasto.
+- **Saldo:** aparece no painel do canto superior direito. Cada jogador começa com **R$ 1.000** (configurável em
+  `economia.saldo_inicial`).
+- **Ligar/desligar:** depois de comprada, clicar de novo liga e desliga a skill, sem pagar de novo.
 - **Suspensão:** se você deixar o partido, perder o mandato ou não for daquela região, a skill **fica suspensa** e volta a funcionar sozinha quando o requisito voltar. Nada do que foi comprado é perdido.
 
-Nesta versão existem 4 skills de teste, uma por árvore. A economia e os partidos ainda não existem, então saldo e filiação são definidos por comandos de teste dos administradores.
+Nesta versão existem 4 skills de teste, uma por árvore. Ainda não há como ganhar dinheiro nem entrar em partidos
+(isso vem com a economia e os partidos); por enquanto, além do saldo inicial, só os administradores mudam saldo e
+filiação, com os comandos de teste.
 
 ### Mob de teste
 
@@ -112,7 +123,6 @@ o workflow **Release** compila e publica o jar automaticamente (se a versão ain
 ./gradlew runServer   # servidor de desenvolvimento
 ```
 
-Para testar com as árvores de habilidades: `./gradlew runClient -PwithSkillLib` (adiciona SkillLib e KubeJS só no
-ambiente de desenvolvimento).
+O Gradle baixa todas as bibliotecas sozinho (SkillLib, KubeJS e Rhino pelo Maven do Modrinth).
 
 Convenções técnicas em [CLAUDE.md](CLAUDE.md).

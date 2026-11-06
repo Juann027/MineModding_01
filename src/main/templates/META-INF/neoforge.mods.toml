@@ -40,11 +40,29 @@ TupiniCraft: um mod brasileiro de sátira política. Origens regionais, cargos p
     ordering="AFTER"
     side="BOTH"
 
-# SkillLib é opcional: sem ele o TupiniCraft funciona e as árvores de habilidades ficam desligadas.
-# Atenção: o SkillLib 1.4.0 precisa do KubeJS instalado para iniciar (bug do próprio SkillLib).
+# SkillLib: árvores de habilidades (painel na tecla K). Faixa fechada porque a compra pelo painel depende
+# de um detalhe da tela do SkillLib 1.4.x.
 [[dependencies.${mod_id}]]
     modId="skilllib"
-    type="optional"
-    versionRange="[${skilllib_version},)"
+    type="required"
+    versionRange="[${skilllib_version},1.5)"
     ordering="AFTER"
+    side="BOTH"
+
+# KubeJS e Rhino: o TupiniCraft não usa, mas o SkillLib 1.4.0 não inicia sem eles (bug do próprio SkillLib).
+# Declarados aqui para o jogo listar tudo o que falta de uma vez, em vez de travar com NoClassDefFoundError.
+[[dependencies.${mod_id}]]
+    modId="kubejs"
+    type="required"
+    reason="O SkillLib 1.4.0 precisa do KubeJS para iniciar."
+    versionRange="[${kubejs_version},)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="rhino"
+    type="required"
+    reason="Dependência do KubeJS (exigido pelo SkillLib 1.4.0)."
+    versionRange="[2101.2.8-build.91,)"
+    ordering="NONE"
     side="BOTH"

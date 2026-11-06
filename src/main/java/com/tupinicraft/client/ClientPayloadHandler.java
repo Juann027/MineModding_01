@@ -3,6 +3,8 @@ package com.tupinicraft.client;
 import com.tupinicraft.network.AnnouncementPayload;
 import com.tupinicraft.network.ElectionSyncPayload;
 import com.tupinicraft.network.PoliticalDataSyncPayload;
+import com.tupinicraft.network.SkillNoticePayload;
+import com.tupinicraft.network.WalletSyncPayload;
 import net.minecraft.client.Minecraft;
 
 /**
@@ -23,6 +25,14 @@ public final class ClientPayloadHandler {
 
     public static void handleAnnouncement(AnnouncementPayload payload) {
         AnnouncementOverlay.push(payload.message());
+    }
+
+    public static void handleWallet(WalletSyncPayload payload) {
+        ClientPoliticalCache.setBalance(payload.balance());
+    }
+
+    public static void handleSkillNotice(SkillNoticePayload payload) {
+        SkillNoticeToast.show(payload);
     }
 
     public static void handleOpenUrna() {

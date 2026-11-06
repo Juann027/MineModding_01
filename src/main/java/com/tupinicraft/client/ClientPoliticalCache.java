@@ -9,6 +9,7 @@ import com.tupinicraft.player.PoliticalData;
  */
 public final class ClientPoliticalCache {
     private static PoliticalDataSyncPayload state;
+    private static long balance = -1;
 
     private ClientPoliticalCache() {
     }
@@ -27,11 +28,21 @@ public final class ClientPoliticalCache {
         return state == null ? -1 : state.nextOfficeMinXp();
     }
 
+    /** Saldo da carteira recebido do servidor, ou -1 se ainda não chegou. */
+    public static long balance() {
+        return balance;
+    }
+
+    static void setBalance(long value) {
+        balance = value;
+    }
+
     static void set(PoliticalDataSyncPayload payload) {
         state = payload;
     }
 
     static void clear() {
         state = null;
+        balance = -1;
     }
 }

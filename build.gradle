@@ -144,16 +144,13 @@ dependencies {
     // Mods obrigatórios no cliente E no servidor (declarados também em neoforge.mods.toml).
     implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
     implementation "net.tslat.smartbrainlib:SmartBrainLib-neoforge-${minecraft_version}:${smartbrainlib_version}"
-    // SkillLib: o código do TupiniCraft compila contra a API pública, mas o mod é OPCIONAL em runtime.
-    // O jar 1.4.0 quebra ao iniciar sem KubeJS (bug do SkillLib), então não é imposto aos jogadores.
-    compileOnly "maven.modrinth:skilllib:${skilllib_version}"
-    // Modo de teste com as árvores de habilidades: ./gradlew runServer -PwithSkillLib (ou runClient).
-    if (project.hasProperty('withSkillLib')) {
-        localRuntime "maven.modrinth:skilllib:${skilllib_version}"
-        localRuntime "maven.modrinth:kubejs:${kubejs_version}"
-        localRuntime "maven.modrinth:rhino:${rhino_version}"
-        localRuntime "maven.modrinth:better-advanced-tooltips:${better_advanced_tooltips_version}"
-    }
+    // SkillLib: obrigatório (árvores de habilidades). O jar 1.4.0 só inicia com o KubeJS instalado
+    // (bug do próprio SkillLib), então KubeJS e Rhino também são exigidos dos jogadores (neoforge.mods.toml).
+    implementation "maven.modrinth:skilllib:${skilllib_version}"
+    // KubeJS/Rhino não são usados pelo código do TupiniCraft: entram só no ambiente de execução local
+    // (runClient/runServer), sem virar dependência publicada.
+    localRuntime "maven.modrinth:kubejs:${kubejs_version}"
+    localRuntime "maven.modrinth:rhino:${rhino_version}"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
@@ -192,6 +189,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             geckolib_version       : geckolib_version,
             smartbrainlib_version  : smartbrainlib_version,
             skilllib_version       : skilllib_version,
+            kubejs_version         : kubejs_version,
             mod_version            : mod_version,
     ]
     inputs.properties replaceProperties

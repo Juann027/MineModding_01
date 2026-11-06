@@ -2,9 +2,13 @@ Mod brasileiro de sátira política para **Minecraft 1.21.1** com **NeoForge 21.
 
 ## Como instalar
 1. Instale o **NeoForge 21.1.x para Minecraft 1.21.1** (instalador em https://neoforged.net → "Install client").
-2. Baixe o arquivo **`tupinicraft-*.jar`** abaixo, em *Assets*, e também as bibliotecas obrigatórias
-   **GeckoLib 4.9.3** e **SmartBrainLib 1.16.11** para NeoForge 1.21.1 (Modrinth ou CurseForge).
-   Opcional, para as árvores de habilidades: **SkillLib 1.4.0** (que hoje exige KubeJS 2101.7.2, Rhino e Better Advanced Tooltips).
+2. Baixe o arquivo **`tupinicraft-*.jar`** abaixo, em *Assets*, e também os 5 mods obrigatórios para NeoForge 1.21.1
+   (Modrinth ou CurseForge):
+   - **GeckoLib 4.9.3** — https://modrinth.com/mod/geckolib
+   - **SmartBrainLib 1.16.11** — https://modrinth.com/mod/smartbrainlib
+   - **SkillLib 1.4.0** — https://modrinth.com/mod/skilllib
+   - **KubeJS 2101.7.2** (exigido pelo SkillLib) — https://modrinth.com/mod/kubejs
+   - **Rhino 2101.2.8** (exigido pelo KubeJS) — https://modrinth.com/mod/rhino
 3. Coloque os jars na pasta `mods` do Minecraft:
    - Windows: `%APPDATA%\.minecraft\mods`
    - macOS: `~/Library/Application Support/minecraft/mods`
@@ -20,7 +24,8 @@ Comandos de administração (`/brasil admin ...`) exigem OP.
 - HUD com cargo, popularidade e barra de XP político.
 - Eleições globais com inscrição, votação na **Urna Eletrônica**, peso de voto por popularidade e apuração gradual.
 - Mandatos por território (Brasil, 27 estados e 27 capitais), candidatos aldeões e configurações administrativas.
-- Árvores de habilidades (pessoais, regionais, partidárias e de cargo) via SkillLib, com 4 skills de teste.
+- Árvores de habilidades (pessoais, regionais, partidárias e de cargo) no painel do SkillLib (tecla **K**):
+  clique numa skill para comprá-la. Cada jogador começa com R$ 1.000 (saldo no HUD). 4 skills de teste.
 - Mob de teste "Cabo Eleitoral" com animações (GeckoLib) e IA (SmartBrainLib).
 - Comandos `/brasil perfil`, `/brasil skills`, `/brasil mandatos`, `/brasil eleicao ...` e `/brasil admin ...`.
 
