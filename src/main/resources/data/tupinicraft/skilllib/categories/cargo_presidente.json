@@ -1,0 +1,8 @@
+{
+  "id": "tupinicraft:cargo_presidente",
+  "name": "Presidente da República",
+  "icon": "minecraft:golden_helmet",
+  "order": 6,
+  "icon_size": 24,
+  "parent": "tupinicraft:cargos"
+}

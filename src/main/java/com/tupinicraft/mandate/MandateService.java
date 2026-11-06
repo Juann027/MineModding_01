@@ -51,6 +51,12 @@ public final class MandateService {
         return queries(server).view(key).isVacant();
     }
 
+    /** Cargo do mandato vigente do jogador (no máximo um), ou vazio. */
+    public static Optional<PoliticalOffice> activeOffice(MinecraftServer server, UUID playerId) {
+        return MandateSavedData.get(server).registry().activeSeatOf(playerId, now(server), expirationEnabled(server))
+                .map(SeatKey::office);
+    }
+
     public static Optional<UUID> lastOccupant(MinecraftServer server, SeatKey key) {
         return MandateSavedData.get(server).registry().lastOccupant(key);
     }

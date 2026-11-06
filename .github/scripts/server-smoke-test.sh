@@ -5,7 +5,9 @@
 #  2. pelo console, valida/aplica overrides de configuração, inicia uma eleição e para o servidor
 #     durante a INSCRIÇÃO, depois de mudar a duração da votação;
 #  3. sobe o servidor de novo e confirma: eleição na mesma fase, override persistido, reset para o TOML,
-#     aldeões completando a disputa, prazo da votação congelado e consulta de mandatos.
+#     aldeões completando a disputa, prazo da votação congelado e consulta de mandatos;
+#  4. sobe uma terceira vez com o SkillLib (-PwithSkillLib) e confirma o carregamento das skills de teste
+#     e o mob de teste (GeckoLib + SmartBrainLib).
 set -uo pipefail
 export LC_ALL=C.UTF-8
 
@@ -27,7 +29,7 @@ run_server() {
   local log="smoke/${name}.log"
   local fifo="smoke/${name}.fifo"
   rm -f "$fifo"; mkfifo "$fifo"
-  ./gradlew runServer --no-daemon --no-configuration-cache --console=plain < "$fifo" > "$log" 2>&1 &
+  ./gradlew runServer --no-daemon --no-configuration-cache --console=plain ${GRADLE_EXTRA:-} < "$fifo" > "$log" 2>&1 &
   local pid=$!
   exec 3>"$fifo"
 
@@ -61,6 +63,7 @@ run_server() {
 
 run_server first \
   "brasil eleicao status" \
+  "summon tupinicraft:cabo_eleitoral 0 -60 0" \
   "brasil admin config set mandato.senador 60" \
   "brasil admin config set mandato.senador 0" \
   "brasil admin config set eleicao.automaticas talvez" \
@@ -80,7 +83,21 @@ run_server second \
   "brasil mandatos brasil" \
   "brasil admin config reset eleicao.votacao_segundos"
 
+# Terceira inicialização: com o SkillLib (e o contorno do KubeJS), num mundo novo.
+rm -rf run/world
+GRADLE_EXTRA=-PwithSkillLib run_server skilllib \
+  "summon tupinicraft:cabo_eleitoral 0 -60 0" \
+  "brasil eleicao status"
+
 grep -q 'Done (' smoke/first.log || fail "primeira inicialização não concluiu"
+grep -q 'Done (' smoke/skilllib.log || fail "inicialização com SkillLib não concluiu"
+grep -qE 'SkillLib n.{1,3}o instalado' smoke/first.log || fail "sem SkillLib o TupiniCraft deveria desativar as árvores"
+grep -qE 'Summoned new' smoke/first.log || fail "mob GeckoLib/SmartBrainLib não foi invocado no servidor dedicado"
+grep -qE 'SkillLib detectado' smoke/skilllib.log || fail "SkillLib não foi detectado"
+grep -qE 'SkillLib: Loaded 4 skills' smoke/skilllib.log || fail "SkillLib não carregou as 4 skills de teste"
+grep -qE '4 regras de skill carregadas' smoke/skilllib.log || fail "regras do TupiniCraft não carregaram"
+if grep -E 'Failed to load skill' smoke/skilllib.log; then fail "SkillLib rejeitou alguma skill"; fi
+grep -qE 'Summoned new' smoke/skilllib.log || fail "mob não foi invocado com SkillLib presente"
 grep -q 'Done (' smoke/second.log || fail "segunda inicialização não concluiu"
 
 if grep -E 'NoClassDefFoundError|ClassNotFoundException|invalid dist|RuntimeDistCleaner' smoke/*.log; then

@@ -8,7 +8,11 @@ import com.tupinicraft.mandate.MandateService;
 import com.tupinicraft.network.ModNetwork;
 import com.tupinicraft.player.PlayerEventHandler;
 import com.tupinicraft.registry.ModAttachments;
+import com.tupinicraft.registry.ModEntities;
 import com.tupinicraft.registry.ModItems;
+import com.tupinicraft.skilltree.SkillBackends;
+import com.tupinicraft.skilltree.SkillRules;
+import com.tupinicraft.skilltree.SkillTreeService;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -30,6 +34,8 @@ public final class TupiniCraft {
     public TupiniCraft(IEventBus modBus, ModContainer container) {
         ModAttachments.ATTACHMENT_TYPES.register(modBus);
         ModItems.ITEMS.register(modBus);
+        ModEntities.ENTITY_TYPES.register(modBus);
+        modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(ModItems::addToCreativeTabs);
         modBus.addListener(ModNetwork::register);
 
@@ -40,11 +46,14 @@ public final class TupiniCraft {
         NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onRespawn);
         NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onChangedDimension);
         NeoForge.EVENT_BUS.addListener(TupiniCraft::onServerTick);
+        NeoForge.EVENT_BUS.addListener(SkillRules::onAddReloadListener);
+        SkillBackends.init();
     }
 
     private static void onServerTick(ServerTickEvent.Post event) {
         ElectionManager.tick(event.getServer());
         MandateService.tick(event.getServer());
+        SkillTreeService.tick(event.getServer());
     }
 
     public static ResourceLocation id(String path) {

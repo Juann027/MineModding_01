@@ -1,3 +1,5 @@
 {
-  "item.tupinicraft.urna_eletronica": "Electronic Ballot Box"
+  "item.tupinicraft.urna_eletronica": "Electronic Ballot Box",
+  "entity.tupinicraft.cabo_eleitoral": "Campaign Worker (test)",
+  "item.tupinicraft.cabo_eleitoral_spawn_egg": "Campaign Worker Spawn Egg (test)"
 }

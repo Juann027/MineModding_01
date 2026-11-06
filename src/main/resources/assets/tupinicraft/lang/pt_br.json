@@ -1,3 +1,5 @@
 {
-  "item.tupinicraft.urna_eletronica": "Urna Eletrônica"
+  "item.tupinicraft.urna_eletronica": "Urna Eletrônica",
+  "entity.tupinicraft.cabo_eleitoral": "Cabo Eleitoral (teste)",
+  "item.tupinicraft.cabo_eleitoral_spawn_egg": "Ovo de Cabo Eleitoral (teste)"
 }

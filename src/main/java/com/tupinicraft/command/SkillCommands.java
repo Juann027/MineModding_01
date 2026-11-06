@@ -1,0 +1,176 @@
+package com.tupinicraft.command;
+
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.LongArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.tupinicraft.economy.Money;
+import com.tupinicraft.economy.Wallet;
+import com.tupinicraft.economy.WalletService;
+import com.tupinicraft.party.PartyAffiliation;
+import com.tupinicraft.player.OfficeProgress;
+import com.tupinicraft.player.PoliticalData;
+import com.tupinicraft.player.PoliticalDataService;
+import com.tupinicraft.player.SkillProgression;
+import com.tupinicraft.politics.PoliticalOffice;
+import com.tupinicraft.registry.ModAttachments;
+import com.tupinicraft.skilltree.SkillBackends;
+import com.tupinicraft.skilltree.SkillGate;
+import com.tupinicraft.skilltree.SkillPlayerContext;
+import com.tupinicraft.skilltree.SkillRule;
+import com.tupinicraft.skilltree.SkillRules;
+import com.tupinicraft.skilltree.SkillTreeKind;
+import com.tupinicraft.skilltree.SkillTreeService;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * /brasil skills [comprar &lt;skill&gt;] e os comandos administrativos de TESTE
+ * (/brasil admin teste dinheiro|partido|pontos). Economia e partidos ainda não existem: esses comandos
+ * só servem para validar as árvores de habilidades.
+ */
+final class SkillCommands {
+    private static final SuggestionProvider<CommandSourceStack> SKILL_SUGGESTIONS = (context, builder) ->
+            SharedSuggestionProvider.suggest(SkillRules.all().stream().map(SkillRule::skillId), builder);
+
+    private SkillCommands() {
+    }
+
+    static LiteralArgumentBuilder<CommandSourceStack> player() {
+        return Commands.literal("skills")
+                .executes(SkillCommands::list)
+                .then(Commands.literal("comprar")
+                        .then(Commands.argument("skill", StringArgumentType.greedyString())
+                                .suggests(SKILL_SUGGESTIONS)
+                                .executes(SkillCommands::purchase)));
+    }
+
+    /** Sob /brasil admin (já exige OP). */
+    static LiteralArgumentBuilder<CommandSourceStack> adminTest() {
+        return Commands.literal("teste")
+                .then(Commands.literal("dinheiro")
+                        .then(Commands.literal("set").then(Commands.argument("jogador", EntityArgument.player())
+                                .then(Commands.argument("valor", LongArgumentType.longArg(0, Wallet.MAX_BALANCE))
+                                        .executes(context -> money(context, false)))))
+                        .then(Commands.literal("add").then(Commands.argument("jogador", EntityArgument.player())
+                                .then(Commands.argument("valor", LongArgumentType.longArg(-Wallet.MAX_BALANCE, Wallet.MAX_BALANCE))
+                                        .executes(context -> money(context, true))))))
+                .then(Commands.literal("partido")
+                        .then(Commands.literal("set").then(Commands.argument("jogador", EntityArgument.player())
+                                .then(Commands.argument("partido", StringArgumentType.word())
+                                        .executes(SkillCommands::setParty))))
+                        .then(Commands.literal("sair").then(Commands.argument("jogador", EntityArgument.player())
+                                .executes(SkillCommands::leaveParty))))
+                .then(Commands.literal("pontos")
+                        .then(Commands.literal("set").then(Commands.argument("jogador", EntityArgument.player())
+                                .then(Commands.argument("cargo", StringArgumentType.word())
+                                        .suggests(BrasilCommands.ELECTIVE_OFFICE_SUGGESTIONS)
+                                        .then(Commands.argument("quantidade", IntegerArgumentType.integer(0, PoliticalData.MAX_VALUE))
+                                                .executes(SkillCommands::setPoints))))));
+    }
+
+    private static int list(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CommandSourceStack source = context.getSource();
+        if (!SkillTreeService.enabled()) {
+            source.sendFailure(Component.literal("Árvores de habilidades desativadas: o SkillLib não está instalado neste servidor."));
+            return 0;
+        }
+        SkillPlayerContext ctx = SkillTreeService.context(player);
+        source.sendSuccess(() -> Component.literal("[SKILLS] Saldo: " + Money.format(ctx.money()) + " | Partido: "
+                + ctx.party().orElse("nenhum") + " | Mandato: " + ctx.activeOffice().map(PoliticalOffice::displayName).orElse("nenhum")
+                + " | Painel: tecla K").withStyle(ChatFormatting.AQUA), false);
+        for (SkillTreeKind kind : SkillTreeKind.values()) {
+            source.sendSuccess(() -> Component.literal(kind.displayName() + ":").withStyle(ChatFormatting.GOLD), false);
+            SkillRules.all().stream().filter(rule -> rule.kind() == kind).forEach(rule -> {
+                ResourceLocation id = ResourceLocation.parse(rule.skillId());
+                boolean unlocked = SkillBackends.get().isUnlocked(player, id);
+                boolean active = SkillBackends.get().isActive(player, id);
+                boolean allowed = SkillGate.effectAllowed(rule, ctx);
+                String status = !unlocked ? "bloqueada" : active ? "ativa" : allowed ? "desbloqueada (inativa)" : "suspensa";
+                source.sendSuccess(() -> Component.literal("  " + rule.skillId() + " — " + status + " — custo: "
+                        + SkillTreeService.cost(rule) + " — " + SkillTreeService.requirementText(rule))
+                        .withStyle(unlocked ? ChatFormatting.WHITE : ChatFormatting.GRAY), false);
+            });
+        }
+        return 1;
+    }
+
+    private static int purchase(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        SkillTreeService.Outcome outcome = SkillTreeService.purchase(player, StringArgumentType.getString(context, "skill").trim());
+        if (outcome.success()) {
+            context.getSource().sendSuccess(outcome::message, false);
+            return 1;
+        }
+        context.getSource().sendFailure(outcome.message());
+        return 0;
+    }
+
+    private static int money(CommandContext<CommandSourceStack> context, boolean add) throws CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(context, "jogador");
+        long value = LongArgumentType.getLong(context, "valor");
+        long before = WalletService.balance(target);
+        long after = add ? before + value : value;
+        if (after < 0 || after > Wallet.MAX_BALANCE) {
+            context.getSource().sendFailure(Component.literal("Saldo inválido: " + after + " (de 0 a " + Wallet.MAX_BALANCE + ")."));
+            return 0;
+        }
+        WalletService.set(target, after);
+        context.getSource().sendSuccess(() -> Component.literal("[TESTE] Saldo de " + target.getGameProfile().getName() + ": "
+                + Money.format(before) + " → " + Money.format(after)).withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+
+    private static int setParty(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(context, "jogador");
+        String party = StringArgumentType.getString(context, "partido");
+        if (!PartyAffiliation.isValidId(party)) {
+            context.getSource().sendFailure(Component.literal("Id de partido inválido: use 2 a 32 letras minúsculas, números ou _."));
+            return 0;
+        }
+        target.setData(ModAttachments.PARTY, new PartyAffiliation(Optional.of(party)));
+        context.getSource().sendSuccess(() -> Component.literal("[TESTE] " + target.getGameProfile().getName()
+                + " agora é filiado(a) ao partido de teste \"" + party + "\".").withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+
+    private static int leaveParty(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(context, "jogador");
+        target.setData(ModAttachments.PARTY, PartyAffiliation.NONE);
+        context.getSource().sendSuccess(() -> Component.literal("[TESTE] " + target.getGameProfile().getName()
+                + " saiu do partido (as skills partidárias ficam salvas e inativas).").withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+
+    private static int setPoints(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(context, "jogador");
+        String officeId = StringArgumentType.getString(context, "cargo");
+        Optional<PoliticalOffice> office = PoliticalOffice.byId(officeId).filter(PoliticalOffice::isElective);
+        if (office.isEmpty()) {
+            context.getSource().sendFailure(Component.literal("Cargo desconhecido: " + officeId));
+            return 0;
+        }
+        int amount = IntegerArgumentType.getInteger(context, "quantidade");
+        PoliticalData data = PoliticalDataService.get(target);
+        Map<PoliticalOffice, OfficeProgress> progress = SkillProgression.copy(data.officeProgress());
+        OfficeProgress current = progress.getOrDefault(office.get(), OfficeProgress.EMPTY);
+        progress.put(office.get(), new OfficeProgress(amount, current.onlineSeconds()));
+        PoliticalDataService.set(target, data.withOfficeProgress(progress));
+        context.getSource().sendSuccess(() -> Component.literal("[TESTE] Pontos de " + office.get().displayName() + " de "
+                + target.getGameProfile().getName() + ": " + current.skillPoints() + " → " + amount).withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+}

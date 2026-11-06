@@ -27,7 +27,28 @@ sourceSets.main.resources {
 }
 
 repositories {
-    // Add here additional repositories if required by some of the dependencies below.
+    // GeckoLib 4 (repositório oficial do projeto, Cloudsmith)
+    maven {
+        name = 'GeckoLib'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        content { includeGroup 'software.bernie.geckolib' }
+    }
+    // SmartBrainLib (repositório oficial do Tslat, Cloudsmith)
+    maven {
+        name = 'SmartBrainLib'
+        url = 'https://dl.cloudsmith.io/public/tslat/sbl/maven/'
+        content { includeGroup 'net.tslat.smartbrainlib' }
+    }
+    // SkillLib não publica Maven próprio; o autor (Yvliux) distribui no Modrinth, que expõe um Maven oficial.
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Modrinth'
+                url = 'https://api.modrinth.com/maven'
+            }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
 }
 
 base {
@@ -120,6 +141,20 @@ configurations {
 }
 
 dependencies {
+    // Mods obrigatórios no cliente E no servidor (declarados também em neoforge.mods.toml).
+    implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+    implementation "net.tslat.smartbrainlib:SmartBrainLib-neoforge-${minecraft_version}:${smartbrainlib_version}"
+    // SkillLib: o código do TupiniCraft compila contra a API pública, mas o mod é OPCIONAL em runtime.
+    // O jar 1.4.0 quebra ao iniciar sem KubeJS (bug do SkillLib), então não é imposto aos jogadores.
+    compileOnly "maven.modrinth:skilllib:${skilllib_version}"
+    // Modo de teste com as árvores de habilidades: ./gradlew runServer -PwithSkillLib (ou runClient).
+    if (project.hasProperty('withSkillLib')) {
+        localRuntime "maven.modrinth:skilllib:${skilllib_version}"
+        localRuntime "maven.modrinth:kubejs:${kubejs_version}"
+        localRuntime "maven.modrinth:rhino:${rhino_version}"
+        localRuntime "maven.modrinth:better-advanced-tooltips:${better_advanced_tooltips_version}"
+    }
+
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
@@ -154,6 +189,9 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,
+            geckolib_version       : geckolib_version,
+            smartbrainlib_version  : smartbrainlib_version,
+            skilllib_version       : skilllib_version,
             mod_version            : mod_version,
     ]
     inputs.properties replaceProperties

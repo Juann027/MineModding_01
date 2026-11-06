@@ -73,6 +73,7 @@ public final class BrasilCommands {
                                 .then(Commands.argument("candidato", StringArgumentType.greedyString())
                                         .suggests(CANDIDATE_SUGGESTIONS)
                                         .executes(BrasilCommands::vote))))
+                .then(SkillCommands.player())
                 .then(AdminCommands.build());
         dispatcher.register(root);
     }
@@ -91,6 +92,10 @@ public final class BrasilCommands {
         source.sendSuccess(() -> line("Cargo: ", data.office().displayName()), false);
         source.sendSuccess(() -> line("XP político: ", String.valueOf(data.politicalXp())), false);
         source.sendSuccess(() -> line("Popularidade: ", String.valueOf(data.popularity())), false);
+        source.sendSuccess(() -> line("Saldo: ", com.tupinicraft.economy.Money.format(
+                com.tupinicraft.economy.WalletService.balance(player)) + " (economia ainda não implementada)"), false);
+        source.sendSuccess(() -> line("Partido: ", player.getData(com.tupinicraft.registry.ModAttachments.PARTY).partyId()
+                .map(id -> id + " (filiação de teste)").orElse("nenhum")), false);
 
         List<SeatView> mandates = MandateService.queries(server).getMandatesOf(player.getUUID());
         for (SeatView seat : mandates) {

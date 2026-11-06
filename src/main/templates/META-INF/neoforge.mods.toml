@@ -24,3 +24,27 @@ TupiniCraft: um mod brasileiro de sátira política. Origens regionais, cargos p
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+
+# Bibliotecas obrigatórias no cliente E no servidor dedicado (instale junto com o TupiniCraft).
+[[dependencies.${mod_id}]]
+    modId="geckolib"
+    type="required"
+    versionRange="[${geckolib_version},5)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="smartbrainlib"
+    type="required"
+    versionRange="[${smartbrainlib_version},)"
+    ordering="AFTER"
+    side="BOTH"
+
+# SkillLib é opcional: sem ele o TupiniCraft funciona e as árvores de habilidades ficam desligadas.
+# Atenção: o SkillLib 1.4.0 precisa do KubeJS instalado para iniciar (bug do próprio SkillLib).
+[[dependencies.${mod_id}]]
+    modId="skilllib"
+    type="optional"
+    versionRange="[${skilllib_version},)"
+    ordering="AFTER"
+    side="BOTH"

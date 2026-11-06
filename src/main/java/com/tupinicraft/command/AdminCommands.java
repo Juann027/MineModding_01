@@ -69,6 +69,7 @@ final class AdminCommands {
                         .then(Commands.literal("avancar").executes(context -> BrasilCommands.report(context.getSource(),
                                 ElectionManager.advance(context.getSource().getServer()), true))))
                 .then(ConfigCommands.build())
+                .then(SkillCommands.adminTest())
                 .then(Commands.literal("mandato")
                         .then(Commands.literal("encerrar")
                                 .then(Commands.argument("territorio", StringArgumentType.word())

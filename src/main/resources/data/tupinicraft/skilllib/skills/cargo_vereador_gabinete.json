@@ -1,0 +1,25 @@
+{
+  "name": "Gabinete do Vereador (teste)",
+  "comment": "§7Cargo - Vereador (teste): +1 de dano de ataque enquanto exercer o mandato.\n§eCusto: 1 ponto de Vereador · XP político nunca é gasto\n§fComprar: /brasil skills comprar tupinicraft:cargo_vereador_gabinete",
+  "type": "passive",
+  "category": "tupinicraft:cargo_vereador",
+  "icon": "minecraft:oak_sign",
+  "max_level": 1,
+  "x": 0,
+  "y": 0,
+  "effects": [
+    {
+      "type": "skilllib:attribute_modifier",
+      "attribute": "minecraft:generic.attack_damage",
+      "operation": "add_value",
+      "amount": 1.0,
+      "trigger": "always"
+    }
+  ],
+  "tupinicraft": {
+    "arvore": "cargo",
+    "cargo": "vereador",
+    "pontos": 1,
+    "xp_min": 0
+  }
+}

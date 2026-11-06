@@ -5,7 +5,10 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import com.tupinicraft.client.render.CaboEleitoralRenderer;
+import com.tupinicraft.registry.ModEntities;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 /** Ponto de entrada exclusivo do cliente (não é carregado no servidor dedicado). */
@@ -13,9 +16,14 @@ import net.neoforged.neoforge.common.NeoForge;
 public final class TupiniCraftClient {
     public TupiniCraftClient(IEventBus modBus) {
         modBus.addListener(PoliticalHud::registerLayers);
+        modBus.addListener(TupiniCraftClient::registerRenderers);
         NeoForge.EVENT_BUS.addListener(TupiniCraftClient::onLoggingOut);
         // Só mede a área das barras de chefe; quem desenha é a camada registrada em PoliticalHud.
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, BossBarArea::onBossEventProgress);
+    }
+
+    private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(ModEntities.CABO_ELEITORAL.get(), CaboEleitoralRenderer::new);
     }
 
     private static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {

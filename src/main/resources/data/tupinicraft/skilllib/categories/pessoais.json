@@ -1,0 +1,7 @@
+{
+  "id": "tupinicraft:pessoais",
+  "name": "Pessoais",
+  "icon": "minecraft:player_head",
+  "order": 10,
+  "icon_size": 24
+}
