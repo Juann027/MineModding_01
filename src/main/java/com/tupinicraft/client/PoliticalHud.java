@@ -21,7 +21,8 @@ import java.util.List;
 /**
  * HUD político (somente cliente), desenhado com camadas nativas do NeoForge:
  * <ul>
- *   <li>barra de XP político logo acima da barra de XP vanilla;</li>
+ *   <li>barra de XP político logo acima da barra de XP vanilla (só quando ela existe, isto é,
+ *       fora do Criativo e do Espectador);</li>
  *   <li>painel discreto no canto superior direito (cargo, popularidade, XP) e, se houver,
  *       o painel da eleição logo abaixo.</li>
  * </ul>
@@ -55,7 +56,10 @@ public final class PoliticalHud {
     private static void renderXpBar(GuiGraphics graphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
         PoliticalData data = ClientPoliticalCache.get();
-        if (data == null || minecraft.player == null || minecraft.player.isSpectator()) {
+        // Mesmo critério da barra de XP vanilla: só no Sobrevivência/Aventura. No Criativo e no
+        // Espectador a barra não é desenhada e nada é reservado em leftHeight/rightHeight.
+        if (data == null || minecraft.player == null || minecraft.gameMode == null
+                || !minecraft.gameMode.hasExperience()) {
             return;
         }
         int x = graphics.guiWidth() / 2 - XP_BAR_WIDTH / 2;
