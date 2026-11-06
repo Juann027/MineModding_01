@@ -1,0 +1,7 @@
+{
+  "id": "tupinicraft:regionais",
+  "name": "Regionais",
+  "icon": "minecraft:filled_map",
+  "order": 11,
+  "icon_size": 24
+}

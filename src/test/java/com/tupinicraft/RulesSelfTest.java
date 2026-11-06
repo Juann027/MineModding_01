@@ -9,6 +9,8 @@ import com.tupinicraft.origin.*;
 import com.tupinicraft.politics.*;
 import com.tupinicraft.territory.*;
 import java.util.*;
+import com.tupinicraft.economy.Money;
+import com.tupinicraft.skilltree.*;
 import com.tupinicraft.player.OfficeProgress;
 import com.tupinicraft.player.SkillProgression;
 
@@ -309,8 +311,129 @@ public class RulesSelfTest {
               "valores desconhecidos nao apagam o resto dos dados");
         layoutTests();
 
+        skillTreeTests();
+
         System.out.println(passed + " passed, " + failures + " failed");
         System.exit(failures == 0 ? 0 : 1);
+    }
+
+    // ---------------------------------------------------------------- árvores de habilidades (integração SkillLib)
+    static SkillPlayerContext ctx(Macroregion region, String party, PoliticalOffice activeOffice, int xp, long money, Map<PoliticalOffice, Integer> pts) {
+        return new SkillPlayerContext(Optional.ofNullable(region), Optional.ofNullable(party), Optional.ofNullable(activeOffice), xp, money, pts);
+    }
+
+    static void skillTreeTests() {
+        check(Money.format(4500).equals("R$ 4.500") && Money.format(0).equals("R$ 0") && Money.format(1234567).equals("R$ 1.234.567"),
+              "formato de dinheiro em reais ficticios (R$ 4.500)");
+
+        SkillRule pessoal = new SkillRule("tupinicraft:p", SkillTreeKind.PERSONAL, Optional.empty(), Optional.empty(), Optional.empty(), 500, 0, 0);
+        SkillRule regional = new SkillRule("tupinicraft:r", SkillTreeKind.REGIONAL, Optional.of(Macroregion.NORDESTE), Optional.empty(), Optional.empty(), 800, 0, 0);
+        SkillRule partido = new SkillRule("tupinicraft:pt", SkillTreeKind.PARTY, Optional.empty(), Optional.of("partido_teste"), Optional.empty(), 300, 0, 0);
+        SkillRule cargo = new SkillRule("tupinicraft:c", SkillTreeKind.OFFICE, Optional.empty(), Optional.empty(), Optional.of(PoliticalOffice.VEREADOR), 0, 1, 100);
+
+        // Compra
+        check(SkillGate.purchaseProblem(pessoal, ctx(null, null, null, 0, 500, Map.of())).isEmpty(), "pessoal: compra com saldo suficiente");
+        check(SkillGate.purchaseProblem(pessoal, ctx(null, null, null, 0, 499, Map.of())).orElseThrow()==SkillGate.Problem.INSUFFICIENT_MONEY, "pessoal: saldo insuficiente");
+        check(SkillGate.purchaseProblem(regional, ctx(Macroregion.SUL, null, null, 0, 9999, Map.of())).orElseThrow()==SkillGate.Problem.WRONG_REGION
+              && SkillGate.purchaseProblem(regional, ctx(Macroregion.NORDESTE, null, null, 0, 9999, Map.of())).isEmpty(), "regional: so a macrorregiao certa compra");
+        check(SkillGate.purchaseProblem(partido, ctx(null, null, null, 0, 9999, Map.of())).orElseThrow()==SkillGate.Problem.NOT_IN_PARTY
+              && SkillGate.purchaseProblem(partido, ctx(null, "outro", null, 0, 9999, Map.of())).orElseThrow()==SkillGate.Problem.NOT_IN_PARTY
+              && SkillGate.purchaseProblem(partido, ctx(null, "partido_teste", null, 0, 300, Map.of())).isEmpty(), "partidaria: exige filiacao ao partido");
+        check(SkillGate.purchaseProblem(cargo, ctx(null, null, null, 99, 0, Map.of(PoliticalOffice.VEREADOR, 5))).orElseThrow()==SkillGate.Problem.INSUFFICIENT_XP,
+              "cargo: XP minimo verificado");
+        check(SkillGate.purchaseProblem(cargo, ctx(null, null, null, 100, 999999, Map.of(PoliticalOffice.PREFEITO, 9))).orElseThrow()==SkillGate.Problem.INSUFFICIENT_OFFICE_POINTS,
+              "cargo: paga com pontos DAQUELE cargo (dinheiro e pontos de outro cargo nao servem)");
+        check(SkillGate.purchaseProblem(cargo, ctx(null, null, null, 100, 0, Map.of(PoliticalOffice.VEREADOR, 1))).isEmpty(), "cargo: compra com 1 ponto de Vereador");
+
+        // Efeitos ativos (suspensao/restauracao)
+        check(SkillGate.effectAllowed(pessoal, ctx(null, null, null, 0, 0, Map.of())), "pessoal sempre ativa");
+        check(!SkillGate.effectAllowed(partido, ctx(null, null, null, 0, 0, Map.of()))
+              && SkillGate.effectAllowed(partido, ctx(null, "partido_teste", null, 0, 0, Map.of())), "partidaria: inativa fora do partido, volta ao refiliar");
+        check(!SkillGate.effectAllowed(cargo, ctx(null, null, null, 5000, 0, Map.of()))
+              && !SkillGate.effectAllowed(cargo, ctx(null, null, PoliticalOffice.PREFEITO, 5000, 0, Map.of()))
+              && SkillGate.effectAllowed(cargo, ctx(null, null, PoliticalOffice.VEREADOR, 0, 0, Map.of())),
+              "cargo: efeito so com o mandato daquele cargo (Desempregado/outro cargo = suspenso)");
+        check(SkillGate.effectAllowed(regional, ctx(Macroregion.NORDESTE, null, null, 0, 0, Map.of()))
+              && !SkillGate.effectAllowed(regional, ctx(Macroregion.NORTE, null, null, 0, 0, Map.of())), "regional: efeito conforme a origem");
+
+        // Regras invalidas recusadas
+        boolean rejected;
+        try { new SkillRule("tupinicraft:x", SkillTreeKind.OFFICE, Optional.empty(), Optional.empty(), Optional.of(PoliticalOffice.VEREADOR), 100, 1, 0); rejected = false; }
+        catch (IllegalArgumentException e) { rejected = true; }
+        check(rejected, "skill de cargo nao pode custar dinheiro");
+        try { new SkillRule("tupinicraft:x", SkillTreeKind.REGIONAL, Optional.empty(), Optional.empty(), Optional.empty(), 1, 0, 0); rejected = false; }
+        catch (IllegalArgumentException e) { rejected = true; }
+        check(rejected, "skill regional exige regiao");
+
+        // Parser do bloco "tupinicraft"
+        com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(
+                "{\"category\":\"tupinicraft:x\",\"tupinicraft\":{\"arvore\":\"regional\",\"regiao\":\"centro_oeste\",\"custo\":1200}}").getAsJsonObject();
+        SkillRule parsed = SkillRuleParser.parse("tupinicraft:teste", json).orElseThrow();
+        check(parsed.kind()==SkillTreeKind.REGIONAL && parsed.region().orElseThrow()==Macroregion.CENTRO_OESTE && parsed.moneyCost()==1200, "parser le regiao e custo");
+        check(SkillRuleParser.parse("outro:x", com.google.gson.JsonParser.parseString("{\"category\":\"outro:c\"}").getAsJsonObject()).isEmpty(),
+              "skills sem bloco tupinicraft sao ignoradas");
+
+        // Arquivos reais do datapack: 4 categorias raiz, subcategorias e as 4 skills de teste validas
+        java.nio.file.Path base = java.nio.file.Path.of("src/main/resources/data/tupinicraft/skilllib");
+        try {
+            Set<String> categories = new HashSet<>();
+            Set<String> roots = new HashSet<>();
+            try (var files = java.nio.file.Files.list(base.resolve("categories"))) {
+                for (var file : files.toList()) {
+                    var cat = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject();
+                    categories.add(cat.get("id").getAsString());
+                    if (!cat.has("parent")) roots.add(cat.get("id").getAsString());
+                }
+            }
+            check(roots.equals(Set.of("tupinicraft:pessoais", "tupinicraft:regionais", "tupinicraft:partidarias", "tupinicraft:cargos")),
+                  "4 categorias raiz independentes: " + roots);
+            boolean allRegions = true;
+            for (Macroregion m : Macroregion.values()) allRegions &= categories.contains("tupinicraft:regional_" + m.name().toLowerCase(Locale.ROOT));
+            boolean allOffices = true;
+            for (PoliticalOffice o : PoliticalOffice.values()) if (o.isElective()) allOffices &= categories.contains("tupinicraft:cargo_" + o.id());
+            check(allRegions && allOffices, "subcategorias: 5 macrorregioes e 7 cargos");
+            Map<SkillTreeKind, Integer> kinds = new EnumMap<>(SkillTreeKind.class);
+            boolean valid = true;
+            try (var files = java.nio.file.Files.list(base.resolve("skills"))) {
+                for (var file : files.toList()) {
+                    String id = "tupinicraft:" + file.getFileName().toString().replace(".json", "");
+                    var skill = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject();
+                    valid &= skill.has("icon") && skill.has("x") && skill.has("y") && skill.has("effects")
+                            && categories.contains(skill.get("category").getAsString());
+                    // SkillLib 1.4.0 usa AttributeModifier.Operation.valueOf(...) do 1.21.1 (o README cita nomes antigos).
+                    for (var effect : skill.getAsJsonArray("effects")) {
+                        var e = effect.getAsJsonObject();
+                        if (e.get("type").getAsString().equals("skilllib:attribute_modifier")) {
+                            valid &= Set.of("add_value", "add_multiplied_base", "add_multiplied_total").contains(e.get("operation").getAsString());
+                        }
+                    }
+                    SkillRule rule = SkillRuleParser.parse(id, skill).orElseThrow();
+                    kinds.merge(rule.kind(), 1, Integer::sum);
+                }
+            }
+            check(valid, "skills de teste com campos obrigatorios do SkillLib e categoria existente");
+            check(kinds.size()==4 && kinds.values().stream().allMatch(n -> n == 1), "uma skill de teste por categoria: " + kinds);
+        } catch (java.io.IOException e) {
+            check(false, "ler datapack de skills: " + e);
+        }
+
+        // Recursos GeckoLib do mob de teste
+        java.nio.file.Path assets = java.nio.file.Path.of("src/main/resources/assets/tupinicraft");
+        try {
+            var geo = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(assets.resolve("geo/entity/cabo_eleitoral.geo.json"))).getAsJsonObject();
+            var anims = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(assets.resolve("animations/entity/cabo_eleitoral.animation.json")))
+                    .getAsJsonObject().getAsJsonObject("animations");
+            Set<String> bones = new HashSet<>();
+            geo.getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject().getAsJsonArray("bones")
+                    .forEach(b -> bones.add(b.getAsJsonObject().get("name").getAsString()));
+            boolean animBonesExist = true;
+            for (var anim : anims.entrySet()) for (var bone : anim.getValue().getAsJsonObject().getAsJsonObject("bones").keySet()) animBonesExist &= bones.contains(bone);
+            check(anims.keySet().containsAll(Set.of("animation.cabo_eleitoral.idle", "animation.cabo_eleitoral.walk", "animation.cabo_eleitoral.attack"))
+                  && animBonesExist && bones.contains("head") && java.nio.file.Files.exists(assets.resolve("textures/entity/cabo_eleitoral.png")),
+                  "GeckoLib: geo, animacoes idle/walk/attack (ossos existentes) e textura do mob de teste");
+        } catch (java.io.IOException e) {
+            check(false, "ler recursos GeckoLib: " + e);
+        }
     }
 
     // Faixa de avisos: fonte simulada de 6 px por caractere, 9 px por linha, padding 5.

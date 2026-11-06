@@ -27,13 +27,32 @@ Regras:
 - Mantenha o namespace `tupinicraft` e a compatibilidade com NeoForge 1.21.1, Java 21, servidor dedicado e
   multiplayer, além dos dados salvos de versões anteriores.
 
+## Bibliotecas de mods (versões exatas)
+
+| Mod | Versão | Coordenada Gradle | Repositório Maven | Instalação |
+|---|---|---|---|---|
+| GeckoLib 4 | 4.9.3 | `software.bernie.geckolib:geckolib-neoforge-1.21.1` | `https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/` | **obrigatória** no cliente e no servidor |
+| SmartBrainLib | 1.16.11 | `net.tslat.smartbrainlib:SmartBrainLib-neoforge-1.21.1` | `https://dl.cloudsmith.io/public/tslat/sbl/maven/` | **obrigatória** no cliente e no servidor |
+| SkillLib (Yvliux) | 1.4.0 | `maven.modrinth:skilllib` | `https://api.modrinth.com/maven` (Maven oficial do Modrinth) | **opcional** (ver bloqueio abaixo) |
+
+- Versões ficam em `gradle.properties`; `neoforge.mods.toml` declara as dependências (GeckoLib `[4.9.3,5)`,
+  SmartBrainLib `[1.16.11,)` obrigatórias; SkillLib `[1.4.0,)` opcional). Não use GeckoLib 5 (é para 1.21.4+).
+- **Bloqueio do SkillLib 1.4.0:** o jar publicado (único disponível; o GitHub só tem o código 1.3.6, sem releases)
+  quebra ao iniciar sem KubeJS (`NoClassDefFoundError: dev/latvian/mods/kubejs/event/KubeEvent`): o
+  `SkillLib.onServerStarting` chama a API do KubeJS direto, e o `isLoaded("kubejs")` não evita a verificação da
+  classe pela JVM. Por isso o SkillLib é **opcional** e o código dele é `compileOnly`. Para usá-lo hoje é
+  preciso instalar também KubeJS `2101.7.2-build.381`, Rhino `2101.2.8-build.91+Rhino-1.21` e Better Advanced
+  Tooltips `2101.1.0-build.5` (todos no Modrinth). No desenvolvimento: `./gradlew runServer -PwithSkillLib`
+  (ou `runClient`) adiciona os quatro só no ambiente local (`localRuntime`), sem ir para o jar do mod.
+- Nunca copie classes das bibliotecas para dentro do mod; use só as APIs públicas.
+
 ## Stack e limites
 
 - Minecraft `1.21.1`, NeoForge `21.1.265` (`gradle.properties`), Parchment `2024.11.17`.
 - Java 21 (toolchain no `build.gradle`). Gradle wrapper 9.2.1.
 - **Não usar** APIs/tutoriais de Forge 1.20.x, Fabric ou NeoForge 21.2+ (ex.: `RegisterClientPayloadHandlersEvent`,
   sync automático de attachments, `SavedDataType`, `ResourceKey`-based items do 1.21.2+). Confira sempre a assinatura 1.21.1.
-- **Sem dependências externas novas** (nem JUnit). Testes de regra puros rodam via `rulesTest` (JavaExec).
+- Dependências de mods: só as da seção "Bibliotecas"; nada de JUnit. Testes de regra rodam via `rulesTest` (JavaExec).
 - Multiplayer e servidor dedicado são obrigatórios.
 
 ## Comandos de build/teste
@@ -75,7 +94,12 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
 | `network` | Payloads (`CustomPacketPayload` + `StreamCodec`) e registro em `RegisterPayloadHandlersEvent`. |
 | `client` | Entrada `@Mod(dist = CLIENT)`, caches visuais, camadas de HUD, faixa de avisos, tela da urna. |
 | `command` | Brigadier (`/brasil ...`) registrado em `RegisterCommandsEvent`. |
-| `registry` | `DeferredRegister` de itens e attachment types. |
+| `registry` | `DeferredRegister` de itens, entidades e attachment types. |
+| `skilltree` | Lado TupiniCraft das árvores: `SkillRule`/`SkillRuleParser`/`SkillGate` (puros), `SkillRules` (lê o bloco `"tupinicraft"` dos JSON de skill), `SkillBackend` (fronteira com a biblioteca), `SkillTreeService` (compra e suspensão), `SkillTreeState`. |
+| `compat.skilllib` | `SkillLibBackend`: único lugar que importa `cn.skilllib.*`; só carregado se o SkillLib estiver instalado. |
+| `economy` | `Wallet` (saldo em reais fictícios por jogador), `WalletService` (único ponto de débito/crédito), `Money` (formato `R$ 4.500`). |
+| `party` | `PartyAffiliation` (filiação; hoje só por comando de teste). |
+| `entity` | Entidades (lógica de servidor). Hoje só o mob de teste `CaboEleitoralEntity` (GeckoLib + SmartBrainLib). |
 
 ## Convenções técnicas
 
@@ -131,8 +155,51 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
   (`PoliticalHud.panelBounds`) nem as barras de chefe (medidas por `BossBarArea` via
   `CustomizeGuiOverlayEvent.BossEventProgress`, sem desenhar). Painel novo no HUD → incluir em `panelBounds`.
 - **Comandos admin** ficam sob `/brasil admin` com `hasPermission(2)`. Validar entradas e retornar mensagens claras.
+- **Árvores de habilidades (SkillLib):**
+  - Quatro categorias raiz independentes: `tupinicraft:pessoais`, `tupinicraft:regionais` (subcategorias
+    `regional_<macrorregião>`), `tupinicraft:partidarias` (uma subcategoria por partido) e `tupinicraft:cargos`
+    (subcategorias `cargo_<cargo>`). Arquivos em `data/tupinicraft/skilllib/categories|skills/*.json`.
+  - **Um arquivo por skill**: o formato do SkillLib + um bloco `"tupinicraft"` com as regras do TupiniCraft
+    (`arvore`: pessoal|regional|partidaria|cargo; `regiao`; `partido`; `cargo`; `custo` em reais; `pontos` do
+    cargo; `xp_min`). O SkillLib ignora o bloco; o TupiniCraft lê o mesmo arquivo (`SkillRules`).
+  - Donos dos dados: **SkillLib** = definição, interface, desbloqueio, ativação, nível e sincronização dessas
+    informações (attachment dele). **TupiniCraft** = dinheiro, filiação, mandato, pontos por cargo, custo e a
+    decisão de quem pode comprar e manter cada efeito. Não duplique o estado de desbloqueio.
+  - Compra só pelo servidor (`/brasil skills comprar`), que valida, cobra e chama `SkillLibAPI.unlockSkill`.
+    Skills pessoais, regionais e partidárias custam dinheiro; as de cargo custam pontos **daquele cargo**
+    (`OfficeProgress.skillPoints`). XP político pode ser exigido, mas **nunca é consumido**.
+  - A cada segundo o `SkillTreeService` desativa efeitos cujo requisito deixou de valer (região, partido,
+    mandato vigente) e os religa quando o requisito volta (`SkillTreeState.suspended`). O progresso nunca é apagado.
+  - Limitações do SkillLib 1.4.0: a interface só liga/desliga skills já desbloqueadas (não compra); não há
+    eventos para vetar a ativação nem para esconder categorias por jogador (todas aparecem; o bloqueio é no
+    servidor); não há moedas nem custos nativos; o README cita operações antigas: em `skilllib:attribute_modifier`
+    use `add_value`, `add_multiplied_base` ou `add_multiplied_total`. Mantenha `resetOnDeath=false` no
+    `skilllib-server.toml`, senão o SkillLib apaga as skills na morte. Atributos 1.21.1: `minecraft:generic.*`.
+- **Economia (contrato, ainda sem fontes de renda):** a única moeda é `Wallet` (attachment, por UUID, copiado na
+  morte, alterado só por `WalletService`). Skills e a futura economia (Pix fictício etc.) devem usar só ela.
+  Hoje o saldo só muda por `/brasil admin teste dinheiro`.
+- **Partidos (ainda não existem):** `PartyAffiliation` guarda a filiação; só `/brasil admin teste partido` a altera.
+  Perder mandato não mexe na filiação; sair do partido só suspende as skills partidárias.
+- **Mobs (GeckoLib + SmartBrainLib):**
+  - Recursos por mob `<nome>`: `assets/tupinicraft/geo/entity/<nome>.geo.json`,
+    `animations/entity/<nome>.animation.json` (animações `animation.<nome>.<acao>`: `idle`, `walk`, `attack`...)
+    e `textures/entity/<nome>.png`. Exporte do Blockbench no formato "GeckoLib Animated Model".
+  - Entidade em `entity` (servidor): implementa `GeoEntity` (controllers e `triggerAnim` disparado no servidor)
+    e `SmartBrainOwner` (`brainProvider()` → `SmartBrainProvider`, `customServerAiStep()` → `tickBrain`).
+    Renderer em `client.render` (`GeoEntityRenderer` + `DefaultedEntityGeoModel`), registrado só no cliente.
+  - GeckoLib cuida só da animação. Dano, colisão, cooldown e alvo são decididos no servidor. Poderes com movimento
+    próprio (bolas de fogo, projéteis, lasers) devem ser **entidades** (ex.: `Projectile`) com a lógica no servidor,
+    não efeitos visuais presos ao modelo. Ataques em área, ondas de choque e invocações também rodam no servidor.
+  - Use a IA do SmartBrainLib só onde ela agrega (sensores, alvos, comportamentos especiais); não troque IA
+    vanilla sem motivo. No modo Pacífico, mobs não miram jogadores (regra do Minecraft).
 - **Extensões futuras:** benefícios por origem entram em `OriginService.applyOriginEffects` (hoje vazio).
-  Ainda fora do escopo: partidos, skill trees, buffs de origem, dimensões, NPCs, economia, missões.
+  Ainda fora do escopo: partidos completos, economia (Pix, Mega-Sena, Tigrinho), dimensões, minérios, facções,
+  bosses e missões.
+- **Como adicionar uma skill:** crie `data/tupinicraft/skilllib/skills/<id>.json` no formato do SkillLib, com
+  `category` numa subcategoria existente e o bloco `"tupinicraft"`; rode `./gradlew build` (o `rulesTest` valida os
+  arquivos) e teste com `-PwithSkillLib`.
+- **Como adicionar um mob:** registre o `EntityType` em `ModEntities` (+ atributos), crie a classe em `entity`, os três
+  recursos GeckoLib e o renderer em `client.render` (registrado em `TupiniCraftClient`).
 
 ## Testes
 
@@ -143,5 +210,6 @@ carregamento sem classes de cliente e persistência de uma eleição ativa após
   atualize esse teste. O source set de teste tem as dependências do Minecraft (`addModdingDependenciesTo`), usadas
   para validar a compatibilidade dos dados salvos (ex.: NBT da v0.1.0 via `PoliticalData.CODEC`).
 - O teste de fumaça do CI cobre: override persistente após reinício, reset para o TOML, rejeição de valores
-  inválidos, aldeões completando disputas, prazo congelado de eleição ativa e consulta de mandatos.
+  inválidos, aldeões completando disputas, prazo congelado de eleição ativa, consulta de mandatos, mob de teste
+  invocado no servidor dedicado e, numa terceira inicialização com `-PwithSkillLib`, o carregamento das skills.
 - Fluxos multiplayer (candidatura, urna, HUD) exigem teste manual com 2+ clientes (`runClient` + servidor).

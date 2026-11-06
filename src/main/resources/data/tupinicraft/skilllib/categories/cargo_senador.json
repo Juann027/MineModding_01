@@ -1,0 +1,8 @@
+{
+  "id": "tupinicraft:cargo_senador",
+  "name": "Senador",
+  "icon": "minecraft:lectern",
+  "order": 4,
+  "icon_size": 24,
+  "parent": "tupinicraft:cargos"
+}
