@@ -1,14 +1,22 @@
 package com.tupinicraft.election;
 
-import com.tupinicraft.TupiniConfig;
 import com.tupinicraft.TupiniCraft;
+import com.tupinicraft.config.ConfigKeys;
+import com.tupinicraft.config.ServerSettings;
+import com.tupinicraft.mandate.MandateService;
+import com.tupinicraft.mandate.Occupant;
+import com.tupinicraft.mandate.SeatKey;
+import com.tupinicraft.mandate.SeatView;
 import com.tupinicraft.network.AnnouncementPayload;
 import com.tupinicraft.network.ElectionSyncPayload;
 import com.tupinicraft.network.OpenUrnaPayload;
+import com.tupinicraft.origin.RegionalOrigin;
 import com.tupinicraft.player.PoliticalData;
 import com.tupinicraft.player.PoliticalDataService;
 import com.tupinicraft.politics.PoliticalOffice;
 import com.tupinicraft.registry.ModItems;
+import com.tupinicraft.territory.Territories;
+import com.tupinicraft.territory.Territory;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -24,6 +32,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -31,13 +40,17 @@ import java.util.stream.Collectors;
 /**
  * Regras da eleição global (lado servidor). Não guarda estado em campos estáticos:
  * tudo fica em {@link ElectionSavedData}. O tempo avança apenas pelo tick do servidor.
+ * <p>
+ * Cada disputa é por uma cadeira (cargo + território). O vencedor toma posse da cadeira
+ * ({@link MandateService}) e, se for jogador, também sobe de cargo pessoal.
  */
 public final class ElectionManager {
     public static final int MAX_RACES = 2;
-    private static final int TICKS_PER_SECOND = 20;
+    private static final int TICKS_PER_SECOND = ServerSettings.TICKS_PER_SECOND;
     private static final int PERIODIC_SYNC_TICKS = 5 * TICKS_PER_SECOND;
     /** Fração do tempo de apuração usada para revelar os votos aos poucos. */
     private static final double COUNTING_REVEAL_FRACTION = 0.8;
+    private static final int FALLBACK_SEAT_ATTEMPTS = 40;
 
     private ElectionManager() {
     }
@@ -57,8 +70,8 @@ public final class ElectionManager {
 
     public static void tick(MinecraftServer server) {
         ElectionSavedData data = ElectionSavedData.get(server);
+        tickCalendars(server, data);
         if (data.phase() == ElectionPhase.INACTIVE) {
-            tickAutoScheduler(server, data);
             return;
         }
 
@@ -75,80 +88,132 @@ public final class ElectionManager {
         }
     }
 
-    private static void tickAutoScheduler(MinecraftServer server, ElectionSavedData data) {
-        if (!TupiniConfig.AUTO_ELECTIONS.get() || server.getPlayerList().getPlayerCount() == 0) {
+    /**
+     * Calendários geral e municipal. Só contam tempo com jogadores online. Se um calendário vence durante
+     * outra eleição, a eleição dele começa assim que a atual terminar; se os dois venceram, eles se alternam.
+     * Mudar o intervalo vale a partir do próximo ciclo (o ciclo em curso mantém o prazo).
+     */
+    private static void tickCalendars(MinecraftServer server, ElectionSavedData data) {
+        if (!ServerSettings.getBool(server, ConfigKeys.AUTO_ELECTIONS) || server.getPlayerList().getPlayerCount() == 0) {
             return;
         }
-        int interval = autoIntervalTicks();
-        int remaining = data.ticksUntilAutoElection();
-        if (remaining < 0 || remaining > interval) {
-            remaining = interval;
+        if (data.ticksUntil(ElectionCalendar.GENERAL) < 0) {
+            data.setTicksUntil(ElectionCalendar.GENERAL, ServerSettings.intervalTicks(server, ConfigKeys.GENERAL_INTERVAL));
         }
-        remaining--;
-        if (remaining > 0) {
-            data.setTicksUntilAutoElection(remaining);
+        if (data.ticksUntil(ElectionCalendar.MUNICIPAL) < 0) {
+            data.setTicksUntil(ElectionCalendar.MUNICIPAL, data.ticksUntil(ElectionCalendar.GENERAL)
+                    + ServerSettings.intervalTicks(server, ConfigKeys.CALENDAR_OFFSET));
+        }
+        for (ElectionCalendar calendar : List.of(ElectionCalendar.GENERAL, ElectionCalendar.MUNICIPAL)) {
+            int ticks = data.ticksUntil(calendar);
+            if (ticks > 0) {
+                data.setTicksUntil(calendar, ticks - 1);
+            }
+        }
+        if (data.phase() != ElectionPhase.INACTIVE) {
             return;
         }
-        data.setTicksUntilAutoElection(interval);
-        List<PoliticalOffice> offices = pickAutomaticOffices(server);
-        Outcome outcome = start(server, offices);
-        if (!outcome.success()) {
-            TupiniCraft.LOGGER.warn("Falha ao iniciar eleição automática: {}", outcome.message().getString());
+        // Se os dois calendários venceram, começa o que não rodou por último (evita que um "engula" o outro).
+        List<ElectionCalendar> order = data.lastAutoCalendar() == ElectionCalendar.GENERAL
+                ? List.of(ElectionCalendar.MUNICIPAL, ElectionCalendar.GENERAL)
+                : List.of(ElectionCalendar.GENERAL, ElectionCalendar.MUNICIPAL);
+        for (ElectionCalendar calendar : order) {
+            if (data.ticksUntil(calendar) <= 0) {
+                data.setTicksUntil(calendar, ServerSettings.intervalTicks(server, calendar == ElectionCalendar.GENERAL
+                        ? ConfigKeys.GENERAL_INTERVAL : ConfigKeys.MUNICIPAL_INTERVAL));
+                List<SeatKey> seats = pickAutomaticSeats(server, calendar);
+                if (seats.isEmpty()) {
+                    TupiniCraft.LOGGER.info("{}: nenhuma cadeira vaga para disputar; ciclo ignorado.", calendar.displayName());
+                    continue;
+                }
+                Outcome outcome = start(server, seats, calendar);
+                if (!outcome.success()) {
+                    TupiniCraft.LOGGER.warn("Falha ao iniciar {}: {}", calendar.displayName(), outcome.message().getString());
+                }
+                return;
+            }
         }
     }
 
     /**
-     * Escolhe 1 ou 2 cargos para a eleição automática: os próximos cargos para os quais
-     * algum jogador online já cumpre os requisitos. Se ninguém cumpre, disputa-se Vereador.
+     * Escolhe até 2 cadeiras vagas para o calendário: primeiro as que algum jogador online pode disputar
+     * (XP suficiente, no seu domicílio eleitoral); senão uma cadeira vaga qualquer do calendário,
+     * que será disputada por aldeões.
      */
-    private static List<PoliticalOffice> pickAutomaticOffices(MinecraftServer server) {
-        Set<PoliticalOffice> contestable = new LinkedHashSet<>();
+    private static List<SeatKey> pickAutomaticSeats(MinecraftServer server, ElectionCalendar calendar) {
+        Set<SeatKey> options = new LinkedHashSet<>();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             PoliticalData data = PoliticalDataService.get(player);
-            data.office().next()
-                    .filter(next -> next.meetsRequirements(data.politicalXp(), data.popularity()))
-                    .ifPresent(contestable::add);
+            if (data.origin().isEmpty()) {
+                continue;
+            }
+            for (PoliticalOffice office : calendar.offices()) {
+                if (ServerSettings.hasRequiredXp(server, office, data.politicalXp())) {
+                    SeatKey seat = new SeatKey(Territories.domicile(office, data.origin().get()).id(), office, 1);
+                    if (MandateService.isVacant(server, seat)) {
+                        options.add(seat);
+                    }
+                }
+            }
         }
-        List<PoliticalOffice> offices = new ArrayList<>(contestable);
-        if (offices.isEmpty()) {
-            return List.of(PoliticalOffice.VEREADOR);
+        Random random = new Random(server.overworld().getRandom().nextLong());
+        if (options.isEmpty()) {
+            List<PoliticalOffice> offices = calendar.offices();
+            for (int attempt = 0; attempt < FALLBACK_SEAT_ATTEMPTS && options.isEmpty(); attempt++) {
+                PoliticalOffice office = offices.get(random.nextInt(offices.size()));
+                List<Territory> territories = Territories.ofType(office.jurisdiction());
+                SeatKey seat = new SeatKey(territories.get(random.nextInt(territories.size())).id(), office, 1);
+                if (MandateService.isVacant(server, seat)) {
+                    options.add(seat);
+                }
+            }
         }
-        Collections.shuffle(offices, new java.util.Random(server.overworld().getRandom().nextLong()));
-        return List.copyOf(offices.subList(0, Math.min(MAX_RACES, offices.size())));
-    }
-
-    private static int autoIntervalTicks() {
-        return TupiniConfig.AUTO_ELECTION_INTERVAL_MINUTES.get() * 60 * TICKS_PER_SECOND;
+        List<SeatKey> list = new ArrayList<>(options);
+        Collections.shuffle(list, random);
+        return List.copyOf(list.subList(0, Math.min(MAX_RACES, list.size())));
     }
 
     // ================================================================== transições
 
-    public static Outcome start(MinecraftServer server, List<PoliticalOffice> offices) {
+    public static Outcome start(MinecraftServer server, List<SeatKey> seats, ElectionCalendar calendar) {
         ElectionSavedData data = ElectionSavedData.get(server);
         if (data.phase() != ElectionPhase.INACTIVE) {
             return Outcome.fail("Já existe uma eleição em andamento (fase: " + data.phase().displayName() + ").");
         }
-        if (offices.isEmpty() || offices.size() > MAX_RACES) {
-            return Outcome.fail("Uma eleição deve disputar 1 ou 2 cargos.");
+        if (seats.isEmpty() || seats.size() > MAX_RACES) {
+            return Outcome.fail("Uma eleição deve disputar 1 ou 2 cadeiras.");
         }
-        if (offices.stream().distinct().count() != offices.size()) {
-            return Outcome.fail("Os cargos em disputa devem ser diferentes.");
+        if (seats.stream().distinct().count() != seats.size()) {
+            return Outcome.fail("As cadeiras em disputa devem ser diferentes.");
         }
-        for (PoliticalOffice office : offices) {
-            if (!office.isElective()) {
-                return Outcome.fail("O cargo " + office.displayName() + " não pode ser disputado em eleição.");
+        for (SeatKey seat : seats) {
+            Optional<Territory> territory = Territories.get(seat.territoryId());
+            if (territory.isEmpty() || territory.get().type() != seat.office().jurisdiction()) {
+                return Outcome.fail(seat.office().displayName() + " é disputado em territórios do tipo "
+                        + seat.office().jurisdiction().displayName() + ".");
+            }
+            if (seat.seat() > seat.office().seatsPerTerritory()) {
+                return Outcome.fail("Cadeira inexistente: " + seat.asString() + ".");
+            }
+            SeatView view = MandateService.queries(server).view(seat);
+            if (!view.isVacant()) {
+                return Outcome.fail("A cadeira de " + MandateService.seatLabel(seat) + " está ocupada por "
+                        + view.displayName().orElse("?") + " (restam " + formatTime(view.remainingTicks().orElse(0)) + ").");
             }
         }
 
-        data.races().clear();
-        for (PoliticalOffice office : offices) {
-            data.races().add(new ElectionRace(office));
+        List<ElectionRace> races = new ArrayList<>();
+        for (SeatKey seat : seats) {
+            int[] npcRange = ServerSettings.npcPopularityRange(server, seat.office());
+            races.add(new ElectionRace(seat, ServerSettings.minimumWinningScore(server, seat.office()), npcRange[0], npcRange[1]));
         }
-        data.enterPhase(ElectionPhase.REGISTRATION, TupiniConfig.REGISTRATION_SECONDS.get() * TICKS_PER_SECOND);
-        announce(server, Component.literal("Começaram as inscrições para " + officeList(data) + "! Use ")
+        data.begin(calendar, ServerSettings.snapshotElectionRules(server), races, ServerSettings.registrationTicks(server));
+        String prefix = calendar == ElectionCalendar.MANUAL ? "" : calendar.displayName() + ": c";
+        announce(server, Component.literal((prefix.isEmpty() ? "C" : prefix) + "omeçaram as inscrições para "
+                        + raceList(data) + "! Use ")
                 .append(Component.literal("/brasil eleicao candidatar").withStyle(ChatFormatting.AQUA)));
         syncAll(server);
-        return Outcome.ok("Eleição iniciada para " + officeList(data) + ".");
+        return Outcome.ok("Eleição iniciada para " + raceList(data) + ".");
     }
 
     /** Avança para a próxima fase (usado pelo cronômetro e pelo comando admin "avancar"). */
@@ -161,7 +226,7 @@ public final class ElectionManager {
                 closeRegistration(server, data);
                 return Outcome.ok("Inscrições encerradas.");
             case VOTING:
-                data.enterPhase(ElectionPhase.COUNTING, TupiniConfig.COUNTING_SECONDS.get() * TICKS_PER_SECOND);
+                data.enterPhase(ElectionPhase.COUNTING, data.rules().countingTicks());
                 announce(server, Component.literal("Votação encerrada! Começou a apuração..."));
                 syncAll(server);
                 return Outcome.ok("Votação encerrada; apuração iniciada.");
@@ -178,30 +243,53 @@ public final class ElectionManager {
         if (data.phase() == ElectionPhase.INACTIVE) {
             return Outcome.fail("Não há eleição ativa para cancelar.");
         }
-        announce(server, Component.literal("A eleição para " + officeList(data) + " foi cancelada pela administração."));
+        announce(server, Component.literal("A eleição para " + raceList(data) + " foi cancelada pela administração."));
         endElection(server, data);
         return Outcome.ok("Eleição cancelada.");
     }
 
     private static void closeRegistration(MinecraftServer server, ElectionSavedData data) {
-        // Congela candidatos e suas popularidades de candidatura (atualiza quem está online).
+        ElectionRules rules = data.rules();
+        // Congela candidatos e suas popularidades de candidatura (atualiza jogadores online).
         for (ElectionRace race : data.races()) {
             List<Candidate> candidates = race.candidates();
             for (int i = 0; i < candidates.size(); i++) {
                 Candidate candidate = candidates.get(i);
-                ServerPlayer online = server.getPlayerList().getPlayer(candidate.id());
+                ServerPlayer online = candidate.npc() ? null : server.getPlayerList().getPlayer(candidate.id());
                 if (online != null) {
                     candidates.set(i, candidate.withPopularity(PoliticalDataService.get(online).popularity()));
                 }
             }
         }
 
-        List<ElectionRace> empty = data.races().stream().filter(r -> r.candidates().isEmpty()).toList();
-        for (ElectionRace race : empty) {
-            announce(server, Component.literal("Ninguém se inscreveu para " + race.office().displayName()
-                    + ". Disputa encerrada sem vencedor."));
+        // Aldeões completam disputas com poucos candidatos.
+        Random random = new Random(server.overworld().getRandom().nextLong());
+        for (ElectionRace race : data.races()) {
+            int needed = NpcCandidateFactory.npcsNeeded(rules, race.candidates().size());
+            if (needed > 0) {
+                List<String> namesInUse = data.races().stream().flatMap(r -> r.candidates().stream())
+                        .map(Candidate::name).toList();
+                List<Candidate> npcs = NpcCandidateFactory.create(needed, race.npcPopularityMin(), race.npcPopularityMax(),
+                        rules, namesInUse, random);
+                race.candidates().addAll(npcs);
+                announce(server, Component.literal("Aldeões entram na disputa para " + raceLabel(race) + ": "
+                        + npcs.stream().map(Candidate::name).collect(Collectors.joining(", ")) + "!"));
+            }
         }
-        data.races().removeAll(empty);
+
+        List<ElectionRace> insufficient = new ArrayList<>();
+        for (ElectionRace race : data.races()) {
+            int count = race.candidates().size();
+            if (count == 0) {
+                announce(server, Component.literal("Ninguém se inscreveu para " + raceLabel(race) + ". Disputa encerrada sem vencedor."));
+                insufficient.add(race);
+            } else if (count < rules.minCandidates()) {
+                announce(server, Component.literal("Candidatos insuficientes para " + raceLabel(race) + " (" + count
+                        + " de " + rules.minCandidates() + "). Disputa encerrada sem vencedor."));
+                insufficient.add(race);
+            }
+        }
+        data.races().removeAll(insufficient);
         data.setDirty();
 
         if (data.races().isEmpty()) {
@@ -209,7 +297,7 @@ public final class ElectionManager {
             return;
         }
 
-        data.enterPhase(ElectionPhase.VOTING, TupiniConfig.VOTING_SECONDS.get() * TICKS_PER_SECOND);
+        data.enterPhase(ElectionPhase.VOTING, rules.votingTicks());
         announce(server, Component.literal("Inscrições encerradas. A votação começou! Use a Urna Eletrônica (botão direito)."));
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             giveUrna(player);
@@ -218,60 +306,44 @@ public final class ElectionManager {
     }
 
     private static void finishCounting(MinecraftServer server, ElectionSavedData data) {
+        int multiplier = data.rules().voteMultiplier();
         for (ElectionRace race : data.races()) {
-            PoliticalOffice office = race.office();
-            ElectionTally.Result result = ElectionTally.decide(office, race.candidates(), race.ballots());
-            TupiniCraft.LOGGER.info("Resultado {}: {} pontos={}", office.id(), result.outcome(), result.scores());
+            ElectionTally.Result result = ElectionTally.decide(race.minimumScore(), race.candidates(), race.ballots(), multiplier);
+            TupiniCraft.LOGGER.info("Resultado {}: {} pontos={}", race.seat().asString(), result.outcome(), result.scores());
+            String label = raceLabel(race);
             switch (result.outcome()) {
                 case WINNER -> {
                     Candidate winner = result.winner().orElseThrow();
                     announce(server, Component.literal(winner.name()).withStyle(ChatFormatting.YELLOW)
-                            .append(Component.literal(" venceu a eleição para " + office.displayName()
-                                    + " com " + result.bestScore() + " pontos!").withStyle(ChatFormatting.WHITE)));
-                    promoteWinner(server, data, winner, office);
+                            .append(Component.literal(" venceu a eleição para " + label + " com " + result.bestScore()
+                                    + " pontos!").withStyle(ChatFormatting.WHITE)));
+                    takeOffice(server, data, race, winner);
                 }
-                case NO_CANDIDATES -> announce(server, Component.literal("Ninguém se inscreveu para "
-                        + office.displayName() + ". Eleição sem vencedor."));
-                case BELOW_MINIMUM -> announce(server, Component.literal("Ninguém venceu para " + office.displayName()
-                        + ": a melhor pontuação foi de " + leadersText(result.involved()) + " (" + result.bestScore()
+                case NO_CANDIDATES -> announce(server, Component.literal("Ninguém se inscreveu para " + label + ". Eleição sem vencedor."));
+                case BELOW_MINIMUM -> announce(server, Component.literal("Ninguém venceu para " + label
+                        + ": a melhor pontuação foi de " + names(result.involved()) + " (" + result.bestScore()
                         + " pontos), mas era preciso " + (race.candidates().size() == 1 ? "superar " : "alcançar ")
                         + result.minimumScore() + "."));
-                case TIE -> announce(server, Component.literal("Empate técnico para " + office.displayName() + " entre "
-                        + leadersText(result.involved()) + " (" + result.bestScore()
+                case TIE -> announce(server, Component.literal("Empate técnico para " + label + " entre "
+                        + names(result.involved()) + " (" + result.bestScore()
                         + " pontos e mesma popularidade). Eleição sem vencedor."));
             }
         }
         endElection(server, data);
     }
 
-    private static void promoteWinner(MinecraftServer server, ElectionSavedData data, Candidate winner, PoliticalOffice office) {
-        ServerPlayer player = server.getPlayerList().getPlayer(winner.id());
-        if (player == null) {
-            data.pendingPromotions().put(winner.id(), office);
-            data.setDirty();
-            TupiniCraft.LOGGER.info("{} venceu offline; promoção a {} pendente.", winner.name(), office.id());
-            return;
+    /** Posse na cadeira disputada; para jogadores, o cargo passa a ser o da cadeira (ver MandateService). */
+    private static void takeOffice(MinecraftServer server, ElectionSavedData data, ElectionRace race, Candidate winner) {
+        Occupant occupant = winner.npc() ? Occupant.npc(winner.id(), winner.name()) : Occupant.player(winner.id(), winner.name());
+        if (!MandateService.inaugurate(server, race.seat(), occupant, Optional.ofNullable(data.electionId()))) {
+            TupiniCraft.LOGGER.warn("Posse recusada em {}: cadeira já ocupada.", race.seat().asString());
+            announce(server, Component.literal(winner.name() + " não pôde tomar posse: a cadeira de " + raceLabel(race)
+                    + " já estava ocupada."));
         }
-        applyPromotion(player, office);
-    }
-
-    private static void applyPromotion(ServerPlayer player, PoliticalOffice office) {
-        PoliticalData current = PoliticalDataService.get(player);
-        // Só promove a partir do cargo imediatamente anterior (o cargo pode ter sido alterado por admin).
-        if (current.office().next().orElse(null) != office) {
-            player.sendSystemMessage(Component.literal("Você venceu para " + office.displayName()
-                    + ", mas seu cargo atual (" + current.office().displayName()
-                    + ") mudou durante a eleição. Promoção não aplicada.").withStyle(ChatFormatting.RED));
-            return;
-        }
-        PoliticalDataService.set(player, current.withOffice(office));
-        player.sendSystemMessage(Component.literal("Parabéns! Você agora é " + office.displayName() + ".")
-                .withStyle(ChatFormatting.GOLD));
     }
 
     private static void endElection(MinecraftServer server, ElectionSavedData data) {
         data.reset();
-        data.setTicksUntilAutoElection(autoIntervalTicks());
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             removeUrnas(player);
         }
@@ -280,7 +352,12 @@ public final class ElectionManager {
 
     // ================================================================== ações de jogador
 
-    public static Outcome register(ServerPlayer player) {
+    /**
+     * Candidatura direta: qualquer jogador (inclusive Desempregado) pode concorrer a qualquer cargo em disputa,
+     * desde que esteja no seu domicílio eleitoral e tenha o XP político mínimo. Popularidade não é requisito.
+     * Sem cargo informado, usa a primeira disputa em que o jogador pode concorrer.
+     */
+    public static Outcome register(ServerPlayer player, Optional<PoliticalOffice> requested) {
         MinecraftServer server = player.server;
         ElectionSavedData data = ElectionSavedData.get(server);
         if (data.phase() != ElectionPhase.REGISTRATION) {
@@ -288,37 +365,56 @@ public final class ElectionManager {
                     ? "Não há eleição ativa no momento."
                     : "As inscrições estão encerradas (fase atual: " + data.phase().displayName() + ").");
         }
+        ElectionRace already = data.raceWithCandidate(player.getUUID());
+        if (already != null) {
+            return Outcome.fail("Você já está inscrito para " + raceLabel(already) + ".");
+        }
         PoliticalData political = PoliticalDataService.get(player);
-        Optional<PoliticalOffice> next = political.office().next();
-        if (next.isEmpty()) {
-            return Outcome.fail("Você já é " + political.office().displayName() + ". Não há cargo acima!");
-        }
-        PoliticalOffice target = next.get();
-        ElectionRace race = data.raceFor(target);
-        if (race == null) {
-            return Outcome.fail("Seu próximo cargo é " + target.displayName()
-                    + ", mas esta eleição disputa apenas: " + officeList(data) + ".");
-        }
-        if (race.isCandidate(player.getUUID())) {
-            return Outcome.fail("Você já está inscrito para " + target.displayName() + ".");
-        }
-        if (political.politicalXp() < target.minPoliticalXp()) {
-            return Outcome.fail("XP político insuficiente para " + target.displayName() + ": você tem "
-                    + political.politicalXp() + ", precisa de " + target.minPoliticalXp() + ".");
-        }
-        if (political.popularity() < target.minPopularity()) {
-            return Outcome.fail("Popularidade insuficiente para " + target.displayName() + ": você tem "
-                    + political.popularity() + ", precisa de " + target.minPopularity() + ".");
+        if (political.origin().isEmpty()) {
+            return Outcome.fail("Sua origem ainda não foi sorteada.");
         }
 
-        String name = player.getGameProfile().getName();
-        race.candidates().add(new Candidate(player.getUUID(), name, political.popularity()));
-        data.setDirty();
-        announce(server, Component.literal(name).withStyle(ChatFormatting.YELLOW)
-                .append(Component.literal(" registrou sua candidatura para " + target.displayName() + "!")
-                        .withStyle(ChatFormatting.WHITE)));
-        syncAll(server);
-        return Outcome.ok("Candidatura registrada para " + target.displayName() + ".");
+        List<ElectionRace> races = data.races().stream()
+                .filter(race -> requested.isEmpty() || race.office() == requested.get())
+                .toList();
+        if (races.isEmpty()) {
+            return Outcome.fail("Esta eleição não disputa " + requested.map(PoliticalOffice::displayName).orElse("?")
+                    + ". Em disputa: " + raceList(data) + ".");
+        }
+        List<String> reasons = new ArrayList<>();
+        for (ElectionRace race : races) {
+            Optional<String> problem = eligibilityProblem(server, player.getUUID(), political, political.origin().get(), race);
+            if (problem.isEmpty()) {
+                String name = player.getGameProfile().getName();
+                race.candidates().add(Candidate.player(player.getUUID(), name, political.popularity()));
+                data.setDirty();
+                announce(server, Component.literal(name).withStyle(ChatFormatting.YELLOW)
+                        .append(Component.literal(" registrou sua candidatura para " + raceLabel(race) + "!")
+                                .withStyle(ChatFormatting.WHITE)));
+                syncAll(server);
+                return Outcome.ok("Candidatura registrada para " + raceLabel(race) + ".");
+            }
+            reasons.add(problem.get());
+        }
+        return Outcome.fail(String.join(" | ", reasons));
+    }
+
+    private static Optional<String> eligibilityProblem(MinecraftServer server, UUID playerId, PoliticalData political,
+                                                       RegionalOrigin origin, ElectionRace race) {
+        PoliticalOffice office = race.office();
+        Territory domicile = Territories.domicile(office, origin);
+        int minXp = ServerSettings.minPoliticalXp(server, office);
+        boolean lastOccupant = MandateService.lastOccupant(server, race.seat()).map(playerId::equals).orElse(false);
+        Optional<CandidacyRules.Problem> problem = CandidacyRules.check(
+                domicile.id().equals(race.territoryId()), political.politicalXp(), minXp,
+                lastOccupant, ServerSettings.getBool(server, ConfigKeys.CONSECUTIVE_REELECTION));
+        String label = raceLabel(race);
+        return problem.map(p -> switch (p) {
+            case OUTSIDE_DOMICILE -> label + ": seu domicílio eleitoral para " + office.displayName() + " é " + domicile.name() + ".";
+            case INSUFFICIENT_XP -> label + ": XP político insuficiente (você tem " + political.politicalXp()
+                    + ", precisa de " + minXp + ").";
+            case REELECTION_DISABLED -> label + ": reeleição consecutiva está desativada neste servidor.";
+        });
     }
 
     public static Outcome castVote(ServerPlayer voter, UUID candidateId) {
@@ -334,25 +430,24 @@ public final class ElectionManager {
             return Outcome.fail("Você não pode votar em si mesmo.");
         }
         if (race.isCandidate(voter.getUUID())) {
-            return Outcome.fail("Candidatos não podem votar na própria disputa (" + race.office().displayName() + ").");
+            return Outcome.fail("Candidatos não podem votar na própria disputa (" + raceLabel(race) + ").");
         }
         if (race.hasVoted(voter.getUUID())) {
-            return Outcome.fail("Você já votou para " + race.office().displayName()
-                    + " nesta eleição. O voto não pode ser alterado.");
+            return Outcome.fail("Você já votou para " + raceLabel(race) + " nesta eleição. O voto não pode ser alterado.");
         }
 
-        int weight = ElectionTally.voteWeight(PoliticalDataService.get(voter).popularity());
+        int weight = data.rules().voteWeight(PoliticalDataService.get(voter).popularity());
         race.ballots().add(new Ballot(voter.getUUID(), candidateId, weight));
         data.setDirty();
         sync(voter, data);
         String candidateName = race.findCandidate(candidateId).map(Candidate::name).orElse("?");
-        return Outcome.ok("Voto registrado: " + candidateName + " para " + race.office().displayName()
+        return Outcome.ok("Voto registrado: " + candidateName + " para " + raceLabel(race)
                 + " (peso " + weight + "). Confirma!");
     }
 
     public static Optional<UUID> findCandidateByName(MinecraftServer server, String name) {
         for (ElectionRace race : ElectionSavedData.get(server).races()) {
-            Optional<Candidate> candidate = race.findCandidateByName(name);
+            Optional<Candidate> candidate = race.findCandidateByName(name.trim());
             if (candidate.isPresent()) {
                 return Optional.of(candidate.get().id());
             }
@@ -373,10 +468,11 @@ public final class ElectionManager {
 
     public static void onPlayerLogin(ServerPlayer player) {
         ElectionSavedData data = ElectionSavedData.get(player.server);
-        PoliticalOffice pending = data.pendingPromotions().remove(player.getUUID());
-        if (pending != null) {
+        // Promoções pendentes salvas pela v0.1.0 (sem cadeira) continuam sendo aplicadas como eram.
+        PoliticalOffice legacyPending = data.pendingPromotions().remove(player.getUUID());
+        if (legacyPending != null) {
             data.setDirty();
-            applyPromotion(player, pending);
+            PoliticalDataService.set(player, PoliticalDataService.get(player).withOffice(legacyPending));
         }
         if (data.phase() == ElectionPhase.VOTING) {
             giveUrna(player);
@@ -417,28 +513,33 @@ public final class ElectionManager {
         List<Component> lines = new ArrayList<>();
         if (data.phase() == ElectionPhase.INACTIVE) {
             lines.add(Component.literal("[ELEIÇÃO] Nenhuma eleição ativa.").withStyle(ChatFormatting.GOLD));
-            if (TupiniConfig.AUTO_ELECTIONS.get() && data.ticksUntilAutoElection() >= 0) {
-                lines.add(Component.literal("Próxima eleição automática em ~" + formatTime(data.ticksUntilAutoElection())
-                        + " (com jogadores online).").withStyle(ChatFormatting.GRAY));
+            if (ServerSettings.getBool(server, ConfigKeys.AUTO_ELECTIONS)) {
+                for (ElectionCalendar calendar : List.of(ElectionCalendar.GENERAL, ElectionCalendar.MUNICIPAL)) {
+                    int ticks = data.ticksUntil(calendar);
+                    if (ticks >= 0) {
+                        lines.add(Component.literal(calendar.displayName() + " em ~" + formatTime(ticks)
+                                + " (com jogadores online).").withStyle(ChatFormatting.GRAY));
+                    }
+                }
             }
             return lines;
         }
-        lines.add(Component.literal("[ELEIÇÃO] Fase: " + data.phase().displayName() + " — tempo restante: "
-                + formatTime(data.ticksRemaining())).withStyle(ChatFormatting.GOLD));
+        lines.add(Component.literal("[ELEIÇÃO] " + data.calendar().displayName() + " — fase: " + data.phase().displayName()
+                + " — tempo restante: " + formatTime(data.ticksRemaining())).withStyle(ChatFormatting.GOLD));
         for (ElectionRace race : data.races()) {
             PoliticalOffice office = race.office();
-            lines.add(Component.literal(office.displayName() + " (requisitos: XP " + office.minPoliticalXp()
-                    + ", popularidade " + office.minPopularity() + "; pontuação mínima "
-                    + ElectionTally.minimumWinningScore(office) + ")").withStyle(ChatFormatting.YELLOW));
+            lines.add(Component.literal(raceLabel(race) + " (requisito: XP " + ServerSettings.minPoliticalXp(server, office)
+                    + "; pontuação mínima " + race.minimumScore() + ")").withStyle(ChatFormatting.YELLOW));
             if (race.candidates().isEmpty()) {
                 lines.add(Component.literal("  Nenhum candidato inscrito.").withStyle(ChatFormatting.GRAY));
             }
             Map<UUID, Integer> partial = data.phase() == ElectionPhase.COUNTING
-                    ? ElectionTally.scores(race.candidates(), race.ballots().subList(0, revealedBallots(data, race)))
+                    ? ElectionTally.scores(race.candidates(), race.ballots().subList(0, revealedBallots(data, race)),
+                    data.rules().voteMultiplier())
                     : Map.of();
             for (Candidate candidate : race.candidates()) {
-                MutableComponent line = Component.literal("  • " + candidate.name() + " (popularidade "
-                        + candidate.popularity() + ")");
+                MutableComponent line = Component.literal("  • " + candidate.name() + (candidate.npc() ? " [aldeão]" : "")
+                        + " (popularidade " + candidate.popularity() + ")");
                 if (partial.containsKey(candidate.id())) {
                     line.append(" — " + partial.get(candidate.id()) + " pontos parciais");
                 }
@@ -482,19 +583,20 @@ public final class ElectionManager {
         boolean counting = data.phase() == ElectionPhase.COUNTING;
         List<ElectionSyncPayload.RaceView> races = new ArrayList<>();
         List<Integer> voted = new ArrayList<>();
-        for (ElectionRace race : data.races()) {
+        for (int index = 0; index < data.races().size(); index++) {
+            ElectionRace race = data.races().get(index);
             int revealed = revealedBallots(data, race);
             Map<UUID, Integer> partial = counting
-                    ? ElectionTally.scores(race.candidates(), race.ballots().subList(0, revealed))
+                    ? ElectionTally.scores(race.candidates(), race.ballots().subList(0, revealed), data.rules().voteMultiplier())
                     : Map.of();
             List<ElectionSyncPayload.CandidateView> candidates = race.candidates().stream()
                     .map(c -> new ElectionSyncPayload.CandidateView(c.id(), c.name(), c.popularity(),
-                            partial.getOrDefault(c.id(), -1)))
+                            partial.getOrDefault(c.id(), -1), c.npc()))
                     .collect(Collectors.toList());
-            races.add(new ElectionSyncPayload.RaceView(race.office().ordinal(), candidates,
+            races.add(new ElectionSyncPayload.RaceView(race.office().ordinal(), raceLabel(race), candidates,
                     counting ? revealed : 0, counting ? race.ballots().size() : 0));
             if (race.hasVoted(player.getUUID())) {
-                voted.add(race.office().ordinal());
+                voted.add(index);
             }
         }
         return new ElectionSyncPayload(data.phase().ordinal(), data.ticksRemaining(), data.phaseTotalTicks(), races, voted);
@@ -508,16 +610,20 @@ public final class ElectionManager {
         PacketDistributor.sendToAllPlayers(new AnnouncementPayload(full));
     }
 
-    private static String officeList(ElectionSavedData data) {
-        return data.races().stream().map(r -> r.office().displayName()).collect(Collectors.joining(" e "));
+    public static String raceLabel(ElectionRace race) {
+        return MandateService.seatLabel(race.seat());
     }
 
-    private static String leadersText(List<Candidate> candidates) {
+    private static String raceList(ElectionSavedData data) {
+        return data.races().stream().map(ElectionManager::raceLabel).collect(Collectors.joining(" e "));
+    }
+
+    private static String names(List<Candidate> candidates) {
         return candidates.stream().map(Candidate::name).collect(Collectors.joining(" e "));
     }
 
-    public static String formatTime(int ticks) {
-        int seconds = Math.max(0, (ticks + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND);
+    public static String formatTime(long ticks) {
+        long seconds = Math.max(0, (ticks + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND);
         return String.format("%d:%02d", seconds / 60, seconds % 60);
     }
 }

@@ -2,9 +2,10 @@
 # Teste de fumaça do servidor dedicado:
 #  1. sobe o servidor de desenvolvimento (Dist.DEDICATED_SERVER) e confirma que carrega sem
 #     erros de classes exclusivas do cliente;
-#  2. pelo console, inicia uma eleição e para o servidor durante a INSCRIÇÃO;
-#  3. sobe o servidor de novo e confirma que a eleição continua na mesma fase;
-#  4. avança as fases (sem candidatos → encerra sem vencedor) e para o servidor.
+#  2. pelo console, valida/aplica overrides de configuração, inicia uma eleição e para o servidor
+#     durante a INSCRIÇÃO, depois de mudar a duração da votação;
+#  3. sobe o servidor de novo e confirma: eleição na mesma fase, override persistido, reset para o TOML,
+#     aldeões completando a disputa, prazo da votação congelado e consulta de mandatos.
 set -uo pipefail
 export LC_ALL=C.UTF-8
 
@@ -60,13 +61,24 @@ run_server() {
 
 run_server first \
   "brasil eleicao status" \
-  "brasil admin eleicao iniciar prefeito senador" \
+  "brasil admin config set mandato.senador 60" \
+  "brasil admin config set mandato.senador 0" \
+  "brasil admin config set eleicao.automaticas talvez" \
+  "brasil admin eleicao iniciar presidente" \
+  "brasil admin config set eleicao.votacao_segundos 90" \
   "brasil eleicao status"
 
 run_server second \
   "brasil eleicao status" \
+  "brasil admin config get mandato.senador" \
+  "brasil admin config reset mandato.senador" \
+  "brasil admin config get mandato.senador" \
   "brasil admin eleicao avancar" \
-  "brasil eleicao status"
+  "brasil eleicao status" \
+  "brasil admin eleicao avancar" \
+  "brasil admin eleicao avancar" \
+  "brasil mandatos brasil" \
+  "brasil admin config reset eleicao.votacao_segundos"
 
 grep -q 'Done (' smoke/first.log || fail "primeira inicialização não concluiu"
 grep -q 'Done (' smoke/second.log || fail "segunda inicialização não concluiu"
@@ -77,14 +89,28 @@ fi
 if grep -E 'Exception (in|while)|Caught exception|Failed to (load|save)' smoke/*.log | grep -i tupinicraft; then
   fail "exceção envolvendo o tupinicraft"
 fi
-grep -qE 'Come.{1,3}aram as inscri.{1,4}es para Prefeito e Senador' smoke/first.log \
+grep -qE 'mandato.senador: 45 . 60 \(override' smoke/first.log \
+  || fail "config set não aplicou o override"
+grep -qE 'Valor inv.{1,3}lido para mandato.senador' smoke/first.log \
+  || fail "valor fora dos limites não foi rejeitado"
+grep -qE 'Valor inv.{1,3}lido para eleicao.automaticas' smoke/first.log \
+  || fail "booleano inválido não foi rejeitado"
+grep -qE 'Come.{1,3}aram as inscri.{1,4}es para Presidente da Rep' smoke/first.log \
   || fail "eleição não foi iniciada pelo comando admin"
-grep -qE 'Fase: Inscri' smoke/second.log \
+grep -qiE 'fase: Inscri' smoke/second.log \
   || fail "eleição não sobreviveu ao reinício do servidor (esperado: Fase: Inscrição)"
-grep -qE 'Ningu.{1,3}m se inscreveu para Prefeito' smoke/second.log \
-  || fail "avanço de fase sem candidatos não encerrou a disputa"
-grep -qE 'Nenhuma elei.{1,4}o ativa' smoke/second.log \
-  || fail "eleição sem candidatos não voltou para INATIVA"
+grep -qE 'mandato.senador = 60 \[override' smoke/second.log \
+  || fail "override de configuração não persistiu após reiniciar"
+grep -qE 'mandato.senador voltou ao valor do TOML: 45' smoke/second.log \
+  || fail "reset não restaurou o valor do TOML"
+grep -qE 'Alde.{1,6}es entram na disputa para Presidente' smoke/second.log \
+  || fail "candidatos aldeões não completaram a disputa"
+grep -qE 'Vota.{1,4}o .{1,6} tempo restante: 0:5' smoke/second.log \
+  || fail "mudar eleicao.votacao_segundos alterou a eleição em andamento (esperado: prazo congelado de 60 s)"
+grep -qE 'venceu a elei.{1,4}o para Presidente|Ningu.{1,3}m venceu para Presidente|Empate t.{1,3}cnico para Presidente' smoke/second.log \
+  || fail "apuração não terminou"
+grep -qE '\[MANDATOS\] Brasil' smoke/second.log \
+  || fail "consulta de mandatos não respondeu"
 
 if [ "$FAILED" = 0 ]; then
   echo "Teste de fumaça do servidor dedicado: OK"

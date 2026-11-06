@@ -1,37 +1,46 @@
 package com.tupinicraft.politics;
 
+import com.tupinicraft.territory.TerritoryType;
+
 import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Cargos políticos em ordem de progressão (progressão fictícia de RPG).
+ * Cargos políticos, do mais local ao mais alto. A ordem é só de exibição: <b>não há progressão
+ * sequencial</b>; qualquer jogador pode concorrer a qualquer cargo se tiver o XP político mínimo.
+ * {@link #next()}/{@link #previous()} servem apenas para navegação/exibição.
  * <p>
- * <b>Fonte única de balanceamento:</b> os requisitos de XP político e popularidade
- * de cada cargo ficam apenas aqui. Os valores são provisórios.
+ * Os requisitos aqui são apenas os <b>valores padrão</b> do arquivo de configuração. Em jogo, leia
+ * sempre os valores efetivos por {@code ServerSettings} (TOML + overrides administrativos do mundo).
  * <p>
  * O {@link #id()} é o identificador persistido e usado nos comandos; não o renomeie.
  */
 public enum PoliticalOffice {
-    //                 id                    nome exibido               XP mín.  popularidade mín.
-    DESEMPREGADO("desempregado", "Desempregado", 0, 0),
-    VEREADOR("vereador", "Vereador", 0, 10),
-    DEPUTADO_ESTADUAL("deputado_estadual", "Deputado Estadual", 50, 30),
-    PREFEITO("prefeito", "Prefeito", 150, 60),
-    DEPUTADO_FEDERAL("deputado_federal", "Deputado Federal", 300, 100),
-    SENADOR("senador", "Senador", 500, 160),
-    GOVERNADOR("governador", "Governador", 800, 240),
-    PRESIDENTE("presidente", "Presidente da República", 1200, 350);
+    //  id, nome exibido, XP mín. padrão, popularidade de referência padrão, mandato padrão (min), jurisdição
+    DESEMPREGADO("desempregado", "Desempregado", 0, 0, 0, null),
+    VEREADOR("vereador", "Vereador", 0, 10, 30, TerritoryType.MUNICIPALITY),
+    DEPUTADO_ESTADUAL("deputado_estadual", "Deputado Estadual", 50, 30, 30, TerritoryType.STATE),
+    PREFEITO("prefeito", "Prefeito", 150, 60, 30, TerritoryType.MUNICIPALITY),
+    DEPUTADO_FEDERAL("deputado_federal", "Deputado Federal", 300, 100, 30, TerritoryType.STATE),
+    SENADOR("senador", "Senador", 500, 160, 45, TerritoryType.STATE),
+    GOVERNADOR("governador", "Governador", 800, 240, 30, TerritoryType.STATE),
+    PRESIDENTE("presidente", "Presidente da República", 1200, 350, 30, TerritoryType.COUNTRY);
 
     private final String id;
     private final String displayName;
-    private final int minPoliticalXp;
-    private final int minPopularity;
+    private final int defaultMinPoliticalXp;
+    private final int defaultReferencePopularity;
+    private final int defaultTermMinutes;
+    private final TerritoryType jurisdiction;
 
-    PoliticalOffice(String id, String displayName, int minPoliticalXp, int minPopularity) {
+    PoliticalOffice(String id, String displayName, int defaultMinPoliticalXp, int defaultReferencePopularity,
+                    int defaultTermMinutes, TerritoryType jurisdiction) {
         this.id = id;
         this.displayName = displayName;
-        this.minPoliticalXp = minPoliticalXp;
-        this.minPopularity = minPopularity;
+        this.defaultMinPoliticalXp = defaultMinPoliticalXp;
+        this.defaultReferencePopularity = defaultReferencePopularity;
+        this.defaultTermMinutes = defaultTermMinutes;
+        this.jurisdiction = jurisdiction;
     }
 
     public String id() {
@@ -42,14 +51,42 @@ public enum PoliticalOffice {
         return displayName;
     }
 
-    /** XP político mínimo para se candidatar a este cargo. */
-    public int minPoliticalXp() {
-        return minPoliticalXp;
+    /** Padrão do TOML para o XP político mínimo de candidatura (único requisito para concorrer). */
+    public int defaultMinPoliticalXp() {
+        return defaultMinPoliticalXp;
     }
 
-    /** Popularidade mínima para se candidatar a este cargo. */
-    public int minPopularity() {
-        return minPopularity;
+    /**
+     * Padrão do TOML para a popularidade de referência do cargo, usada só na pontuação mínima de vitória
+     * (referência + margem). Popularidade NÃO é requisito de candidatura.
+     */
+    public int defaultReferencePopularity() {
+        return defaultReferencePopularity;
+    }
+
+    /** Padrão do TOML para a duração do mandato, em minutos. */
+    public int defaultTermMinutes() {
+        return defaultTermMinutes;
+    }
+
+    /** Nível territorial onde o cargo é exercido (null para Desempregado). */
+    public TerritoryType jurisdiction() {
+        return jurisdiction;
+    }
+
+    /** Cadeiras deste cargo por território. Hoje sempre 1; o modelo já suporta várias. */
+    public int seatsPerTerritory() {
+        return isElective() ? 1 : 0;
+    }
+
+    /** Cargos disputados nas eleições gerais (país e estados). */
+    public boolean isGeneral() {
+        return jurisdiction == TerritoryType.COUNTRY || jurisdiction == TerritoryType.STATE;
+    }
+
+    /** Cargos disputados nas eleições municipais. */
+    public boolean isMunicipal() {
+        return jurisdiction == TerritoryType.MUNICIPALITY;
     }
 
     /** Cargos que podem ser disputados em eleição (todos, exceto Desempregado). */
@@ -64,11 +101,6 @@ public enum PoliticalOffice {
 
     public Optional<PoliticalOffice> previous() {
         return ordinal() > 0 ? Optional.of(values()[ordinal() - 1]) : Optional.empty();
-    }
-
-    /** Verifica XP e popularidade (o cargo anterior é verificado por quem chama, via {@link #next()}). */
-    public boolean meetsRequirements(int politicalXp, int popularity) {
-        return politicalXp >= minPoliticalXp && popularity >= minPopularity;
     }
 
     public static Optional<PoliticalOffice> byId(String id) {

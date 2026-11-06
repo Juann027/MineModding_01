@@ -1,6 +1,7 @@
 package com.tupinicraft.player;
 
 import com.tupinicraft.election.ElectionManager;
+import com.tupinicraft.mandate.MandateService;
 import com.tupinicraft.origin.OriginService;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -15,6 +16,7 @@ public final class PlayerEventHandler {
             OriginService.assignIfMissing(player);
             OriginService.applyOriginEffects(player);
             ElectionManager.onPlayerLogin(player);
+            MandateService.onPlayerLogin(player);
             PoliticalDataService.sync(player);
         }
     }

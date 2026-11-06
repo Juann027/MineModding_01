@@ -4,7 +4,6 @@ import com.tupinicraft.election.ElectionManager;
 import com.tupinicraft.election.ElectionPhase;
 import com.tupinicraft.network.CastVotePayload;
 import com.tupinicraft.network.ElectionSyncPayload;
-import com.tupinicraft.politics.PoliticalOffice;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -46,11 +45,11 @@ public final class UrnaScreen extends Screen {
             labels.add(new Label(Component.literal("Não há votação em andamento.").withStyle(ChatFormatting.RED), y));
             y += ROW_SPACING;
         }
-        for (ElectionSyncPayload.RaceView race : state.races()) {
-            PoliticalOffice office = race.politicalOffice();
-            boolean alreadyVoted = state.hasVotedFor(office);
+        for (int index = 0; index < state.races().size(); index++) {
+            ElectionSyncPayload.RaceView race = state.races().get(index);
+            boolean alreadyVoted = state.hasVotedIn(index);
             boolean isCandidateHere = race.candidates().stream().anyMatch(c -> c.id().equals(self));
-            Component header = Component.literal(office.displayName()).withStyle(ChatFormatting.GOLD);
+            Component header = Component.literal(race.label()).withStyle(ChatFormatting.GOLD);
             if (alreadyVoted) {
                 header = header.copy().append(Component.literal(" — voto registrado ✔").withStyle(ChatFormatting.GREEN));
             } else if (isCandidateHere) {
@@ -61,7 +60,8 @@ public final class UrnaScreen extends Screen {
             for (ElectionSyncPayload.CandidateView candidate : race.candidates()) {
                 boolean isSelf = candidate.id().equals(self);
                 Button button = Button.builder(
-                                Component.literal("Votar em " + candidate.name() + (isSelf ? " (você)" : "")),
+                                Component.literal("Votar em " + candidate.name()
+                                        + (candidate.npc() ? " [aldeão]" : "") + (isSelf ? " (você)" : "")),
                                 pressed -> vote(candidate.id()))
                         .bounds(left, y, BUTTON_WIDTH, BUTTON_HEIGHT)
                         .build();
