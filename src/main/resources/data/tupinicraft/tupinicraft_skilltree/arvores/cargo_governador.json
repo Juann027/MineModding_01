@@ -1,0 +1,8 @@
+{
+  "nome": "Cargo: Governador",
+  "tipo": "cargo",
+  "cargo": "governador",
+  "icone": "minecraft:golden_helmet",
+  "fundo": "minecraft:textures/block/polished_andesite.png",
+  "ordem": 45
+}

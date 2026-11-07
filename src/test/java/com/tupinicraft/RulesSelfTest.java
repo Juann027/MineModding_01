@@ -371,62 +371,80 @@ public class RulesSelfTest {
         catch (IllegalArgumentException e) { rejected = true; }
         check(rejected, "skill regional exige regiao");
 
-        // Parser do bloco "tupinicraft"
-        com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(
-                "{\"category\":\"tupinicraft:x\",\"tupinicraft\":{\"arvore\":\"regional\",\"regiao\":\"centro_oeste\",\"custo\":1200}}").getAsJsonObject();
-        SkillRule parsed = SkillRuleParser.parse("tupinicraft:teste", json).orElseThrow();
-        check(parsed.kind()==SkillTreeKind.REGIONAL && parsed.region().orElseThrow()==Macroregion.CENTRO_OESTE && parsed.moneyCost()==1200, "parser le regiao e custo");
-        check(SkillRuleParser.parse("outro:x", com.google.gson.JsonParser.parseString("{\"category\":\"outro:c\"}").getAsJsonObject()).isEmpty(),
-              "skills sem bloco tupinicraft sao ignoradas");
+        // Parser das árvores e skills (formato próprio do TupiniCraft)
+        var gson = new com.google.gson.Gson();
+        java.util.function.Function<String, com.google.gson.JsonObject> js = text -> gson.fromJson(text, com.google.gson.JsonObject.class);
+        SkillTreeDef co = SkillDataParser.parseTree("tupinicraft:regional_co", js.apply(
+                "{\"nome\":\"CO\",\"tipo\":\"regional\",\"regiao\":\"centro_oeste\",\"icone\":\"minecraft:wheat\",\"fundo\":\"minecraft:textures/block/stone.png\"}"));
+        SkillDef parsed = SkillDataParser.parseSkill("tupinicraft:teste", js.apply(
+                "{\"arvore\":\"tupinicraft:regional_co\",\"nome\":\"T\",\"icone\":\"minecraft:stone\",\"custo\":1200,"
+                + "\"efeitos\":[{\"atributo\":\"minecraft:generic.armor\",\"operacao\":\"add_value\",\"valor\":2}]}"), co);
+        check(parsed.rule().kind()==SkillTreeKind.REGIONAL && parsed.rule().region().orElseThrow()==Macroregion.CENTRO_OESTE
+              && parsed.rule().moneyCost()==1200 && parsed.effects().size()==1 && parsed.frame().equals("task"),
+              "parser: tipo e regiao vem da arvore; custo, efeitos e moldura padrao da skill");
+        try { SkillDataParser.parseSkill("tupinicraft:x", js.apply("{\"arvore\":\"a:b\",\"nome\":\"X\",\"icone\":\"minecraft:stone\","
+                + "\"efeitos\":[{\"atributo\":\"minecraft:generic.armor\",\"operacao\":\"addition\",\"valor\":1}]}"), co); rejected = false; }
+        catch (IllegalArgumentException e) { rejected = true; }
+        check(rejected, "operacao de atributo invalida recusada");
 
-        // Arquivos reais do datapack: 4 categorias raiz, subcategorias e as 4 skills de teste validas
-        java.nio.file.Path base = java.nio.file.Path.of("src/main/resources/data/tupinicraft/skilllib");
+        // Catálogo: pais, raiz unica e árvores ausentes
+        String tree = "{\"nome\":\"P\",\"tipo\":\"pessoal\",\"icone\":\"minecraft:stone\",\"fundo\":\"minecraft:textures/block/stone.png\"}";
+        java.util.function.BiFunction<String, String, com.google.gson.JsonObject> sk = (arvore, pai) -> js.apply(
+                "{\"arvore\":\"" + arvore + "\",\"nome\":\"S\",\"icone\":\"minecraft:stone\",\"custo\":1" + (pai == null ? "" : ",\"pai\":\"" + pai + "\"") + "}");
+        List<String> errors = new ArrayList<>();
+        SkillCatalogData catalog = SkillCatalogData.build(Map.of("t:p", js.apply(tree), "t:vazia", js.apply(tree)), Map.of(
+                "t:raiz", sk.apply("t:p", null), "t:filho", sk.apply("t:p", "t:raiz"), "t:neto", sk.apply("t:p", "t:filho"),
+                "t:orfa", sk.apply("t:p", "t:nao_existe"), "t:filha_da_orfa", sk.apply("t:p", "t:orfa"),
+                "t:sem_arvore", sk.apply("t:nenhuma", null), "t:raiz2", sk.apply("t:p", null)), errors::add);
+        check(catalog.skills().keySet().equals(Set.of("t:raiz", "t:filho", "t:neto")) && errors.size() == 4,
+              "catalogo descarta orfas (e filhas), skill sem arvore e raiz extra: " + catalog.skills().keySet() + " " + errors);
+        check(catalog.treesInOrder().size()==1 && catalog.childrenOf("t:raiz").size()==1, "arvore sem skills fica fora das abas");
+
+        // Estado salvo: compras da v0.4.0 (só "suspended") carregam; compra e suspensão
+        net.minecraft.nbt.CompoundTag oldState = new net.minecraft.nbt.CompoundTag();
+        net.minecraft.nbt.ListTag oldSuspended = new net.minecraft.nbt.ListTag();
+        oldSuspended.add(net.minecraft.nbt.StringTag.valueOf("tupinicraft:cargo_vereador_gabinete"));
+        oldState.put("suspended", oldSuspended);
+        SkillTreeState loaded = SkillTreeState.CODEC.parse(net.minecraft.nbt.NbtOps.INSTANCE, oldState).getOrThrow();
+        check(loaded.unlocked().isEmpty() && loaded.suspended().size()==1, "estado de skills da v0.4.0 carrega sem erro");
+        SkillTreeState bought = SkillTreeState.EMPTY.withUnlocked("t:a").withSuspended("t:a", true);
+        check(bought.isUnlocked("t:a") && bought.suspended().contains("t:a") && !bought.withSuspended("t:a", false).suspended().contains("t:a"),
+              "compra fica salva; suspender e restaurar nao apaga a compra");
+
+        // Abas visíveis: só a região e o partido do jogador (+ pessoais e cargos), ou onde já comprou
+        SkillTreeDef nordesteTree = SkillDataParser.parseTree("t:n", js.apply(
+                "{\"nome\":\"N\",\"tipo\":\"regional\",\"regiao\":\"nordeste\",\"icone\":\"minecraft:stone\",\"fundo\":\"minecraft:a\"}"));
+        check(SkillGate.treeVisible(nordesteTree, ctx(Macroregion.NORDESTE, null, null, 0, 0, Map.of()), false)
+              && !SkillGate.treeVisible(nordesteTree, ctx(Macroregion.SUL, null, null, 0, 0, Map.of()), false)
+              && SkillGate.treeVisible(nordesteTree, ctx(Macroregion.SUL, null, null, 0, 0, Map.of()), true),
+              "aba regional so para a regiao do jogador (ou se ja comprou nela)");
+
+        // Arquivos reais do datapack
+        java.nio.file.Path base = java.nio.file.Path.of("src/main/resources/data/tupinicraft/tupinicraft_skilltree");
         try {
-            Set<String> categories = new HashSet<>();
-            Set<String> roots = new HashSet<>();
-            try (var files = java.nio.file.Files.list(base.resolve("categories"))) {
-                for (var file : files.toList()) {
-                    var cat = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject();
-                    categories.add(cat.get("id").getAsString());
-                    if (!cat.has("parent")) roots.add(cat.get("id").getAsString());
-                }
+            Map<String, com.google.gson.JsonObject> treeFiles = new HashMap<>();
+            Map<String, com.google.gson.JsonObject> skillFiles = new HashMap<>();
+            try (var files = java.nio.file.Files.list(base.resolve("arvores"))) {
+                for (var file : files.toList()) treeFiles.put("tupinicraft:" + file.getFileName().toString().replace(".json", ""),
+                        js.apply(java.nio.file.Files.readString(file)));
             }
-            check(roots.equals(Set.of("tupinicraft:pessoais", "tupinicraft:regionais", "tupinicraft:partidarias", "tupinicraft:cargos")),
-                  "4 categorias raiz independentes: " + roots);
-            boolean allRegions = true;
-            for (Macroregion m : Macroregion.values()) allRegions &= categories.contains("tupinicraft:regional_" + m.name().toLowerCase(Locale.ROOT));
-            boolean allOffices = true;
-            for (PoliticalOffice o : PoliticalOffice.values()) if (o.isElective()) allOffices &= categories.contains("tupinicraft:cargo_" + o.id());
-            check(allRegions && allOffices, "subcategorias: 5 macrorregioes e 7 cargos");
-            Map<SkillTreeKind, Integer> kinds = new EnumMap<>(SkillTreeKind.class);
-            boolean valid = true;
-            boolean priceShown = true;
             try (var files = java.nio.file.Files.list(base.resolve("skills"))) {
-                for (var file : files.toList()) {
-                    String id = "tupinicraft:" + file.getFileName().toString().replace(".json", "");
-                    var skill = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject();
-                    valid &= skill.has("icon") && skill.has("x") && skill.has("y") && skill.has("effects")
-                            && categories.contains(skill.get("category").getAsString());
-                    // SkillLib 1.4.0 usa AttributeModifier.Operation.valueOf(...) do 1.21.1 (o README cita nomes antigos).
-                    for (var effect : skill.getAsJsonArray("effects")) {
-                        var e = effect.getAsJsonObject();
-                        if (e.get("type").getAsString().equals("skilllib:attribute_modifier")) {
-                            valid &= Set.of("add_value", "add_multiplied_base", "add_multiplied_total").contains(e.get("operation").getAsString());
-                        }
-                    }
-                    SkillRule rule = SkillRuleParser.parse(id, skill).orElseThrow();
-                    kinds.merge(rule.kind(), 1, Integer::sum);
-                    // A descrição exibida no painel do SkillLib mostra o preço real e ensina a comprar pelo clique.
-                    String comment = skill.get("comment").getAsString();
-                    String price = rule.kind() == SkillTreeKind.OFFICE
-                            ? rule.officePointCost() + " ponto" : Money.format(rule.moneyCost());
-                    priceShown &= comment.contains("Custo: " + price) && comment.contains("Clique no ícone para comprar")
-                            && !comment.contains("/brasil");
-                }
+                for (var file : files.toList()) skillFiles.put("tupinicraft:" + file.getFileName().toString().replace(".json", ""),
+                        js.apply(java.nio.file.Files.readString(file)));
             }
-            check(valid, "skills de teste com campos obrigatorios do SkillLib e categoria existente");
-            check(priceShown, "descricao de cada skill mostra o custo real do bloco tupinicraft e a compra pelo clique");
-            check(kinds.size()==4 && kinds.values().stream().allMatch(n -> n == 1), "uma skill de teste por categoria: " + kinds);
+            List<String> realErrors = new ArrayList<>();
+            SkillCatalogData real = SkillCatalogData.build(treeFiles, skillFiles, realErrors::add);
+            check(realErrors.isEmpty() && real.trees().size()==treeFiles.size() && real.skills().size()==skillFiles.size(),
+                  "datapack real sem erros: " + realErrors);
+            boolean allRegions = true;
+            for (Macroregion m : Macroregion.values()) allRegions &= real.trees().containsKey("tupinicraft:regional_" + m.name().toLowerCase(Locale.ROOT));
+            boolean allOffices = true;
+            for (PoliticalOffice o : PoliticalOffice.values()) if (o.isElective()) allOffices &= real.trees().containsKey("tupinicraft:cargo_" + o.id());
+            check(allRegions && allOffices && real.trees().containsKey("tupinicraft:pessoais"),
+                  "arvores: pessoais, 5 macrorregioes, 7 cargos e partido de teste");
+            Map<SkillTreeKind, Integer> kinds = new java.util.EnumMap<>(SkillTreeKind.class);
+            real.allSkills().forEach(skill -> kinds.merge(skill.rule().kind(), 1, Integer::sum));
+            check(kinds.size()==4 && kinds.values().stream().allMatch(n -> n == 1), "uma skill de teste por tipo de arvore: " + kinds);
         } catch (java.io.IOException e) {
             check(false, "ler datapack de skills: " + e);
         }

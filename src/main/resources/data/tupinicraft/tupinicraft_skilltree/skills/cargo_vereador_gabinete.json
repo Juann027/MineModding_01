@@ -1,0 +1,15 @@
+{
+  "arvore": "tupinicraft:cargo_vereador",
+  "nome": "Gabinete do Vereador (teste)",
+  "descricao": "+1 de dano de ataque enquanto exercer o mandato.",
+  "icone": "minecraft:oak_sign",
+  "moldura": "goal",
+  "pontos": 1,
+  "efeitos": [
+    {
+      "atributo": "minecraft:generic.attack_damage",
+      "operacao": "add_value",
+      "valor": 1
+    }
+  ]
+}

@@ -50,6 +50,19 @@ public final class SkillGate {
         return Optional.empty();
     }
 
+    /**
+     * A aba da árvore aparece para o jogador? Pessoais e de cargo: sempre (para ele ver o que pode conquistar).
+     * Regional: só a da sua macrorregião. Partidária: só a do seu partido. Em todos os casos, também aparece se ele
+     * já comprou algo nela (para ver as skills suspensas).
+     */
+    public static boolean treeVisible(SkillTreeDef tree, SkillPlayerContext player, boolean hasPurchaseInTree) {
+        return hasPurchaseInTree || switch (tree.kind()) {
+            case PERSONAL, OFFICE -> true;
+            case REGIONAL -> player.macroregion().equals(tree.region());
+            case PARTY -> player.party().equals(tree.party());
+        };
+    }
+
     /** O efeito de uma skill já desbloqueada pode ficar ativo agora? */
     public static boolean effectAllowed(SkillRule rule, SkillPlayerContext player) {
         return switch (rule.kind()) {

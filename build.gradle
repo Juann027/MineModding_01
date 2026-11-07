@@ -39,7 +39,7 @@ repositories {
         url = 'https://dl.cloudsmith.io/public/tslat/sbl/maven/'
         content { includeGroup 'net.tslat.smartbrainlib' }
     }
-    // SkillLib não publica Maven próprio; o autor (Yvliux) distribui no Modrinth, que expõe um Maven oficial.
+    // UI Lib e Architectury API pelo Maven oficial do Modrinth.
     exclusiveContent {
         forRepository {
             maven {
@@ -144,13 +144,11 @@ dependencies {
     // Mods obrigatórios no cliente E no servidor (declarados também em neoforge.mods.toml).
     implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
     implementation "net.tslat.smartbrainlib:SmartBrainLib-neoforge-${minecraft_version}:${smartbrainlib_version}"
-    // SkillLib: obrigatório (árvores de habilidades). O jar 1.4.0 só inicia com o KubeJS instalado
-    // (bug do próprio SkillLib), então KubeJS e Rhino também são exigidos dos jogadores (neoforge.mods.toml).
-    implementation "maven.modrinth:skilllib:${skilllib_version}"
-    // KubeJS/Rhino não são usados pelo código do TupiniCraft: entram só no ambiente de execução local
-    // (runClient/runServer), sem virar dependência publicada.
-    localRuntime "maven.modrinth:kubejs:${kubejs_version}"
-    localRuntime "maven.modrinth:rhino:${rhino_version}"
+    // UI Lib (DAQEM): componentes de tela usados SÓ pelo cliente (árvore de habilidades). O servidor dedicado
+    // não precisa dele (neoforge.mods.toml declara side="CLIENT"). Modrinth: ID da versão 9.0.0 para NeoForge.
+    implementation "maven.modrinth:ui-lib:${uilib_modrinth_version_id}"
+    // Architectury API: exigida pelo UI Lib; o código do TupiniCraft não a usa (só ambiente de execução local).
+    localRuntime "maven.modrinth:architectury-api:${architectury_version}"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
@@ -188,8 +186,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_license            : mod_license,
             geckolib_version       : geckolib_version,
             smartbrainlib_version  : smartbrainlib_version,
-            skilllib_version       : skilllib_version,
-            kubejs_version         : kubejs_version,
+            uilib_version          : uilib_version,
             mod_version            : mod_version,
     ]
     inputs.properties replaceProperties

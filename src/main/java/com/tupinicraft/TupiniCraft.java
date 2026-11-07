@@ -10,8 +10,7 @@ import com.tupinicraft.player.PlayerEventHandler;
 import com.tupinicraft.registry.ModAttachments;
 import com.tupinicraft.registry.ModEntities;
 import com.tupinicraft.registry.ModItems;
-import com.tupinicraft.skilltree.SkillBackends;
-import com.tupinicraft.skilltree.SkillRules;
+import com.tupinicraft.skilltree.SkillCatalog;
 import com.tupinicraft.skilltree.SkillTreeService;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
@@ -46,8 +45,8 @@ public final class TupiniCraft {
         NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onRespawn);
         NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onChangedDimension);
         NeoForge.EVENT_BUS.addListener(TupiniCraft::onServerTick);
-        NeoForge.EVENT_BUS.addListener(SkillRules::onAddReloadListener);
-        SkillBackends.init();
+        NeoForge.EVENT_BUS.addListener(SkillCatalog::onAddReloadListener);
+        NeoForge.EVENT_BUS.addListener(SkillTreeService::onDatapackSync);
     }
 
     private static void onServerTick(ServerTickEvent.Post event) {

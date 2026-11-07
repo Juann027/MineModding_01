@@ -1,0 +1,8 @@
+{
+  "nome": "Cargo: Vereador",
+  "tipo": "cargo",
+  "cargo": "vereador",
+  "icone": "minecraft:oak_sign",
+  "fundo": "minecraft:textures/block/polished_andesite.png",
+  "ordem": 40
+}

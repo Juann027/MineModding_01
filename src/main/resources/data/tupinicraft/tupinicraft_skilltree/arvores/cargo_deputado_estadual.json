@@ -1,0 +1,8 @@
+{
+  "nome": "Cargo: Deputado Estadual / Distrital",
+  "tipo": "cargo",
+  "cargo": "deputado_estadual",
+  "icone": "minecraft:writable_book",
+  "fundo": "minecraft:textures/block/polished_andesite.png",
+  "ordem": 41
+}

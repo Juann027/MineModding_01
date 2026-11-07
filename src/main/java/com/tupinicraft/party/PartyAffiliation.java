@@ -8,7 +8,7 @@ import java.util.Optional;
 /**
  * Filiação partidária do jogador (Data Attachment, copiada na morte, mantida ao perder mandatos).
  * O sistema de partidos ainda NÃO existe: hoje a filiação só é definida por comando administrativo
- * de teste. Sair do partido não apaga as skills compradas daquele partido (ficam no SkillLib);
+ * de teste. Sair do partido não apaga as skills compradas daquele partido (ficam no SkillTreeState);
  * elas só ficam inativas até o jogador voltar.
  */
 public record PartyAffiliation(Optional<String> partyId) {

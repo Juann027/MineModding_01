@@ -1,0 +1,8 @@
+{
+  "nome": "Regional: Sul",
+  "tipo": "regional",
+  "regiao": "sul",
+  "icone": "minecraft:snowball",
+  "fundo": "minecraft:textures/block/spruce_planks.png",
+  "ordem": 24
+}

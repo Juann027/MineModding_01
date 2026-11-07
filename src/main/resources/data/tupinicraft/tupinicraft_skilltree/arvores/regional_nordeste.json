@@ -1,0 +1,8 @@
+{
+  "nome": "Regional: Nordeste",
+  "tipo": "regional",
+  "regiao": "nordeste",
+  "icone": "minecraft:cactus",
+  "fundo": "minecraft:textures/block/sand.png",
+  "ordem": 21
+}

@@ -1,0 +1,8 @@
+{
+  "nome": "Cargo: Deputado Federal",
+  "tipo": "cargo",
+  "cargo": "deputado_federal",
+  "icone": "minecraft:book",
+  "fundo": "minecraft:textures/block/polished_andesite.png",
+  "ordem": 43
+}

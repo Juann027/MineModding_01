@@ -1,8 +1,0 @@
-{
-  "id": "tupinicraft:cargo_deputado_federal",
-  "name": "Deputado Federal",
-  "icon": "minecraft:book",
-  "order": 3,
-  "icon_size": 24,
-  "parent": "tupinicraft:cargos"
-}
