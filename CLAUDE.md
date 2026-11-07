@@ -224,3 +224,7 @@ carregamento sem classes de cliente, das skills e persistência de uma eleição
   inválidos, aldeões completando disputas, prazo congelado de eleição ativa, consulta de mandatos, mob de teste
   invocado no servidor dedicado e o carregamento das árvores e das 4 skills de teste.
 - Fluxos multiplayer (candidatura, urna, HUD) exigem teste manual com 2+ clientes (`runClient` + servidor).
+- **Testes no jogo só quando valer a pena.** Os testes com Minecraft de verdade (abrir servidor e cliente, tirar
+  prints) são os mais caros, porque cada print entra no histórico. O dono pode pedir "só build e testes automáticos,
+  sem teste no jogo" em mudanças pequenas. Em mudanças grandes, recomende manter o teste no jogo: foi assim que
+  foram achados vários bugs (skill sumindo ao morrer, molduras roxas).
