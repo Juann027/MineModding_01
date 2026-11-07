@@ -9,16 +9,18 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
    (arquivo `tupinicraft-<versão>.jar` em *Assets*), ou compile você mesmo com `./gradlew build`
    (Windows: `gradlew.bat build`) → o jar sai em `build/libs/`.
 2. **Instale o NeoForge 21.1.x para Minecraft 1.21.1**: baixe o instalador em <https://neoforged.net>, execute e escolha "Install client".
-   Baixe também os 5 mods **obrigatórios**, todos para NeoForge 1.21.1 (coloque na mesma pasta `mods`).
+   Baixe também os 4 mods **obrigatórios**, todos para NeoForge 1.21.1 (coloque na mesma pasta `mods`).
    Estão no Modrinth (links abaixo) e também podem ser procurados pelo nome no CurseForge:
 
-   | Mod | Versão | Para quê | Download |
-   |---|---|---|---|
-   | GeckoLib | 4.9.3 | animações dos mobs | <https://modrinth.com/mod/geckolib> |
-   | SmartBrainLib | 1.16.11 | IA dos mobs | <https://modrinth.com/mod/smartbrainlib> |
-   | SkillLib | 1.4.0 | árvores de habilidades (tecla **K**) | <https://modrinth.com/mod/skilllib> |
-   | KubeJS | 2101.7.2 | exigido pelo SkillLib | <https://modrinth.com/mod/kubejs> |
-   | Rhino | 2101.2.8 | exigido pelo KubeJS | <https://modrinth.com/mod/rhino> |
+   | Mod | Versão | Para quê | Onde instalar | Download |
+   |---|---|---|---|---|
+   | GeckoLib | 4.9.3 | animações dos mobs | cliente e servidor | <https://modrinth.com/mod/geckolib> |
+   | SmartBrainLib | 1.16.11 | IA dos mobs | cliente e servidor | <https://modrinth.com/mod/smartbrainlib> |
+   | UI Lib (DAQEM) | 9.0.0 | tela das árvores de habilidades (tecla **K**) | só no cliente | <https://modrinth.com/mod/ui-lib> |
+   | Architectury API | 13.0.x | exigido pelo UI Lib | só no cliente | <https://modrinth.com/mod/architectury-api> |
+
+   **Vindo da v0.4.0?** Pode apagar SkillLib, KubeJS e Rhino da pasta `mods`: o TupiniCraft não usa mais.
+   As skills compradas na v0.4.0 ficavam guardadas no SkillLib e não são recuperadas (eram só as 4 de teste).
 
    Se faltar algum, o jogo mostra na tela de carregamento qual é.
 3. Abra o launcher do Minecraft uma vez com o perfil **NeoForge** (isso cria a pasta `mods`).
@@ -31,7 +33,7 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
 ### Multiplayer
 
 - O **servidor** precisa de NeoForge 21.1.x (use o mesmo instalador com "Install server") e dos mesmos jars em `mods/`
-  (TupiniCraft e os 5 mods obrigatórios acima).
+  (TupiniCraft, GeckoLib e SmartBrainLib; UI Lib e Architectury são só do cliente, mas podem ficar no servidor).
 - **Todos os jogadores** precisam dos mesmos mods no cliente.
 - Comandos de administração (`/brasil admin ...`) exigem OP nível 2 (`/op <jogador>` no console).
 - Configurações padrão: `config/tupinicraft-server.toml` do servidor. Administradores podem mudar valores no
@@ -47,7 +49,7 @@ Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e e
 | `/brasil eleicao status` | Fase, cargos em disputa, candidatos e tempo restante |
 | `/brasil eleicao candidatar [cargo]` | Inscreve você numa disputa do seu domicílio eleitoral (basta ter o XP político mínimo) |
 | `/brasil eleicao votar <candidato>` | Vota (ou use a Urna Eletrônica com o botão direito) |
-| `/brasil skills` | (Opcional) lista as skills no chat; o normal é usar o painel da tecla **K** |
+| `/brasil skills` | (Opcional) lista as skills no chat; o normal é usar a tela da tecla **K** |
 | `/brasil mandatos [território]` | Mandatos vigentes, ou todas as cadeiras de um território (ex.: `es`, `vitoria`) |
 | `/brasil admin eleicao iniciar <cargo> [território] [cargo2 território2]` | Inicia uma eleição (ex.: `prefeito vitoria`) |
 | `/brasil admin eleicao avancar` / `cancelar` | Pula para a próxima fase / cancela |
@@ -77,20 +79,25 @@ Cargos: `desempregado`, `vereador`, `deputado_estadual`, `prefeito`, `deputado_f
 
 ### Árvores de habilidades (tecla K)
 
-Aperte **K** para abrir o painel do SkillLib. Quatro árvores:
+Aperte **K** (configurável em Opções → Controles) para abrir as árvores, numa tela no estilo da de
+Progressos do Minecraft: uma aba por árvore, skills ligadas por linhas (cada uma exige a anterior) e moldura
+dourada nas compradas. As abas que aparecem:
 - **Pessoais:** para todos.
-- **Regionais:** uma por macrorregião; vale a da sua origem.
-- **Partidárias:** do partido em que você está filiado.
+- **Regional:** só a da macrorregião da sua origem.
+- **Partidária:** só a do partido em que você está filiado.
 - **Cargos políticos:** uma por cargo.
 
+Uma árvore que você deixou de poder usar (mudou de partido, por exemplo) continua aparecendo se você já comprou
+algo nela, para você ver o que ficou suspenso.
+
 Como funcionam:
-- **Compra:** passe o mouse na skill para ver o preço e **clique nela**. Ela é comprada e já ativada; uma
+- **Compra:** passe o mouse na skill para ver o preço e **clique nela**. Ela é comprada e já fica ativa; uma
   notificação no canto da tela confirma ou explica o motivo da recusa. As pessoais, regionais e partidárias custam
   **dinheiro** (reais fictícios); as de cargo custam **pontos daquele cargo**, ganhos exercendo o mandato online.
   O XP político pode ser exigido, mas nunca é gasto.
 - **Saldo:** aparece no painel do canto superior direito. Cada jogador começa com **R$ 1.000** (configurável em
   `economia.saldo_inicial`).
-- **Ligar/desligar:** depois de comprada, clicar de novo liga e desliga a skill, sem pagar de novo.
+- **Ordem:** dentro de uma árvore, é preciso comprar a skill anterior (a ligada pela linha) antes da próxima.
 - **Suspensão:** se você deixar o partido, perder o mandato ou não for daquela região, a skill **fica suspensa** e volta a funcionar sozinha quando o requisito voltar. Nada do que foi comprado é perdido.
 
 Nesta versão existem 4 skills de teste, uma por árvore. Ainda não há como ganhar dinheiro nem entrar em partidos
@@ -123,6 +130,6 @@ o workflow **Release** compila e publica o jar automaticamente (se a versão ain
 ./gradlew runServer   # servidor de desenvolvimento
 ```
 
-O Gradle baixa todas as bibliotecas sozinho (SkillLib, KubeJS e Rhino pelo Maven do Modrinth).
+O Gradle baixa todas as bibliotecas sozinho (UI Lib e Architectury pelo Maven do Modrinth).
 
 Convenções técnicas em [CLAUDE.md](CLAUDE.md).

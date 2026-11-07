@@ -1,8 +1,0 @@
-{
-  "id": "tupinicraft:cargo_deputado_estadual",
-  "name": "Deputado Estadual / Distrital",
-  "icon": "minecraft:writable_book",
-  "order": 1,
-  "icon_size": 24,
-  "parent": "tupinicraft:cargos"
-}

@@ -5,7 +5,9 @@ import com.tupinicraft.config.ServerSettings;
 import com.tupinicraft.economy.Money;
 import com.tupinicraft.economy.WalletService;
 import com.tupinicraft.mandate.MandateService;
+import com.tupinicraft.network.SkillDefinitionsPayload;
 import com.tupinicraft.network.SkillNoticePayload;
+import com.tupinicraft.network.SkillStatePayload;
 import com.tupinicraft.player.OfficeProgress;
 import com.tupinicraft.player.PoliticalData;
 import com.tupinicraft.player.PoliticalDataService;
@@ -17,19 +19,31 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.WeakHashMap;
 
 /**
- * Regras do TupiniCraft sobre as skills (servidor autoritativo): compra com dinheiro ou pontos de cargo e
- * suspensão/restauração automática dos efeitos conforme os requisitos (região, partido, mandato).
+ * Árvores de habilidades no servidor (autoritativo): compra com dinheiro ou pontos de cargo, efeitos
+ * (modificadores de atributo) enquanto o requisito vale, suspensão/restauração automática e sincronização
+ * com a tela do cliente (UI Lib).
  */
 public final class SkillTreeService {
     /** Frequência da checagem de requisitos (4x por segundo): um efeito sem requisito some em até 0,25 s. */
     private static final int ENFORCE_INTERVAL_TICKS = ServerSettings.TICKS_PER_SECOND / 4;
+
+    /**
+     * Último estado enviado a cada jogador, só para não reenviar o mesmo pacote (cache de rede, não é estado do
+     * mundo; some com o jogador). Uma entidade nova (ao renascer) recebe o estado de novo.
+     */
+    private static final Map<ServerPlayer, SkillStatePayload> LAST_SENT = Collections.synchronizedMap(new WeakHashMap<>());
 
     private SkillTreeService() {
     }
@@ -58,82 +72,57 @@ public final class SkillTreeService {
                 points);
     }
 
-    /** Compra uma skill: valida tudo no servidor, cobra e desbloqueia no SkillLib. */
+    public static SkillTreeState state(ServerPlayer player) {
+        return player.getData(ModAttachments.SKILL_TREE_STATE);
+    }
+
+    /** Compra uma skill: valida tudo no servidor e cobra. O efeito entra na próxima checagem (até 0,25 s). */
     public static Outcome purchase(ServerPlayer player, String skillId) {
-        SkillBackend backend = SkillBackends.get();
-        if (!backend.available()) {
-            return Outcome.fail("As árvores de habilidades estão desativadas: o SkillLib não está instalado neste servidor.");
-        }
-        Optional<SkillRule> found = SkillRules.get(skillId);
+        Optional<SkillDef> found = SkillCatalog.get().skill(skillId);
         if (found.isEmpty()) {
-            return Outcome.fail("Habilidade desconhecida: " + skillId + ". Veja a lista com /brasil skills.");
+            return Outcome.fail("Habilidade desconhecida: " + skillId + ".");
         }
-        SkillRule rule = found.get();
-        ResourceLocation id = ResourceLocation.parse(skillId);
-        if (!backend.skillExists(id)) {
-            return Outcome.fail("A habilidade " + skillId + " não foi carregada pelo SkillLib (verifique o datapack).");
+        SkillDef skill = found.get();
+        SkillRule rule = skill.rule();
+        SkillTreeState state = state(player);
+        if (state.isUnlocked(skillId)) {
+            return Outcome.fail("Você já comprou " + skill.name() + ".");
         }
-        if (backend.isUnlocked(player, id)) {
-            return Outcome.fail("Você já desbloqueou " + skillId + ".");
-        }
-        for (ResourceLocation prerequisite : backend.prerequisites(id)) {
-            if (!backend.isUnlocked(player, prerequisite)) {
-                return Outcome.fail("Desbloqueie antes o pré-requisito " + prerequisite + ".");
-            }
+        if (skill.parent().isPresent() && !state.isUnlocked(skill.parent().get())) {
+            String parentName = SkillCatalog.get().skill(skill.parent().get()).map(SkillDef::name).orElse(skill.parent().get());
+            return Outcome.fail("Compre antes \"" + parentName + "\" (a skill anterior desta árvore).");
         }
         SkillPlayerContext context = context(player);
         Optional<SkillGate.Problem> problem = SkillGate.purchaseProblem(rule, context);
         if (problem.isPresent()) {
             return Outcome.fail(describe(problem.get(), rule, context));
         }
-
-        // Cobra (XP político nunca é consumido) e desbloqueia; devolve se o SkillLib recusar.
+        // Cobra (XP político nunca é consumido).
         if (rule.kind() == SkillTreeKind.OFFICE) {
-            PoliticalOffice office = rule.office().orElseThrow();
-            if (!changeOfficePoints(player, office, -rule.officePointCost())) {
-                return Outcome.fail("Pontos de " + office.displayName() + " insuficientes.");
+            if (!changeOfficePoints(player, rule.office().orElseThrow(), -rule.officePointCost())) {
+                return Outcome.fail("Pontos de " + rule.office().orElseThrow().displayName() + " insuficientes.");
             }
-            if (!backend.unlock(player, id)) {
-                changeOfficePoints(player, office, rule.officePointCost());
-                return Outcome.fail("O SkillLib recusou o desbloqueio de " + skillId + ".");
-            }
-        } else {
-            if (!WalletService.debit(player, rule.moneyCost())) {
-                return Outcome.fail("Saldo insuficiente.");
-            }
-            if (!backend.unlock(player, id)) {
-                WalletService.credit(player, rule.moneyCost());
-                return Outcome.fail("O SkillLib recusou o desbloqueio de " + skillId + ".");
-            }
+        } else if (!WalletService.debit(player, rule.moneyCost())) {
+            return Outcome.fail("Saldo insuficiente.");
         }
+        player.setData(ModAttachments.SKILL_TREE_STATE, state.withUnlocked(skillId));
+        enforce(player);
         TupiniCraft.LOGGER.info("{} comprou a skill {}", player.getGameProfile().getName(), skillId);
-        return Outcome.ok("Habilidade desbloqueada: " + skillId + " (" + cost(rule) + "). Ligue e desligue no painel do SkillLib (tecla K).");
+        return Outcome.ok("Habilidade comprada: " + skill.name() + " (" + cost(rule) + ").");
     }
 
-    /**
-     * Compra pedida pelo painel do SkillLib (clique numa skill bloqueada): compra, já ativa se couber e
-     * responde com uma notificação na tela.
-     */
-    public static void purchaseFromPanel(ServerPlayer player, ResourceLocation skillId) {
+    /** Compra pedida pela tela da árvore (clique num nó): responde com uma notificação na tela. */
+    public static void purchaseFromScreen(ServerPlayer player, ResourceLocation skillId) {
         String id = skillId.toString();
         Outcome outcome = purchase(player, id);
         if (!outcome.success()) {
             notify(player, false, "Não foi possível comprar", outcome.message());
             return;
         }
-        SkillBackend backend = SkillBackends.get();
-        String price = SkillRules.get(id).map(SkillTreeService::cost).orElse("");
-        if (backend.canActivateMore(player)) {
-            backend.setActive(player, skillId, true);
-            notify(player, true, "Habilidade comprada e ativada", Component.literal(skillName(id) + " — " + price));
-        } else {
-            notify(player, true, "Habilidade comprada", Component.literal(skillName(id)
-                    + " — limite de skills ativas atingido; desative outra para ativá-la."));
-        }
-    }
-
-    private static String skillName(String skillId) {
-        return SkillBackends.get().displayName(ResourceLocation.parse(skillId));
+        SkillDef skill = SkillCatalog.get().skill(id).orElseThrow();
+        boolean active = !state(player).suspended().contains(id);
+        notify(player, true, active ? "Habilidade comprada e ativada" : "Habilidade comprada (suspensa)",
+                Component.literal(skill.name() + " — " + cost(skill.rule())));
     }
 
     private static void notify(ServerPlayer player, boolean success, String title, Component message) {
@@ -154,49 +143,91 @@ public final class SkillTreeService {
         return true;
     }
 
-    /** 4x por segundo: suspende efeitos sem requisito e restaura os suspensos quando o requisito volta. */
+    /** 4x por segundo: aplica/suspende efeitos conforme os requisitos e sincroniza a tela se algo mudou. */
     public static void tick(MinecraftServer server) {
-        SkillBackend backend = SkillBackends.get();
-        if (!backend.available() || server.getTickCount() % ENFORCE_INTERVAL_TICKS != 0 || SkillRules.all().isEmpty()) {
+        if (server.getTickCount() % ENFORCE_INTERVAL_TICKS != 0) {
             return;
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            enforce(player, backend);
+            enforce(player);
         }
     }
 
-    static void enforce(ServerPlayer player, SkillBackend backend) {
+    static void enforce(ServerPlayer player) {
+        SkillCatalogData catalog = SkillCatalog.get();
         SkillPlayerContext context = context(player);
-        SkillTreeState state = player.getData(ModAttachments.SKILL_TREE_STATE);
+        SkillTreeState state = state(player);
         SkillTreeState updated = state;
-        for (SkillRule rule : SkillRules.all()) {
-            ResourceLocation id = ResourceLocation.parse(rule.skillId());
-            if (!backend.isUnlocked(player, id)) {
-                continue;
+        for (String skillId : state.unlocked()) {
+            Optional<SkillDef> found = catalog.skill(skillId);
+            if (found.isEmpty()) {
+                continue; // skill removida do datapack: a compra fica guardada, sem efeito
             }
-            boolean allowed = SkillGate.effectAllowed(rule, context);
-            boolean active = backend.isActive(player, id);
-            boolean suspended = updated.suspended().contains(rule.skillId());
-            if (active && !allowed) {
-                backend.setActive(player, id, false);
-                updated = updated.with(rule.skillId(), true);
-                Component reason = Component.literal(skillName(rule.skillId()) + ": " + requirementText(rule)
-                        + ". O progresso continua salvo.");
+            SkillDef skill = found.get();
+            boolean allowed = SkillGate.effectAllowed(skill.rule(), context);
+            SkillEffects.set(player, skill, allowed);
+            boolean wasSuspended = updated.suspended().contains(skillId);
+            if (!allowed && !wasSuspended) {
+                updated = updated.withSuspended(skillId, true);
+                Component reason = Component.literal(skill.name() + ": " + requirementText(skill.rule()) + ". A compra continua salva.");
                 player.sendSystemMessage(Component.literal("Habilidade suspensa — ").append(reason).withStyle(ChatFormatting.YELLOW));
                 notify(player, false, "Habilidade suspensa", reason);
-            } else if (suspended && allowed) {
-                if (!active && backend.canActivateMore(player)) {
-                    backend.setActive(player, id, true);
-                    player.sendSystemMessage(Component.literal("Habilidade restaurada: " + rule.skillId() + ".")
-                            .withStyle(ChatFormatting.GREEN));
-                    notify(player, true, "Habilidade restaurada", Component.literal(skillName(rule.skillId())));
-                }
-                updated = updated.with(rule.skillId(), false);
+            } else if (allowed && wasSuspended) {
+                updated = updated.withSuspended(skillId, false);
+                player.sendSystemMessage(Component.literal("Habilidade restaurada: " + skill.name() + ".").withStyle(ChatFormatting.GREEN));
+                notify(player, true, "Habilidade restaurada", Component.literal(skill.name()));
             }
         }
         if (updated != state) {
             player.setData(ModAttachments.SKILL_TREE_STATE, updated);
         }
+        syncState(player, catalog, context, updated);
+    }
+
+    private static void syncState(ServerPlayer player, SkillCatalogData catalog, SkillPlayerContext context, SkillTreeState state) {
+        List<String> visible = new ArrayList<>();
+        for (SkillTreeDef tree : catalog.treesInOrder()) {
+            boolean bought = state.unlocked().stream().anyMatch(id -> catalog.skill(id).filter(s -> s.tree().equals(tree.id())).isPresent());
+            if (SkillGate.treeVisible(tree, context, bought)) {
+                visible.add(tree.id());
+            }
+        }
+        SkillStatePayload payload = new SkillStatePayload(List.copyOf(state.unlocked()), List.copyOf(state.suspended()), visible);
+        if (!payload.equals(LAST_SENT.get(player))) {
+            LAST_SENT.put(player, payload);
+            PacketDistributor.sendToPlayer(player, payload);
+        }
+    }
+
+    /** Ao entrar e após /reload: envia as definições das árvores (o estado vai logo em seguida, no enforce). */
+    public static void onDatapackSync(OnDatapackSyncEvent event) {
+        SkillDefinitionsPayload definitions = definitionsPayload(SkillCatalog.get());
+        event.getRelevantPlayers().forEach(player -> {
+            PacketDistributor.sendToPlayer(player, definitions);
+            LAST_SENT.remove(player);
+        });
+    }
+
+    static void onCatalogReloaded() {
+        LAST_SENT.clear();
+    }
+
+    private static SkillDefinitionsPayload definitionsPayload(SkillCatalogData catalog) {
+        List<SkillDefinitionsPayload.TreeView> trees = new ArrayList<>();
+        List<SkillDefinitionsPayload.SkillView> skills = new ArrayList<>();
+        for (SkillTreeDef tree : catalog.treesInOrder()) {
+            trees.add(new SkillDefinitionsPayload.TreeView(tree.id(), tree.name(), tree.icon(), tree.background()));
+            catalog.allSkills().stream().filter(s -> s.tree().equals(tree.id()) && s.parent().isEmpty())
+                    .forEach(root -> addWithChildren(catalog, root, skills));
+        }
+        return new SkillDefinitionsPayload(trees, skills);
+    }
+
+    private static void addWithChildren(SkillCatalogData catalog, SkillDef skill, List<SkillDefinitionsPayload.SkillView> out) {
+        out.add(new SkillDefinitionsPayload.SkillView(skill.id(), skill.tree(), skill.parent().orElse(""),
+                new SkillDefinitionsPayload.Display(skill.name(), skill.description(), skill.icon(), skill.frame(),
+                        "Custo: " + cost(skill.rule()), requirementText(skill.rule()))));
+        catalog.childrenOf(skill.id()).forEach(child -> addWithChildren(catalog, child, out));
     }
 
     public static String cost(SkillRule rule) {
@@ -229,18 +260,5 @@ public final class SkillTreeService {
                     + " insuficientes: você tem " + context.pointsOf(rule.office().orElseThrow()) + ", custa "
                     + rule.officePointCost() + " (ganhos exercendo o mandato online).";
         };
-    }
-
-    /**
-     * Ao renascer: o SkillLib 1.4.0 sincroniza durante a clonagem do jogador, antes do cliente trocar de
-     * entidade, e o painel passa a mostrar as skills compradas como bloqueadas. Reenviamos depois do respawn.
-     */
-    public static void onRespawn(ServerPlayer player) {
-        SkillBackends.get().resync(player);
-    }
-
-    /** Usado no perfil e na lista; true se o SkillLib está ativo neste servidor. */
-    public static boolean enabled() {
-        return SkillBackends.get().available();
     }
 }

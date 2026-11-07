@@ -1,8 +1,0 @@
-{
-  "id": "tupinicraft:cargo_vereador",
-  "name": "Vereador",
-  "icon": "minecraft:oak_sign",
-  "order": 0,
-  "icon_size": 24,
-  "parent": "tupinicraft:cargos"
-}

@@ -1,0 +1,15 @@
+{
+  "arvore": "tupinicraft:pessoais",
+  "nome": "Jeitinho Brasileiro (teste)",
+  "descricao": "+10% de velocidade.",
+  "icone": "minecraft:feather",
+  "moldura": "task",
+  "custo": 500,
+  "efeitos": [
+    {
+      "atributo": "minecraft:generic.movement_speed",
+      "operacao": "add_multiplied_base",
+      "valor": 0.1
+    }
+  ]
+}

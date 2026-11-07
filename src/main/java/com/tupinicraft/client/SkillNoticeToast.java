@@ -6,7 +6,7 @@ import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.sounds.SoundEvents;
 
-/** Notificação (toast) das árvores de habilidades; aparece por cima do painel do SkillLib. */
+/** Notificação (toast) das árvores de habilidades; aparece por cima da tela da árvore. */
 final class SkillNoticeToast {
     /** Um só "canal": uma notificação nova substitui a anterior em vez de empilhar. */
     private static final SystemToast.SystemToastId ID = new SystemToast.SystemToastId(5000L);

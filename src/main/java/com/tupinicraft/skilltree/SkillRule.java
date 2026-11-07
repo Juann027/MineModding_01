@@ -6,10 +6,9 @@ import com.tupinicraft.politics.PoliticalOffice;
 import java.util.Optional;
 
 /**
- * Regras do TupiniCraft para uma habilidade do SkillLib (lidas do bloco {@code "tupinicraft"} do próprio
- * JSON da skill). O SkillLib guarda desbloqueio/ativação/nível; o TupiniCraft guarda custos e requisitos.
+ * Custos e requisitos de uma skill (o tipo e o requisito vêm da árvore dela; ver {@link SkillDataParser}).
  *
- * @param skillId        ID da skill no SkillLib, ex.: {@code tupinicraft:pessoal_jeitinho}
+ * @param skillId        ID da skill, ex.: {@code tupinicraft:pessoal_jeitinho}
  * @param region         macrorregião exigida (só REGIONAL)
  * @param party          partido exigido (só PARTY)
  * @param office         cargo exigido (só OFFICE)

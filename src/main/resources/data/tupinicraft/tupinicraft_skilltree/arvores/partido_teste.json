@@ -1,0 +1,8 @@
+{
+  "nome": "Partido de Teste",
+  "tipo": "partidaria",
+  "partido": "partido_teste",
+  "icone": "minecraft:white_banner",
+  "fundo": "minecraft:textures/block/white_wool.png",
+  "ordem": 30
+}

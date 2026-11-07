@@ -1,0 +1,8 @@
+{
+  "nome": "Regional: Norte",
+  "tipo": "regional",
+  "regiao": "norte",
+  "icone": "minecraft:jungle_sapling",
+  "fundo": "minecraft:textures/block/moss_block.png",
+  "ordem": 20
+}

@@ -1,0 +1,8 @@
+{
+  "nome": "Cargo: Presidente da República",
+  "tipo": "cargo",
+  "cargo": "presidente",
+  "icone": "minecraft:golden_helmet",
+  "fundo": "minecraft:textures/block/polished_andesite.png",
+  "ordem": 46
+}

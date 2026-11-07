@@ -1,8 +1,0 @@
-{
-  "id": "tupinicraft:partido_teste",
-  "name": "Partido de Teste",
-  "icon": "minecraft:paper",
-  "order": 0,
-  "icon_size": 24,
-  "parent": "tupinicraft:partidarias"
-}

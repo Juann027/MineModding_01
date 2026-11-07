@@ -1,0 +1,8 @@
+{
+  "nome": "Regional: Centro-Oeste",
+  "tipo": "regional",
+  "regiao": "centro_oeste",
+  "icone": "minecraft:wheat",
+  "fundo": "minecraft:textures/block/coarse_dirt.png",
+  "ordem": 22
+}

@@ -17,11 +17,11 @@ import com.tupinicraft.player.PoliticalDataService;
 import com.tupinicraft.player.SkillProgression;
 import com.tupinicraft.politics.PoliticalOffice;
 import com.tupinicraft.registry.ModAttachments;
-import com.tupinicraft.skilltree.SkillBackends;
+import com.tupinicraft.skilltree.SkillCatalog;
+import com.tupinicraft.skilltree.SkillDef;
 import com.tupinicraft.skilltree.SkillGate;
 import com.tupinicraft.skilltree.SkillPlayerContext;
-import com.tupinicraft.skilltree.SkillRule;
-import com.tupinicraft.skilltree.SkillRules;
+import com.tupinicraft.skilltree.SkillTreeState;
 import com.tupinicraft.skilltree.SkillTreeKind;
 import com.tupinicraft.skilltree.SkillTreeService;
 import net.minecraft.ChatFormatting;
@@ -30,7 +30,6 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Map;
@@ -43,7 +42,7 @@ import java.util.Optional;
  */
 final class SkillCommands {
     private static final SuggestionProvider<CommandSourceStack> SKILL_SUGGESTIONS = (context, builder) ->
-            SharedSuggestionProvider.suggest(SkillRules.all().stream().map(SkillRule::skillId), builder);
+            SharedSuggestionProvider.suggest(SkillCatalog.get().allSkills().stream().map(SkillDef::id), builder);
 
     private SkillCommands() {
     }
@@ -84,24 +83,20 @@ final class SkillCommands {
     private static int list(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         CommandSourceStack source = context.getSource();
-        if (!SkillTreeService.enabled()) {
-            source.sendFailure(Component.literal("Árvores de habilidades desativadas: o SkillLib não está instalado neste servidor."));
-            return 0;
-        }
         SkillPlayerContext ctx = SkillTreeService.context(player);
+        SkillTreeState state = SkillTreeService.state(player);
         source.sendSuccess(() -> Component.literal("[SKILLS] Saldo: " + Money.format(ctx.money()) + " | Partido: "
                 + ctx.party().orElse("nenhum") + " | Mandato: " + ctx.activeOffice().map(PoliticalOffice::displayName).orElse("nenhum")
-                + " | Painel: tecla K").withStyle(ChatFormatting.AQUA), false);
+                + " | Árvores: tecla K").withStyle(ChatFormatting.AQUA), false);
         for (SkillTreeKind kind : SkillTreeKind.values()) {
             source.sendSuccess(() -> Component.literal(kind.displayName() + ":").withStyle(ChatFormatting.GOLD), false);
-            SkillRules.all().stream().filter(rule -> rule.kind() == kind).forEach(rule -> {
-                ResourceLocation id = ResourceLocation.parse(rule.skillId());
-                boolean unlocked = SkillBackends.get().isUnlocked(player, id);
-                boolean active = SkillBackends.get().isActive(player, id);
-                boolean allowed = SkillGate.effectAllowed(rule, ctx);
-                String status = !unlocked ? "bloqueada" : active ? "ativa" : allowed ? "desbloqueada (inativa)" : "suspensa";
-                source.sendSuccess(() -> Component.literal("  " + rule.skillId() + " — " + status + " — custo: "
-                        + SkillTreeService.cost(rule) + " — " + SkillTreeService.requirementText(rule))
+            SkillCatalog.get().allSkills().stream().filter(skill -> skill.rule().kind() == kind)
+                    .sorted(java.util.Comparator.comparing(SkillDef::id)).forEach(skill -> {
+                boolean unlocked = state.isUnlocked(skill.id());
+                boolean allowed = SkillGate.effectAllowed(skill.rule(), ctx);
+                String status = !unlocked ? "à venda" : allowed ? "ativa" : "suspensa";
+                source.sendSuccess(() -> Component.literal("  " + skill.id() + " — " + status + " — custo: "
+                        + SkillTreeService.cost(skill.rule()) + " — " + SkillTreeService.requirementText(skill.rule()))
                         .withStyle(unlocked ? ChatFormatting.WHITE : ChatFormatting.GRAY), false);
             });
         }

@@ -1,8 +1,0 @@
-{
-  "id": "tupinicraft:cargo_governador",
-  "name": "Governador",
-  "icon": "minecraft:iron_helmet",
-  "order": 5,
-  "icon_size": 24,
-  "parent": "tupinicraft:cargos"
-}

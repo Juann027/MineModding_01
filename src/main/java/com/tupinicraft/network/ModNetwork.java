@@ -32,6 +32,10 @@ public final class ModNetwork {
                 (payload, context) -> ClientPayloadHandler.handleOpenUrna());
         registrar.playToClient(WalletSyncPayload.TYPE, WalletSyncPayload.STREAM_CODEC,
                 (payload, context) -> ClientPayloadHandler.handleWallet(payload));
+        registrar.playToClient(SkillDefinitionsPayload.TYPE, SkillDefinitionsPayload.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandler.handleSkillDefinitions(payload));
+        registrar.playToClient(SkillStatePayload.TYPE, SkillStatePayload.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandler.handleSkillState(payload));
         registrar.playToClient(SkillNoticePayload.TYPE, SkillNoticePayload.STREAM_CODEC,
                 (payload, context) -> ClientPayloadHandler.handleSkillNotice(payload));
 
@@ -42,7 +46,7 @@ public final class ModNetwork {
 
     private static void handleSkillPurchase(SkillPurchaseRequestPayload payload, IPayloadContext context) {
         if (context.player() instanceof ServerPlayer player) {
-            SkillTreeService.purchaseFromPanel(player, payload.skillId());
+            SkillTreeService.purchaseFromScreen(player, payload.skillId());
         }
     }
 

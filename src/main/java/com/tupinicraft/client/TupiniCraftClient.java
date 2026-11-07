@@ -5,7 +5,9 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
-import com.tupinicraft.client.compat.SkillPanelPurchaseHook;
+import com.tupinicraft.client.skilltree.ClientSkillCache;
+import com.tupinicraft.client.skilltree.LegacyAdvancementWidgets;
+import com.tupinicraft.client.skilltree.SkillTreeKeys;
 import com.tupinicraft.client.render.CaboEleitoralRenderer;
 import com.tupinicraft.registry.ModEntities;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
@@ -21,8 +23,10 @@ public final class TupiniCraftClient {
         NeoForge.EVENT_BUS.addListener(TupiniCraftClient::onLoggingOut);
         // Só mede a área das barras de chefe; quem desenha é a camada registrada em PoliticalHud.
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, BossBarArea::onBossEventProgress);
-        // Clique numa skill bloqueada no painel do SkillLib (tecla K) = pedido de compra ao servidor.
-        NeoForge.EVENT_BUS.addListener(SkillPanelPurchaseHook::onMouseClick);
+        // Árvores de habilidades (UI Lib): tecla K.
+        modBus.addListener(SkillTreeKeys::register);
+        modBus.addListener(LegacyAdvancementWidgets::register);
+        NeoForge.EVENT_BUS.addListener(SkillTreeKeys::onClientTick);
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
@@ -33,5 +37,6 @@ public final class TupiniCraftClient {
         ClientPoliticalCache.clear();
         ClientElectionCache.clear();
         AnnouncementOverlay.clear();
+        ClientSkillCache.clear();
     }
 }

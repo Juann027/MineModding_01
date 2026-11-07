@@ -1,0 +1,8 @@
+{
+  "nome": "Regional: Sudeste",
+  "tipo": "regional",
+  "regiao": "sudeste",
+  "icone": "minecraft:cocoa_beans",
+  "fundo": "minecraft:textures/block/bricks.png",
+  "ordem": 23
+}

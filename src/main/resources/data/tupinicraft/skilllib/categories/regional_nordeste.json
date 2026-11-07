@@ -1,8 +1,0 @@
-{
-  "id": "tupinicraft:regional_nordeste",
-  "name": "Nordeste",
-  "icon": "minecraft:cactus",
-  "order": 1,
-  "icon_size": 24,
-  "parent": "tupinicraft:regionais"
-}

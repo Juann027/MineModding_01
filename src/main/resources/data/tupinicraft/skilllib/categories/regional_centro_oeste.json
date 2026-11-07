@@ -1,8 +1,0 @@
-{
-  "id": "tupinicraft:regional_centro_oeste",
-  "name": "Centro-Oeste",
-  "icon": "minecraft:wheat",
-  "order": 2,
-  "icon_size": 24,
-  "parent": "tupinicraft:regionais"
-}

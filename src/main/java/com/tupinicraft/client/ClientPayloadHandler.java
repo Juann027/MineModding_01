@@ -3,7 +3,11 @@ package com.tupinicraft.client;
 import com.tupinicraft.network.AnnouncementPayload;
 import com.tupinicraft.network.ElectionSyncPayload;
 import com.tupinicraft.network.PoliticalDataSyncPayload;
+import com.tupinicraft.client.skilltree.ClientSkillCache;
+import com.tupinicraft.client.skilltree.SkillTreeScreen;
+import com.tupinicraft.network.SkillDefinitionsPayload;
 import com.tupinicraft.network.SkillNoticePayload;
+import com.tupinicraft.network.SkillStatePayload;
 import com.tupinicraft.network.WalletSyncPayload;
 import net.minecraft.client.Minecraft;
 
@@ -29,6 +33,22 @@ public final class ClientPayloadHandler {
 
     public static void handleWallet(WalletSyncPayload payload) {
         ClientPoliticalCache.setBalance(payload.balance());
+    }
+
+    public static void handleSkillDefinitions(SkillDefinitionsPayload payload) {
+        ClientSkillCache.setDefinitions(payload);
+        refreshSkillScreen();
+    }
+
+    public static void handleSkillState(SkillStatePayload payload) {
+        ClientSkillCache.setState(payload);
+        refreshSkillScreen();
+    }
+
+    private static void refreshSkillScreen() {
+        if (Minecraft.getInstance().screen instanceof SkillTreeScreen screen) {
+            screen.refresh();
+        }
     }
 
     public static void handleSkillNotice(SkillNoticePayload payload) {

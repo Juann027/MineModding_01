@@ -1,8 +1,0 @@
-{
-  "id": "tupinicraft:regional_norte",
-  "name": "Norte",
-  "icon": "minecraft:jungle_sapling",
-  "order": 0,
-  "icon_size": 24,
-  "parent": "tupinicraft:regionais"
-}

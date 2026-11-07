@@ -1,8 +1,0 @@
-{
-  "id": "tupinicraft:regional_sudeste",
-  "name": "Sudeste",
-  "icon": "minecraft:cocoa_beans",
-  "order": 3,
-  "icon_size": 24,
-  "parent": "tupinicraft:regionais"
-}
