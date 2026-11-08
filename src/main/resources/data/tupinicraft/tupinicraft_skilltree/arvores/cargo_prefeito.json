@@ -2,7 +2,7 @@
   "nome": "Cargo: Prefeito",
   "tipo": "cargo",
   "cargo": "prefeito",
-  "icone": "minecraft:bell",
+  "icone": "tupinicraft:icone_estadio",
   "fundo": "minecraft:textures/block/polished_andesite.png",
   "ordem": 42
 }

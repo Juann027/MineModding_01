@@ -2,7 +2,7 @@
   "nome": "Regional: Centro-Oeste",
   "tipo": "regional",
   "regiao": "centro_oeste",
-  "icone": "minecraft:wheat",
+  "icone": "tupinicraft:icone_niobio",
   "fundo": "minecraft:textures/block/coarse_dirt.png",
   "ordem": 22
 }

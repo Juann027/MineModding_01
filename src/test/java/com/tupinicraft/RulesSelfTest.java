@@ -28,6 +28,20 @@ public class RulesSelfTest {
     static Ballot vote(String voter, Candidate c, int voterPop, ElectionRules rules) { return new Ballot(UUID.nameUUIDFromBytes(voter.getBytes()), c.id(), rules.voteWeight(voterPop)); }
 
     public static void main(String[] a) {
+        RegressionSelfTest.main(a);
+        // A pontuação long precisa sobreviver também ao pacote servidor -> cliente.
+        var electionPacket = new com.tupinicraft.network.ElectionSyncPayload(3, 100, 300,
+                List.of(new com.tupinicraft.network.ElectionSyncPayload.RaceView(1, "Vereador", List.of(
+                        new com.tupinicraft.network.ElectionSyncPayload.CandidateView(UUID.randomUUID(), "Teste", 0,
+                                2_151_000_000L, false)), 215, 215)), List.of(0));
+        var packetBuffer = io.netty.buffer.Unpooled.buffer();
+        try {
+            com.tupinicraft.network.ElectionSyncPayload.STREAM_CODEC.encode(packetBuffer, electionPacket);
+            check(com.tupinicraft.network.ElectionSyncPayload.STREAM_CODEC.decode(packetBuffer).equals(electionPacket),
+                    "pacote eleitoral preserva pontuação acima do limite de int");
+        } finally {
+            packetBuffer.release();
+        }
         // Origens
         check(RegionalOrigin.values().length == 27, "27 UFs");
         check(RegionalOrigin.MA.demonym().equals("Maranhense"), "MA Maranhense");

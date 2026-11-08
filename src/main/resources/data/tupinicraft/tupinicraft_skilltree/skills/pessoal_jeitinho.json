@@ -2,7 +2,7 @@
   "arvore": "tupinicraft:pessoais",
   "nome": "Jeitinho Brasileiro (teste)",
   "descricao": "+10% de velocidade.",
-  "icone": "minecraft:feather",
+  "icone": "tupinicraft:icone_vira_lata",
   "moldura": "task",
   "custo": 500,
   "efeitos": [

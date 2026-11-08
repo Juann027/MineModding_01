@@ -2,7 +2,7 @@
   "nome": "Regional: Nordeste",
   "tipo": "regional",
   "regiao": "nordeste",
-  "icone": "minecraft:cactus",
+  "icone": "tupinicraft:icone_sertao",
   "fundo": "minecraft:textures/block/sand.png",
   "ordem": 21
 }

@@ -2,7 +2,7 @@
   "nome": "Regional: Sudeste",
   "tipo": "regional",
   "regiao": "sudeste",
-  "icone": "minecraft:cocoa_beans",
+  "icone": "tupinicraft:icone_cristo_redentor",
   "fundo": "minecraft:textures/block/bricks.png",
   "ordem": 23
 }

@@ -21,6 +21,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Regressões de efeitos, mandatos e pontuação
+        run: bash scripts/regression-test.sh
+
+      - name: Validar ícones das árvores de habilidades
+        run: python3 scripts/validate-skill-art.py
+
       - name: Build with Gradle (inclui rulesTest)
         run: ./gradlew build
 

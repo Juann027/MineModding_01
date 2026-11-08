@@ -3,6 +3,15 @@
 Mod brasileiro de sátira política para **Minecraft 1.21.1** com **NeoForge 21.1.x** (Java 21).
 Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e eleições multiplayer com urna eletrônica.
 
+### Atualização 0.5.1
+
+O JAR da 0.5.1 é publicado em [Releases](https://github.com/Juann027/MineModding_01/releases/latest). O resumo dos testes está em [Validação 0.5.1](docs/VALIDACAO_0.5.1.md).
+
+- Efeitos de habilidades são removidos ou atualizados corretamente após `/reload`, inclusive quando a skill sai do datapack, muda de atributo ou perde efeitos.
+- Mandatos vencidos são encerrados antes de uma nova posse, mantendo o cargo e as atualizações pendentes dos jogadores consistentes.
+- A apuração usa pontuações de 64 bits, inclusive no pacote do HUD. Cliente e servidor precisam desta mesma versão (protocolo de rede 2).
+- As árvores e as quatro habilidades existentes usam as imagens fornecidas em `Arte.rar`; 33 ícones foram adaptados para PNG transparente de 128 × 128. Veja [o catálogo de arte](docs/ARTE_SKILL_TREES.md).
+
 ## Como jogar (instalar no seu Minecraft)
 
 1. **Baixe o jar do mod** na página de [Releases](https://github.com/Juann027/MineModding_01/releases/latest)
@@ -128,6 +137,8 @@ o workflow **Release** compila e publica o jar automaticamente (se a versão ain
 ./gradlew build       # compila e roda os testes de regras
 ./gradlew runClient   # cliente de desenvolvimento
 ./gradlew runServer   # servidor de desenvolvimento
+bash scripts/regression-test.sh    # regressões sem dependências do Minecraft (Java 21)
+python3 scripts/validate-skill-art.py # referências, modelos e integridade dos ícones
 ```
 
 O Gradle baixa todas as bibliotecas sozinho (UI Lib e Architectury pelo Maven do Modrinth).
