@@ -533,7 +533,7 @@ public final class ElectionManager {
             if (race.candidates().isEmpty()) {
                 lines.add(Component.literal("  Nenhum candidato inscrito.").withStyle(ChatFormatting.GRAY));
             }
-            Map<UUID, Integer> partial = data.phase() == ElectionPhase.COUNTING
+            Map<UUID, Long> partial = data.phase() == ElectionPhase.COUNTING
                     ? ElectionTally.scores(race.candidates(), race.ballots().subList(0, revealedBallots(data, race)),
                     data.rules().voteMultiplier())
                     : Map.of();
@@ -586,12 +586,12 @@ public final class ElectionManager {
         for (int index = 0; index < data.races().size(); index++) {
             ElectionRace race = data.races().get(index);
             int revealed = revealedBallots(data, race);
-            Map<UUID, Integer> partial = counting
+            Map<UUID, Long> partial = counting
                     ? ElectionTally.scores(race.candidates(), race.ballots().subList(0, revealed), data.rules().voteMultiplier())
                     : Map.of();
             List<ElectionSyncPayload.CandidateView> candidates = race.candidates().stream()
                     .map(c -> new ElectionSyncPayload.CandidateView(c.id(), c.name(), c.popularity(),
-                            partial.getOrDefault(c.id(), -1), c.npc()))
+                            partial.getOrDefault(c.id(), -1L), c.npc()))
                     .collect(Collectors.toList());
             races.add(new ElectionSyncPayload.RaceView(race.office().ordinal(), raceLabel(race), candidates,
                     counting ? revealed : 0, counting ? race.ballots().size() : 0));

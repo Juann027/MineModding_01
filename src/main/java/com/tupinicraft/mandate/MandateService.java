@@ -13,8 +13,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -67,6 +65,8 @@ public final class MandateService {
      * Retorna false se a cadeira já tem ocupante vigente.
      */
     public static boolean inaugurate(MinecraftServer server, SeatKey key, Occupant occupant, Optional<UUID> electionId) {
+        // A eleição roda antes da limpeza periódica: finalize os vencidos antes de substituir qualquer registro.
+        expireMandates(server);
         MandateSavedData data = MandateSavedData.get(server);
         long start = now(server);
         boolean expiration = expirationEnabled(server);
@@ -109,6 +109,7 @@ public final class MandateService {
 
     /** Aplica, no login, mudanças de cargo que aconteceram com o jogador offline. */
     public static void onPlayerLogin(ServerPlayer player) {
+        expireMandates(player.server);
         MandateSavedData data = MandateSavedData.get(player.server);
         PoliticalOffice pending = data.pendingOfficeUpdates().remove(player.getUUID());
         if (pending != null) {
@@ -135,16 +136,8 @@ public final class MandateService {
             return;
         }
         MandateSavedData data = MandateSavedData.get(server);
-        long now = now(server);
-        List<SeatKey> expired = new ArrayList<>();
-        for (Map.Entry<SeatKey, Mandate> entry : data.registry().mandates().entrySet()) {
-            if (now >= entry.getValue().termEnd()) {
-                expired.add(entry.getKey());
-            }
-        }
-        for (SeatKey key : expired) {
-            data.registry().vacate(key).ifPresent(mandate -> onMandateEnded(server, key, mandate, "terminou"));
-        }
+        Map<SeatKey, Mandate> expired = data.registry().expire(now(server), true);
+        expired.forEach((key, mandate) -> onMandateEnded(server, key, mandate, "terminou"));
         if (!expired.isEmpty()) {
             data.setDirty();
         }
@@ -156,8 +149,9 @@ public final class MandateService {
                         + seatLabel(key) + " " + how + ".").withStyle(ChatFormatting.WHITE));
         server.getPlayerList().broadcastSystemMessage(message, false);
         if (mandate.occupant().type() == OccupantType.PLAYER) {
-            setPlayerOffice(server, mandate.occupant().id(), PoliticalOffice.DESEMPREGADO);
-            notifyPlayer(server, mandate.occupant().id(), Component.literal("Você agora é Desempregado. Seu XP político, "
+            PoliticalOffice office = activeOffice(server, mandate.occupant().id()).orElse(PoliticalOffice.DESEMPREGADO);
+            setPlayerOffice(server, mandate.occupant().id(), office);
+            notifyPlayer(server, mandate.occupant().id(), Component.literal("Seu cargo atual é " + office.displayName() + ". Seu XP político, "
                     + "popularidade e habilidades de " + key.office().displayName() + " foram mantidos.").withStyle(ChatFormatting.YELLOW));
         }
     }

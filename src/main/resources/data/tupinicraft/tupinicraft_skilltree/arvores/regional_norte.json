@@ -2,7 +2,7 @@
   "nome": "Regional: Norte",
   "tipo": "regional",
   "regiao": "norte",
-  "icone": "minecraft:jungle_sapling",
+  "icone": "tupinicraft:icone_amazonia",
   "fundo": "minecraft:textures/block/moss_block.png",
   "ordem": 20
 }

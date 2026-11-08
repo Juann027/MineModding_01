@@ -41,3 +41,7 @@ repo/
 
 ### TupiniCraft ###
 smoke/
+
+# Saídas locais (JAR compilado e logs)
+dist/
+logs/

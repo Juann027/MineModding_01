@@ -2,7 +2,7 @@
   "arvore": "tupinicraft:regional_nordeste",
   "nome": "Resistência do Sertão (teste)",
   "descricao": "+4 de vida máxima.",
-  "icone": "minecraft:cactus",
+  "icone": "tupinicraft:icone_sertao",
   "moldura": "task",
   "custo": 800,
   "efeitos": [

@@ -2,7 +2,7 @@
   "nome": "Cargo: Senador",
   "tipo": "cargo",
   "cargo": "senador",
-  "icone": "minecraft:lectern",
+  "icone": "tupinicraft:icone_constituicao",
   "fundo": "minecraft:textures/block/polished_andesite.png",
   "ordem": 44
 }

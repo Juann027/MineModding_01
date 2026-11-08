@@ -2,7 +2,7 @@
   "nome": "Cargo: Vereador",
   "tipo": "cargo",
   "cargo": "vereador",
-  "icone": "minecraft:oak_sign",
+  "icone": "tupinicraft:icone_favela",
   "fundo": "minecraft:textures/block/polished_andesite.png",
   "ordem": 40
 }

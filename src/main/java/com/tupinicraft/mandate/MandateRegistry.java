@@ -73,6 +73,19 @@ public final class MandateRegistry {
         return Optional.ofNullable(removed);
     }
 
+    /** Remove todos os vencidos antes de uma posse, retornando-os para notificações e atualização dos jogadores. */
+    public Map<SeatKey, Mandate> expire(long now, boolean expirationEnabled) {
+        Map<SeatKey, Mandate> expired = new LinkedHashMap<>();
+        if (expirationEnabled) {
+            for (var entry : Map.copyOf(mandates).entrySet()) {
+                if (!entry.getValue().isActive(now, true)) {
+                    vacate(entry.getKey()).ifPresent(mandate -> expired.put(entry.getKey(), mandate));
+                }
+            }
+        }
+        return Collections.unmodifiableMap(expired);
+    }
+
     /** Último ocupante: o atual, se houver mandato registrado, senão o anterior. */
     public Optional<UUID> lastOccupant(SeatKey key) {
         Mandate current = mandates.get(key);

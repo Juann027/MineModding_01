@@ -2,7 +2,7 @@
   "nome": "Regional: Sul",
   "tipo": "regional",
   "regiao": "sul",
-  "icone": "minecraft:snowball",
+  "icone": "tupinicraft:icone_chimarrao",
   "fundo": "minecraft:textures/block/spruce_planks.png",
   "ordem": 24
 }

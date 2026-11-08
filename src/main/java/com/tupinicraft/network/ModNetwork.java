@@ -14,7 +14,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  * (nunca no servidor dedicado). Handlers rodam na thread principal (padrão do NeoForge 21.1).
  */
 public final class ModNetwork {
-    public static final String PROTOCOL_VERSION = "1";
+    public static final String PROTOCOL_VERSION = "2";
 
     private ModNetwork() {
     }

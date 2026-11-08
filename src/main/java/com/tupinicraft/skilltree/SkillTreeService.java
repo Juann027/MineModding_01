@@ -25,6 +25,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -158,14 +159,21 @@ public final class SkillTreeService {
         SkillPlayerContext context = context(player);
         SkillTreeState state = state(player);
         SkillTreeState updated = state;
+        Map<String, List<SkillEffectDef>> activeEffects = new LinkedHashMap<>();
         for (String skillId : state.unlocked()) {
             Optional<SkillDef> found = catalog.skill(skillId);
             if (found.isEmpty()) {
-                continue; // skill removida do datapack: a compra fica guardada, sem efeito
+                // A compra permanece salva; os efeitos antigos são removidos na reconciliação abaixo.
+                if (!updated.suspended().contains(skillId)) {
+                    updated = updated.withSuspended(skillId, true);
+                }
+                continue;
             }
             SkillDef skill = found.get();
             boolean allowed = SkillGate.effectAllowed(skill.rule(), context);
-            SkillEffects.set(player, skill, allowed);
+            if (allowed) {
+                activeEffects.put(skillId, skill.effects());
+            }
             boolean wasSuspended = updated.suspended().contains(skillId);
             if (!allowed && !wasSuspended) {
                 updated = updated.withSuspended(skillId, true);
@@ -178,7 +186,8 @@ public final class SkillTreeService {
                 notify(player, true, "Habilidade restaurada", Component.literal(skill.name()));
             }
         }
-        if (updated != state) {
+        SkillEffects.reconcile(player, activeEffects);
+        if (!updated.equals(state)) {
             player.setData(ModAttachments.SKILL_TREE_STATE, updated);
         }
         syncState(player, catalog, context, updated);

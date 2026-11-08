@@ -1,5 +1,13 @@
 Mod brasileiro de sátira política para **Minecraft 1.21.1** com **NeoForge 21.1.x**.
 
+## Correções e arte da v0.5.1
+
+- `/reload` remove bônus de skills excluídas e atualiza efeitos alterados, inclusive atributo, operação e quantidade.
+- Mandatos vencidos são encerrados antes de novas posses, mantendo o cargo dos antigos ocupantes consistente.
+- Pontuações eleitorais usam 64 bits no servidor e na sincronização do HUD.
+- 33 ícones do pacote de arte foram adaptados para as árvores e habilidades, com transparência e resolução de 128 × 128.
+- Cliente e servidor devem usar a v0.5.1: o protocolo de rede foi atualizado para 2. Os IDs e formatos dos dados salvos foram mantidos.
+
 ## Como instalar
 1. Instale o **NeoForge 21.1.x para Minecraft 1.21.1** (instalador em https://neoforged.net → "Install client").
 2. Baixe o arquivo **`tupinicraft-*.jar`** abaixo, em *Assets*, e também os 4 mods obrigatórios para NeoForge 1.21.1

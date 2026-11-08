@@ -71,12 +71,12 @@ public record ElectionSyncPayload(int phase, int ticksRemaining, int phaseTotalT
      * @param shownScore pontuação parcial revelada na apuração, ou -1 fora da apuração
      * @param npc        candidato aldeão
      */
-    public record CandidateView(UUID id, String name, int popularity, int shownScore, boolean npc) {
+    public record CandidateView(UUID id, String name, int popularity, long shownScore, boolean npc) {
         public static final StreamCodec<ByteBuf, CandidateView> STREAM_CODEC = StreamCodec.composite(
                 UUIDUtil.STREAM_CODEC, CandidateView::id,
                 ByteBufCodecs.STRING_UTF8, CandidateView::name,
                 ByteBufCodecs.VAR_INT, CandidateView::popularity,
-                ByteBufCodecs.INT, CandidateView::shownScore,
+                ByteBufCodecs.VAR_LONG, CandidateView::shownScore,
                 ByteBufCodecs.BOOL, CandidateView::npc,
                 CandidateView::new);
     }

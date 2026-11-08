@@ -22,26 +22,26 @@ public final class ElectionTally {
     }
 
     /** Pontuação de cada candidato (na ordem de inscrição) considerando os votos informados. */
-    public static Map<UUID, Integer> scores(List<Candidate> candidates, List<Ballot> ballots, int voteMultiplier) {
-        Map<UUID, Integer> scores = new LinkedHashMap<>();
+    public static Map<UUID, Long> scores(List<Candidate> candidates, List<Ballot> ballots, int voteMultiplier) {
+        Map<UUID, Long> scores = new LinkedHashMap<>();
         for (Candidate candidate : candidates) {
-            scores.put(candidate.id(), candidate.popularity() + voteMultiplier * candidate.simulatedSupport());
+            scores.put(candidate.id(), (long) candidate.popularity() + (long) voteMultiplier * candidate.simulatedSupport());
         }
         for (Ballot ballot : ballots) {
-            scores.computeIfPresent(ballot.candidate(), (id, score) -> score + voteMultiplier * ballot.weight());
+            scores.computeIfPresent(ballot.candidate(), (id, score) -> score + (long) voteMultiplier * ballot.weight());
         }
         return scores;
     }
 
     public static Result decide(int minimumScore, List<Candidate> candidates, List<Ballot> ballots, int voteMultiplier) {
-        Map<UUID, Integer> scores = scores(candidates, ballots, voteMultiplier);
+        Map<UUID, Long> scores = scores(candidates, ballots, voteMultiplier);
         if (candidates.isEmpty()) {
             return new Result(Outcome.NO_CANDIDATES, Optional.empty(), 0, minimumScore, scores, List.of());
         }
 
         if (candidates.size() == 1) {
             Candidate only = candidates.get(0);
-            int score = scores.get(only.id());
+            long score = scores.get(only.id());
             // Candidato único precisa SUPERAR a pontuação mínima.
             if (score > minimumScore) {
                 return new Result(Outcome.WINNER, Optional.of(only), score, minimumScore, scores, List.of());
@@ -49,7 +49,7 @@ public final class ElectionTally {
             return new Result(Outcome.BELOW_MINIMUM, Optional.empty(), score, minimumScore, scores, List.of(only));
         }
 
-        int best = candidates.stream().mapToInt(c -> scores.get(c.id())).max().orElse(0);
+        long best = candidates.stream().mapToLong(c -> scores.get(c.id())).max().orElse(0);
         List<Candidate> leaders = new ArrayList<>(candidates.stream().filter(c -> scores.get(c.id()) == best).toList());
         if (best < minimumScore) {
             return new Result(Outcome.BELOW_MINIMUM, Optional.empty(), best, minimumScore, scores, leaders);
@@ -80,7 +80,7 @@ public final class ElectionTally {
      * @param minimumScore  pontuação mínima de vitória da disputa
      * @param involved      candidatos empatados (TIE) ou líderes abaixo do mínimo (BELOW_MINIMUM)
      */
-    public record Result(Outcome outcome, Optional<Candidate> winner, int bestScore, int minimumScore,
-                         Map<UUID, Integer> scores, List<Candidate> involved) {
+    public record Result(Outcome outcome, Optional<Candidate> winner, long bestScore, int minimumScore,
+                         Map<UUID, Long> scores, List<Candidate> involved) {
     }
 }
