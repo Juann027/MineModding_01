@@ -1,5 +1,11 @@
 Mod brasileiro de sátira política para **Minecraft 1.21.1** com **NeoForge 21.1.x**.
 
+## Correções da v0.5.2
+
+- Nova aba TupiniCraft no criativo com os 35 itens registrados pelo mod.
+- Texturas dos ícones corrigidas: agora estão na pasta carregada pelo atlas padrão de itens.
+- Teste do JAR verifica caminhos e inclusão das texturas, além da integridade dos PNGs.
+
 ## Correções e arte da v0.5.1
 
 - `/reload` remove bônus de skills excluídas e atualiza efeitos alterados, inclusive atributo, operação e quantidade.

@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "tupinicraft:skilltree/picanha"
+    "layer0": "tupinicraft:item/skilltree/picanha"
   }
 }

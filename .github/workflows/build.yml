@@ -30,6 +30,9 @@ jobs:
       - name: Build with Gradle (inclui rulesTest)
         run: ./gradlew build
 
+      - name: Validar texturas e modelos empacotados
+        run: python3 scripts/validate-skill-art.py --jar build/libs
+
       - name: Teste de fumaça no servidor dedicado
         run: bash .github/scripts/server-smoke-test.sh
 

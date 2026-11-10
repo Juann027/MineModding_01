@@ -20,7 +20,7 @@ public final class ModItems {
             "cabo_eleitoral_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.CABO_ELEITORAL, 0x009C3B, 0xFFDF00, new Item.Properties()));
 
-    /** Ícones usados pelo UI Lib nas árvores e nos nós; não são adicionados às abas criativas. */
+    /** Ícones usados pelo UI Lib nas árvores e nos nós e disponíveis na aba TupiniCraft. */
     static {
         for (String icon : java.util.List.of(
                 "cristo_redentor",

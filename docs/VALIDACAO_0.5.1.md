@@ -2,7 +2,7 @@
 
 ## Entrega
 
-- Código-fonte atualizado; o JAR é publicado pelo workflow Release (não fica versionado no repositório).
+- Código-fonte atualizado e JAR compilado em `dist/tupinicraft-0.5.1.jar`.
 - Minecraft 1.21.1, NeoForge 21.1.265 e Java 21; dependências mantidas.
 - Cliente e servidor precisam da versão 0.5.1 (protocolo de rede 2).
 - Instalação e dependências: consulte o README. Este pacote não inclui os mods de terceiros.

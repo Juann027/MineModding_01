@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "tupinicraft:skilltree/cristo_redentor"
+    "layer0": "tupinicraft:item/skilltree/cristo_redentor"
   }
 }

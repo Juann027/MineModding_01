@@ -4,7 +4,7 @@
 
 Os 33 PNGs de `Arte/Skill Tree Icons em PNG` foram adaptados para texturas RGBA de 128 × 128, com transparência, proporção preservada e margem de 4 pixels. A compressão PNG é sem perdas após o redimensionamento.
 
-Os ícones são itens internos com modelos `minecraft:item/generated`, compatíveis com a API de ItemStack do UI Lib. Não são adicionados às abas criativas. Para usar um em um datapack, defina `"icone": "tupinicraft:icone_<nome>"`. Todos os arquivos de árvores e as quatro skills existentes já usam as artes correspondentes. Árvores sem habilidades continuam sem aba, como antes.
+Os ícones são itens internos com modelos `minecraft:item/generated` e texturas em `textures/item/skilltree`, compatíveis com a API de ItemStack do UI Lib. Todos estão disponíveis na aba criativa TupiniCraft. Para usar um em um datapack, defina `"icone": "tupinicraft:icone_<nome>"`. Todos os arquivos de árvores e as quatro skills existentes já usam as artes correspondentes. Árvores sem habilidades continuam sem aba, como antes.
 
 Os emblemas separados de partidos não foram vinculados ao partido genérico de teste. A funcionalidade de partidos completos continua fora do escopo.
 

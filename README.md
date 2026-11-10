@@ -3,9 +3,21 @@
 Mod brasileiro de sátira política para **Minecraft 1.21.1** com **NeoForge 21.1.x** (Java 21).
 Origem regional (27 UFs), cargos políticos, XP político, popularidade, HUD e eleições multiplayer com urna eletrônica.
 
+### Atualização 0.5.2
+
+[Correções, validação e instalação da 0.5.2](docs/VALIDACAO_0.5.2.md).
+
+Cliente e servidor devem usar a versão 0.5.2.
+
+O JAR desta entrega está em `dist/tupinicraft-0.5.2.jar`. Remova o JAR antigo do TupiniCraft da pasta `mods` e coloque o novo, mantendo as dependências descritas abaixo.
+
+- Aba **TupiniCraft** no criativo, com a Urna Eletrônica, o ovo do Cabo Eleitoral e os 33 ícones das árvores.
+- Texturas dos ícones movidas para `textures/item/skilltree`, incluído no atlas padrão do Minecraft; modelos atualizados.
+- Validação de modelos e texturas também dentro do JAR, com rejeição de referências fora do atlas.
+
 ### Atualização 0.5.1
 
-O JAR da 0.5.1 é publicado em [Releases](https://github.com/Juann027/MineModding_01/releases/latest). O resumo dos testes está em [Validação 0.5.1](docs/VALIDACAO_0.5.1.md).
+O histórico dos testes da atualização anterior está em [Validação 0.5.1](docs/VALIDACAO_0.5.1.md).
 
 - Efeitos de habilidades são removidos ou atualizados corretamente após `/reload`, inclusive quando a skill sai do datapack, muda de atributo ou perde efeitos.
 - Mandatos vencidos são encerrados antes de uma nova posse, mantendo o cargo e as atualizações pendentes dos jogadores consistentes.

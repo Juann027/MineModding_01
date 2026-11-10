@@ -8,6 +8,7 @@ import com.tupinicraft.mandate.MandateService;
 import com.tupinicraft.network.ModNetwork;
 import com.tupinicraft.player.PlayerEventHandler;
 import com.tupinicraft.registry.ModAttachments;
+import com.tupinicraft.registry.ModCreativeTabs;
 import com.tupinicraft.registry.ModEntities;
 import com.tupinicraft.registry.ModItems;
 import com.tupinicraft.skilltree.SkillCatalog;
@@ -33,6 +34,7 @@ public final class TupiniCraft {
     public TupiniCraft(IEventBus modBus, ModContainer container) {
         ModAttachments.ATTACHMENT_TYPES.register(modBus);
         ModItems.ITEMS.register(modBus);
+        ModCreativeTabs.TABS.register(modBus);
         ModEntities.ENTITY_TYPES.register(modBus);
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(ModItems::addToCreativeTabs);
