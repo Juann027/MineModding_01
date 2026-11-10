@@ -29,6 +29,7 @@ public class RulesSelfTest {
 
     public static void main(String[] a) {
         RegressionSelfTest.main(a);
+        IconTextureSelfTest.run();
         // A pontuação long precisa sobreviver também ao pacote servidor -> cliente.
         var electionPacket = new com.tupinicraft.network.ElectionSyncPayload(3, 100, 300,
                 List.of(new com.tupinicraft.network.ElectionSyncPayload.RaceView(1, "Vereador", List.of(

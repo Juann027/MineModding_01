@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "tupinicraft:skilltree/bolsa"
+    "layer0": "tupinicraft:item/skilltree/bolsa"
   }
 }

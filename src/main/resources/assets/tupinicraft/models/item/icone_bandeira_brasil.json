@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "tupinicraft:skilltree/bandeira_brasil"
+    "layer0": "tupinicraft:item/skilltree/bandeira_brasil"
   }
 }

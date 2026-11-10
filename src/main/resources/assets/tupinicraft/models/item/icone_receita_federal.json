@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "tupinicraft:skilltree/receita_federal"
+    "layer0": "tupinicraft:item/skilltree/receita_federal"
   }
 }

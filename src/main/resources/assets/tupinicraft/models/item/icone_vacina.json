@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "tupinicraft:skilltree/vacina"
+    "layer0": "tupinicraft:item/skilltree/vacina"
   }
 }
