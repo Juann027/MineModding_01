@@ -1,0 +1,1 @@
+TigrinhoSelfTest: 2169 verificações passaram.

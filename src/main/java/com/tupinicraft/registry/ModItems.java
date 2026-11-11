@@ -15,6 +15,9 @@ public final class ModItems {
     public static final DeferredItem<UrnaEletronicaItem> URNA_ELETRONICA = ITEMS.register(
             "urna_eletronica", () -> new UrnaEletronicaItem(new Item.Properties().stacksTo(1)));
 
+    public static final DeferredItem<net.minecraft.world.item.BlockItem> TIGRINHO_MACHINE = ITEMS.register(
+            "tigrinho_machine", () -> new net.minecraft.world.item.BlockItem(ModBlocks.TIGRINHO_MACHINE.get(), new Item.Properties()));
+
     /** Ovo do mob de teste (só no modo criativo). */
     public static final DeferredItem<DeferredSpawnEggItem> CABO_ELEITORAL_SPAWN_EGG = ITEMS.register(
             "cabo_eleitoral_spawn_egg",
@@ -56,7 +59,7 @@ public final class ModItems {
                 "intelectual",
                 "painho",
                 "sertao")) {
-            ITEMS.register("icone_" + icon, () -> new Item(new Item.Properties()));
+            ITEMS.register("icone_" + icon, () -> icon.equals("tigrinho") ? new com.tupinicraft.tigrinho.TigrinhoItem(new Item.Properties()) : new Item(new Item.Properties()));
         }
     }
 
