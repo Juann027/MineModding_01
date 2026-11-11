@@ -14,13 +14,20 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  * (nunca no servidor dedicado). Handlers rodam na thread principal (padrão do NeoForge 21.1).
  */
 public final class ModNetwork {
-    public static final String PROTOCOL_VERSION = "2";
+    public static final String PROTOCOL_VERSION = "3";
 
     private ModNetwork() {
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
+        registrar.playToServer(TigrinhoSpinPayload.TYPE, TigrinhoSpinPayload.STREAM_CODEC,
+                (payload, context) -> {
+                    if (context.player() instanceof ServerPlayer player)
+                        com.tupinicraft.tigrinho.TigrinhoService.spin(player, payload);
+                });
+        registrar.playToClient(TigrinhoStatePayload.TYPE, TigrinhoStatePayload.STREAM_CODEC,
+                (payload, context) -> com.tupinicraft.client.tigrinho.TigrinhoScreen.receive(payload));
 
         registrar.playToClient(PoliticalDataSyncPayload.TYPE, PoliticalDataSyncPayload.STREAM_CODEC,
                 (payload, context) -> ClientPayloadHandler.handlePoliticalData(payload));

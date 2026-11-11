@@ -246,3 +246,12 @@ tasks.matching { it.name == 'runServer' }.configureEach {
         it.standardInput = System.in
     }
 }
+
+// Tigrinho: same dependency-free Java self-test convention as rulesTest.
+def tigrinhoTest = tasks.register('tigrinhoTest', JavaExec) {
+    group = 'verification'
+    description = 'Valida probabilidades, apostas, sequência de pacotes e animação do Tigrinho.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.tupinicraft.TigrinhoSelfTest'
+}
+tasks.named('check') { dependsOn tigrinhoTest }

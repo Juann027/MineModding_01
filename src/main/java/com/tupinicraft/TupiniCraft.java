@@ -33,6 +33,7 @@ public final class TupiniCraft {
 
     public TupiniCraft(IEventBus modBus, ModContainer container) {
         ModAttachments.ATTACHMENT_TYPES.register(modBus);
+        com.tupinicraft.registry.ModBlocks.BLOCKS.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
         ModEntities.ENTITY_TYPES.register(modBus);
@@ -41,6 +42,8 @@ public final class TupiniCraft {
         modBus.addListener(ModNetwork::register);
 
         container.registerConfig(ModConfig.Type.SERVER, BrasilServerConfig.SPEC);
+        container.registerConfig(ModConfig.Type.SERVER, com.tupinicraft.tigrinho.TigrinhoConfig.SPEC, "tupinicraft-tigrinho-server.toml");
+        com.tupinicraft.tigrinho.TigrinhoService.registerEvents();
 
         NeoForge.EVENT_BUS.addListener(BrasilCommands::register);
         NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onLogin);

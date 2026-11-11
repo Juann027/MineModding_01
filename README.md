@@ -1,3 +1,5 @@
+> **Tigrinho: implementação em validação.** Consulte [docs/TIGRINHO.md](docs/TIGRINHO.md). O JAR em `dist/` é o original 0.5.2 e **não contém** o minigame. A compilação desta alteração ainda precisa ser executada em ambiente com acesso às dependências.
+
 # TupiniCraft
 
 Mod brasileiro de sátira política para **Minecraft 1.21.1** com **NeoForge 21.1.x** (Java 21).
