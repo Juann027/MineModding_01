@@ -38,5 +38,7 @@
   "item.tupinicraft.icone_painho": "Icon: Painho",
   "item.tupinicraft.icone_sertao": "Icon: Sertao",
   "itemGroup.tupinicraft": "TupiniCraft",
-  "block.tupinicraft.tigrinho_machine": "Tigrinho Slot Machine"
+  "block.tupinicraft.tigrinho_machine": "Tigrinho Slot Machine",
+"entity.tupinicraft.leao_do_fim": "End Lion",
+"item.tupinicraft.leao_do_fim_spawn_egg": "End Lion Spawn Egg"
 }

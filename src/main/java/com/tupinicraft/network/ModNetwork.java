@@ -14,13 +14,15 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  * (nunca no servidor dedicado). Handlers rodam na thread principal (padrão do NeoForge 21.1).
  */
 public final class ModNetwork {
-    public static final String PROTOCOL_VERSION = "3";
+    public static final String PROTOCOL_VERSION = "4";
 
     private ModNetwork() {
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
+        registrar.playToClient(VoteResultPayload.TYPE, VoteResultPayload.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandler.handleVoteResult(payload));
         registrar.playToServer(TigrinhoSpinPayload.TYPE, TigrinhoSpinPayload.STREAM_CODEC,
                 (payload, context) -> {
                     if (context.player() instanceof ServerPlayer player)
@@ -60,7 +62,7 @@ public final class ModNetwork {
     private static void handleCastVote(CastVotePayload payload, IPayloadContext context) {
         if (context.player() instanceof ServerPlayer voter) {
             ElectionManager.Outcome outcome = ElectionManager.castVote(voter, payload.candidate());
-            voter.sendSystemMessage(outcome.message());
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(voter, new VoteResultPayload(outcome.message()));
         }
     }
 }

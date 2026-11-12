@@ -1,21 +1,26 @@
 # Arquivos da integração Tigrinho
 
-Comparação byte a byte com o ZIP recebido. Nenhum arquivo original removido. Texturas fornecidas copiadas sem alteração; traduções preexistentes preservadas.
+Comparação com o ZIP original. Nenhum arquivo original removido; o JAR 0.5.2 foi preservado e o JAR novo 0.5.3-tigrinho-dev foi acrescentado.
 
-## Modificados (9)
+## Modificados (13)
 
 - `LEIA-ME.txt`
 - `MineModding_01-main/README.md`
 - `MineModding_01-main/build.gradle`
 - `MineModding_01-main/gradle.properties`
+- `MineModding_01-main/logs/debug-1.log.gz`
+- `MineModding_01-main/logs/debug-2.log.gz`
+- `MineModding_01-main/logs/debug-3.log.gz`
+- `MineModding_01-main/logs/debug.log`
 - `MineModding_01-main/src/main/java/com/tupinicraft/TupiniCraft.java`
 - `MineModding_01-main/src/main/java/com/tupinicraft/network/ModNetwork.java`
 - `MineModding_01-main/src/main/java/com/tupinicraft/registry/ModItems.java`
 - `MineModding_01-main/src/main/resources/assets/tupinicraft/lang/en_us.json`
 - `MineModding_01-main/src/main/resources/assets/tupinicraft/lang/pt_br.json`
 
-## Criados (35)
+## Criados (40)
 
+- `MineModding_01-main/dist/tupinicraft-0.5.3-tigrinho-dev.jar`
 - `MineModding_01-main/docs/TIGRINHO.md`
 - `MineModding_01-main/docs/TIGRINHO_ARQUIVOS.md`
 - `MineModding_01-main/docs/tigrinho-validation/gradle-build.txt`
@@ -23,6 +28,10 @@ Comparação byte a byte com o ZIP recebido. Nenhum arquivo original removido. T
 - `MineModding_01-main/docs/tigrinho-validation/regressions.txt`
 - `MineModding_01-main/docs/tigrinho-validation/resources.txt`
 - `MineModding_01-main/docs/tigrinho-validation/rules.txt`
+- `MineModding_01-main/docs/tigrinho-validation/server-first.txt`
+- `MineModding_01-main/docs/tigrinho-validation/server-second.txt`
+- `MineModding_01-main/docs/tigrinho-validation/server-smoke-summary.txt`
+- `MineModding_01-main/logs/debug-4.log.gz`
 - `MineModding_01-main/scripts/test-tigrinho.sh`
 - `MineModding_01-main/scripts/validate-tigrinho.py`
 - `MineModding_01-main/src/main/java/com/tupinicraft/client/tigrinho/ReelAnimation.java`
@@ -52,4 +61,4 @@ Comparação byte a byte com o ZIP recebido. Nenhum arquivo original removido. T
 - `MineModding_01-main/src/main/resources/data/tupinicraft/recipe/tigrinho_machine.json`
 - `MineModding_01-main/src/test/java/com/tupinicraft/TigrinhoSelfTest.java`
 
-O cache `.gradle/` da tentativa de compilação não integra a entrega. O JAR original em `dist/` foi preservado byte a byte e não contém o minigame.
+Caches, mundos de teste e intermediários de build não integram a entrega.

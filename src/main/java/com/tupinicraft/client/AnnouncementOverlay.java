@@ -1,94 +1,77 @@
 package com.tupinicraft.client;
 
+import com.tupinicraft.network.AnnouncementPayload;
 import net.minecraft.Util;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.List;
 
-/**
- * Faixa de avisos eleitorais no topo da tela (substitui o chat para os anúncios da eleição).
- * Os avisos entram numa fila e são exibidos um de cada vez. A posição vem de {@link AnnouncementLayout}:
- * nunca cobre os painéis do canto superior direito ({@link PoliticalHud}) nem as barras de chefe.
- */
+/** Bounded global-event queue. All visual effects remain inside the measured card. */
 public final class AnnouncementOverlay {
-    private static final long DISPLAY_MILLIS = 5000L;
-    private static final long FAST_DISPLAY_MILLIS = 2500L;
-    private static final int MAX_QUEUE = 10;
-    private static final int MAX_TEXT_WIDTH = 280;
-    private static final int PADDING = 5;
-
-    private static final Deque<Component> QUEUE = new ArrayDeque<>();
-    private static Component current;
-    private static long shownAtMillis;
-
-    private AnnouncementOverlay() {
+    private static final Deque<AnnouncementPayload> QUEUE = new ArrayDeque<>();
+    private static AnnouncementPayload current;
+    private static long shownAt;
+    private static int duration;
+    private static long lastFrame;
+    private AnnouncementOverlay() {}
+    static void push(AnnouncementPayload event) {
+        if (QUEUE.size() == 10) QUEUE.removeFirst();
+        QUEUE.addLast(event);
     }
-
-    static void push(Component message) {
-        if (QUEUE.size() >= MAX_QUEUE) {
-            QUEUE.pollFirst();
-        }
-        QUEUE.addLast(message);
-    }
-
-    static void clear() {
-        QUEUE.clear();
-        current = null;
-    }
-
-    static void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
-        // Lido em todo frame (mesmo sem aviso) para não reaproveitar a medida de um frame antigo.
-        int bossBarBottom = BossBarArea.consumeBottom();
+    static void clear() { QUEUE.clear(); current = null; lastFrame = 0; }
+    static void render(GuiGraphics g, DeltaTracker delta) {
+        int bossBottom = BossBarArea.consumeBottom();
+        var mc = Minecraft.getInstance();
+        if (mc.player == null) { clear(); return; }
         long now = Util.getMillis();
-        long duration = QUEUE.isEmpty() ? DISPLAY_MILLIS : FAST_DISPLAY_MILLIS;
-        if (current != null && now - shownAtMillis > duration) {
-            current = null;
-        }
-        if (current == null) {
-            current = QUEUE.pollFirst();
-            shownAtMillis = now;
-        }
-        if (current == null) {
+        long elapsed = lastFrame == 0 ? 0 : Math.max(0, now - lastFrame);
+        lastFrame = now;
+        if (mc.options.hideGui || mc.screen != null) {
+            if (current != null) shownAt += elapsed;
             return;
         }
-
-        Minecraft minecraft = Minecraft.getInstance();
-        Font font = minecraft.font;
-        Component message = current;
-        AnnouncementLayout.Placement placement = AnnouncementLayout.place(
-                graphics.guiWidth(), graphics.guiHeight(), bossBarBottom,
-                PoliticalHud.panelBounds(minecraft, graphics.guiWidth()),
-                MAX_TEXT_WIDTH, PADDING,
-                maxWidth -> boxSize(font, font.split(message, maxWidth)));
-        List<FormattedCharSequence> lines = font.split(message, placement.maxTextWidth());
-        AnnouncementLayout.Rect box = placement.box();
-        int x = box.left();
-        int y = box.top();
-        int boxWidth = box.width();
-        int boxHeight = box.height();
-
-        graphics.fill(x, y, x + boxWidth, y + boxHeight, 0xB0000000);
-        graphics.fill(x, y, x + boxWidth, y + 1, 0xFFFFDF00);
-        graphics.fill(x, y + boxHeight - 1, x + boxWidth, y + boxHeight, 0xFF009C3B);
-        for (int i = 0; i < lines.size(); i++) {
-            FormattedCharSequence line = lines.get(i);
-            int lineX = x + (boxWidth - font.width(line)) / 2;
-            graphics.drawString(font, line, lineX, y + PADDING + i * font.lineHeight, 0xFFFFFFFF, true);
+        if (current != null && now - shownAt >= duration) current = null;
+        if (current == null && !QUEUE.isEmpty()) {
+            current = QUEUE.removeFirst(); shownAt = now;
+            // Fixed for this card: new arrivals cannot abruptly shorten its animation.
+            duration = QUEUE.isEmpty() ? current.durationMillis() : Math.min(4000, current.durationMillis());
         }
-    }
-
-    private static int[] boxSize(Font font, List<FormattedCharSequence> lines) {
-        int textWidth = 0;
-        for (FormattedCharSequence line : lines) {
-            textWidth = Math.max(textWidth, font.width(line));
+        if (current == null || mc.options.hideGui || mc.screen != null) return;
+        var font = mc.font;
+        final var event = current;
+        var placement = AnnouncementLayout.place(g.guiWidth(), g.guiHeight(), bossBottom,
+            PoliticalHud.panelBounds(mc, g.guiWidth()), 286, 12,
+            maxWidth -> new int[]{maxWidth + 24, 38 + Math.min(5, font.split(event.message(), maxWidth).size()) * 10});
+        var box = placement.box();
+        int x = box.left(), y = box.top(), w = box.width(), h = box.height();
+        if (y + h > g.guiHeight() - 42) { shownAt += elapsed; return; } // Never cover the hotbar on overcrowded HUDs.
+        var lines = font.split(event.message(), placement.maxTextWidth());
+        int pages = Math.max(1, (lines.size() + 4) / 5);
+        duration = Math.max(duration, pages * 3500);
+        int page = Math.min(pages - 1, (int)((now - shownAt) / 3500));
+        float enter = Math.min(1F, (now - shownAt) / 360F);
+        float leave = Math.min(1F, (duration - (now - shownAt)) / 280F);
+        float reveal = Math.min(1F - (float)Math.pow(1F - enter, 3), leave);
+        int visible = Math.max(1, Math.round(w * reveal));
+        g.enableScissor(x + (w - visible) / 2, y, x + (w + visible) / 2, y + h);
+        CivicUi.panel(g, x, y, w, h);
+        g.fill(x, y, x + w, y + 2, event.accent());
+        CivicUi.seal(g, x + 12, y + 9, event.accent());
+        g.drawString(font, CivicUi.fit(event.title().getString(), w - 48), x + 34, y + 12, event.accent(), false);
+        for (int i = page * 5; i < Math.min((page + 1) * 5, lines.size()); i++)
+            g.drawString(font, lines.get(i), x + 12, y + 30 + (i % 5) * 10, CivicUi.TEXT, false);
+        // Gentle moving scan line and deterministic sparks: no allocations or world particles.
+        int scan = (int)((now - shownAt) / 14 % w);
+        g.fill(x + scan, y + 3, x + scan + 1, y + h - 4, 0x126FE0B7);
+        for (int i = 0; i < 9; i++) {
+            int px = x + 4 + (int)((i * 37L + (now - shownAt) / 45) % Math.max(1, w - 8));
+            int py = y + h - 6 - i % 3;
+            g.fill(px, py, px + 1, py + 1, event.accent());
         }
-        return new int[]{textWidth + PADDING * 2, lines.size() * font.lineHeight + PADDING * 2};
+        int remaining = Math.round((w - 4) * Math.max(0F, 1F - (now - shownAt) / (float)duration));
+        g.fill(x + 2, y + h - 2, x + 2 + remaining, y + h, event.accent());
+        g.disableScissor();
     }
 }

@@ -255,3 +255,11 @@ def tigrinhoTest = tasks.register('tigrinhoTest', JavaExec) {
     mainClass = 'com.tupinicraft.TigrinhoSelfTest'
 }
 tasks.named('check') { dependsOn tigrinhoTest }
+
+// Pagination and global-event placement regressions.
+def civicUiTest = tasks.register('civicUiTest', JavaExec) {
+    group = 'verification'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.tupinicraft.CivicUiSelfTest'
+}
+tasks.named('check') { dependsOn civicUiTest }

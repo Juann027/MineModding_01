@@ -120,7 +120,7 @@ public final class PoliticalHud {
     private static List<Panel> layoutPanels(Minecraft minecraft, int guiWidth) {
         List<Panel> panels = new ArrayList<>(2);
         PoliticalData data = ClientPoliticalCache.get();
-        if (data == null || minecraft.player == null || minecraft.getDebugOverlay().showDebugScreen()) {
+        if (data == null || minecraft.player == null || minecraft.screen != null || minecraft.options.hideGui || minecraft.getDebugOverlay().showDebugScreen()) {
             return panels;
         }
         Font font = minecraft.font;
@@ -158,27 +158,26 @@ public final class PoliticalHud {
         lines.add(Component.literal("ELEIÇÃO: " + phase.displayName() + " (")
                 .append(ElectionManager.formatTime(ClientElectionCache.displayTicksRemaining()) + ")")
                 .withStyle(ChatFormatting.GOLD));
-        for (int index = 0; index < state.races().size(); index++) {
-            ElectionSyncPayload.RaceView race = state.races().get(index);
-            switch (phase) {
-                case REGISTRATION -> lines.add(Component.literal(race.label() + ": "
-                        + race.candidates().size() + " candidato(s)").withStyle(ChatFormatting.WHITE));
-                case VOTING -> lines.add(Component.literal(race.label() + ": ")
-                        .withStyle(ChatFormatting.WHITE)
-                        .append(state.hasVotedIn(index)
-                                ? Component.literal("voto registrado ✔").withStyle(ChatFormatting.GREEN)
-                                : Component.literal("use a Urna!").withStyle(ChatFormatting.YELLOW)));
-                case COUNTING -> {
-                    lines.add(Component.literal(race.label() + " — apurados " + race.revealedBallots()
-                            + "/" + race.totalBallots()).withStyle(ChatFormatting.WHITE));
-                    for (ElectionSyncPayload.CandidateView candidate : race.candidates()) {
-                        lines.add(label("  " + candidate.name() + (candidate.npc() ? " [aldeão]" : "") + ": ",
-                                Math.max(0, candidate.shownScore()) + " pts"));
-                    }
-                }
-                default -> {
-                }
+        int count = state.races().size();
+        int voted = 0;
+        int candidates = 0;
+        int revealed = 0;
+        int ballots = 0;
+        for (int i = 0; i < count; i++) {
+            if (state.hasVotedIn(i)) voted++;
+            var race = state.races().get(i);
+            candidates += race.candidates().size();
+            revealed += race.revealedBallots();
+            ballots += race.totalBallots();
+        }
+        switch (phase) {
+            case REGISTRATION -> lines.add(label("Inscrições · ", candidates + " candidatos / " + count + " disputas"));
+            case VOTING -> {
+                lines.add(label("Seu progresso · ", voted + "/" + count + " votos registrados"));
+                lines.add(Component.literal("Abra a Urna Eletrônica para votar").withStyle(ChatFormatting.GREEN));
             }
+            case COUNTING -> lines.add(label("Apuração · ", revealed + "/" + ballots + " cédulas"));
+            default -> { }
         }
         return lines;
     }
@@ -189,6 +188,7 @@ public final class PoliticalHud {
         for (Component line : lines) {
             width = Math.max(width, font.width(line));
         }
+        width = Math.min(width, Math.max(80, guiWidth / 2 - 16));
         width += PANEL_PADDING * 2;
         int height = lines.size() * LINE_HEIGHT + PANEL_PADDING * 2 - 2;
         int x = guiWidth - width - SCREEN_MARGIN;
@@ -197,10 +197,10 @@ public final class PoliticalHud {
 
     private static void drawPanel(GuiGraphics graphics, Font font, Panel panel) {
         AnnouncementLayout.Rect r = panel.bounds();
-        graphics.fill(r.left(), r.top(), r.right(), r.bottom(), PANEL_BACKGROUND);
+        CivicUi.panel(graphics, r.left(), r.top(), r.width(), r.height());
         List<Component> lines = panel.lines();
         for (int i = 0; i < lines.size(); i++) {
-            graphics.drawString(font, lines.get(i), r.left() + PANEL_PADDING, r.top() + PANEL_PADDING + i * LINE_HEIGHT,
+            graphics.drawString(font, CivicUi.fit(lines.get(i).getString(), r.width() - PANEL_PADDING * 2), r.left() + PANEL_PADDING, r.top() + PANEL_PADDING + i * LINE_HEIGHT,
                     0xFFFFFFFF, false);
         }
     }

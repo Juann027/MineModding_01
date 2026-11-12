@@ -7,7 +7,6 @@ import com.tupinicraft.mandate.MandateService;
 import com.tupinicraft.mandate.Occupant;
 import com.tupinicraft.mandate.SeatKey;
 import com.tupinicraft.mandate.SeatView;
-import com.tupinicraft.network.AnnouncementPayload;
 import com.tupinicraft.network.ElectionSyncPayload;
 import com.tupinicraft.network.OpenUrnaPayload;
 import com.tupinicraft.origin.RegionalOrigin;
@@ -604,10 +603,8 @@ public final class ElectionManager {
 
     /** Aviso global exibido como faixa na tela dos jogadores (não usa o chat). */
     private static void announce(MinecraftServer server, MutableComponent message) {
-        Component full = Component.literal("[ELEIÇÃO] ").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
-                .append(message.withStyle(style -> style.getColor() == null ? style.withColor(ChatFormatting.WHITE) : style));
-        TupiniCraft.LOGGER.info(full.getString());
-        PacketDistributor.sendToAllPlayers(new AnnouncementPayload(full));
+        com.tupinicraft.event.GlobalEvents.broadcast("election", Component.literal("ELEIÇÕES / EVENTO GLOBAL"),
+                message, 0xFFECC879, 7000);
     }
 
     public static String raceLabel(ElectionRace race) {

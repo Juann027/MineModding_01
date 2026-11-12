@@ -1,4 +1,4 @@
-> **Tigrinho: implementação em validação.** Consulte [docs/TIGRINHO.md](docs/TIGRINHO.md). O JAR em `dist/` é o original 0.5.2 e **não contém** o minigame. A compilação desta alteração ainda precisa ser executada em ambiente com acesso às dependências.
+> **Tigrinho compilado:** JAR novo em `dist/tupinicraft-0.5.3-tigrinho-dev.jar`. Build, testes de regras e teste de servidor dedicado aprovados. A interface e os giros com jogadores ainda precisam de teste no cliente. Consulte [docs/TIGRINHO.md](docs/TIGRINHO.md).
 
 # TupiniCraft
 

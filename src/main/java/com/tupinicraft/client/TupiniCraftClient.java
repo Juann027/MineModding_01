@@ -9,6 +9,7 @@ import com.tupinicraft.client.skilltree.ClientSkillCache;
 import com.tupinicraft.client.skilltree.LegacyAdvancementWidgets;
 import com.tupinicraft.client.skilltree.SkillTreeKeys;
 import com.tupinicraft.client.render.CaboEleitoralRenderer;
+import com.tupinicraft.client.render.LeaoDoFimRenderer;
 import com.tupinicraft.registry.ModEntities;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
@@ -31,6 +32,7 @@ public final class TupiniCraftClient {
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.CABO_ELEITORAL.get(), CaboEleitoralRenderer::new);
+        event.registerEntityRenderer(ModEntities.LEAO_DO_FIM.get(), LeaoDoFimRenderer::new);
     }
 
     private static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
