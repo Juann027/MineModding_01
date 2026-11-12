@@ -28,7 +28,7 @@ public final class ClientPayloadHandler {
     }
 
     public static void handleAnnouncement(AnnouncementPayload payload) {
-        AnnouncementOverlay.push(payload.message());
+        AnnouncementOverlay.push(payload);
     }
 
     public static void handleWallet(WalletSyncPayload payload) {
@@ -53,6 +53,11 @@ public final class ClientPayloadHandler {
 
     public static void handleSkillNotice(SkillNoticePayload payload) {
         SkillNoticeToast.show(payload);
+    }
+
+    public static void handleVoteResult(com.tupinicraft.network.VoteResultPayload payload) {
+        if (Minecraft.getInstance().screen instanceof UrnaScreen screen) screen.receiveResult(payload.message());
+        else if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(payload.message(), true);
     }
 
     public static void handleOpenUrna() {

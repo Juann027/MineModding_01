@@ -2,6 +2,7 @@ package com.tupinicraft.registry;
 
 import com.tupinicraft.TupiniCraft;
 import com.tupinicraft.entity.CaboEleitoralEntity;
+import com.tupinicraft.entity.LeaoDoFimEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -22,10 +23,19 @@ public final class ModEntities {
                     .clientTrackingRange(8)
                     .build("cabo_eleitoral"));
 
+    /** LeãoDoFim: neutral validation mob; no natural spawning yet. */
+    public static final DeferredHolder<EntityType<?>, EntityType<LeaoDoFimEntity>> LEAO_DO_FIM = ENTITY_TYPES.register(
+            "leao_do_fim",
+            () -> EntityType.Builder.of(LeaoDoFimEntity::new, MobCategory.CREATURE)
+                    .sized(1.4F, 1.7F)
+                    .clientTrackingRange(10)
+                    .build("leao_do_fim"));
+
     private ModEntities() {
     }
 
     public static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(CABO_ELEITORAL.get(), CaboEleitoralEntity.createAttributes().build());
+        event.put(LEAO_DO_FIM.get(), LeaoDoFimEntity.createAttributes().build());
     }
 }

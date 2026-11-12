@@ -2,9 +2,10 @@
 
 ## Estado da entrega
 
-Implementação adicionada diretamente ao projeto original. **Ainda não homologada no Minecraft.**
-A compilação completa foi tentada, mas o wrapper não conseguiu baixar Gradle 9.2.1 (`Network is unreachable`).
-Não foi produzido um JAR novo. `dist/tupinicraft-0.5.2.jar` é o binário original preservado e **não contém esta implementação**.
+Implementação adicionada diretamente ao projeto original e **compilada com sucesso**. JAR novo em `dist/tupinicraft-0.5.3-tigrinho-dev.jar`.
+O JAR `dist/tupinicraft-0.5.2.jar` continua preservado como original e não contém o minigame; instale somente a nova versão.
+
+Na nova tentativa foi possível configurar o proxy efetivamente disponível para o Java, baixar o Gradle e usar um JDK 21 completo. A compilação detectou uma chamada ao construtor de `Session` sem o argumento `now`; ela foi corrigida. O build seguinte passou em 16 segundos, após preparar as dependências.
 
 Resultados realmente executados com Java 21:
 
@@ -14,10 +15,11 @@ Resultados realmente executados com Java 21:
 | `scripts/regression-test.sh` | 27 verificações existentes aprovadas |
 | `scripts/validate-tigrinho.py` | 63 JSONs válidos; sete imagens com dimensões/referências corretas; modelo, receita, loot e tag presentes |
 | Parser Java do JDK, todos os fontes | 110 arquivos; zero erros sintáticos; não é checagem de tipos/imports |
-| `bash gradlew build --no-daemon` | Bloqueado no download do Gradle, antes da compilação |
-| Cliente, multiplayer, servidor dedicado, GUI escalada, persistência em reinício real | Não executados neste ambiente |
+| Gradle 9.2.1 `build --no-daemon --no-configuration-cache --max-workers=2` | **BUILD SUCCESSFUL**; JAR gerado; `rulesTest`: 136 aprovados; `tigrinhoTest`: 2.169 aprovados |
+| Servidor dedicado | Duas inicializações, desligamentos normais e regressões de persistência de eleição/configuração: **OK**; máquina colocada e reconhecida via comando |
+| Cliente gráfico, giros com jogadores, multiplayer do minigame e persistência de fichas reais | Não executados; permanecem pendentes |
 
-Os registros estão em `docs/tigrinho-validation/`. Os testes de regras não usam mocks de Minecraft e não comprovam integração de rede ou carregamento de classes no servidor.
+Os registros estão em `docs/tigrinho-validation/`. Os testes de regras não usam mocks de Minecraft e não comprovam o fluxo de rede com jogadores. O carregamento no servidor dedicado foi verificado separadamente. O teste de servidor usou o script existente, apontado para o Gradle local, com dois comandos adicionais para colocar e reconhecer a máquina. O log contém avisos de consulta externa às chaves de autenticação e da configuração flat do teste; eles não impediram as duas inicializações nem as verificações.
 
 ## Auditoria do projeto recebido
 
@@ -55,7 +57,7 @@ Responsabilidades:
 
 A máquina não tem block entity nem renderer com tick. Usa modelo JSON estático com gabinete, molduras, visor e símbolos anexados. A colisão é de um bloco inteiro. Não armazena fichas: remover/reposicionar a máquina não altera contas.
 
-As classes gráficas ficam sob `client`; o handler comum usa o padrão de chamada adiada por lambda já empregado pelo projeto. Isso foi revisado no fonte, mas o teste real de servidor dedicado continua obrigatório.
+As classes gráficas ficam sob `client`; o handler comum usa o padrão de chamada adiada por lambda já empregado pelo projeto. O carregamento dessas classes no servidor dedicado foi exercitado nas duas inicializações do teste de fumaça, sem erro de classes exclusivas do cliente.
 
 ## Economia, regras e probabilidades
 
@@ -79,8 +81,7 @@ A trinca `t` recebe mensagem especial “Tigrinho Dourado”. As demais trincas 
 
 ## Configuração
 
-Arquivo criado pelo NeoForge no mundo:
-`<mundo>/serverconfig/tupinicraft-tigrinho-server.toml`.
+Arquivo `tupinicraft-tigrinho-server.toml`, registrado como configuração SERVER. Nesta execução NeoForge 21.1.265 o caminho efetivo foi `run/config/tupinicraft-tigrinho-server.toml`. Consulte o caminho anunciado por `ConfigTracker` no log da sua instalação; não presuma o diretório `serverconfig` de outras versões.
 
 | Chave | Padrão | Limites/significado |
 |---|---|---|
@@ -142,7 +143,7 @@ Mascote: textura original `textures/item/skilltree/tigrinho.png`, reutilizada se
 
 1. Instale Java/JDK 21 e extraia o projeto. Na pasta `MineModding_01-main`, execute `./gradlew build` (Windows: `gradlew.bat build`). No Linux, use `bash gradlew build` se faltar permissão de execução.
 2. O build executa `rulesTest` e `tigrinhoTest` pelo `check`. Para as verificações independentes: `bash scripts/test-tigrinho.sh`, `bash scripts/regression-test.sh` e `python3 scripts/validate-tigrinho.py`.
-3. Somente após build aprovado, use `build/libs/tupinicraft-0.5.3-tigrinho-dev.jar`. Não use o JAR antigo de `dist/` para testar este recurso.
+3. O build desta entrega foi aprovado. Use o novo `dist/tupinicraft-0.5.3-tigrinho-dev.jar`, ou `build/libs/tupinicraft-0.5.3-tigrinho-dev.jar` se recompilar. Não use o JAR 0.5.2 antigo nem instale as duas versões simultaneamente.
 4. Instale no cliente e servidor NeoForge 21.1.265 / Minecraft 1.21.1, mantendo as dependências originais descritas no README. UI Lib/Architectury continuam sendo exigências do cliente; GeckoLib/SmartBrainLib também são usadas pelo restante do mod no servidor.
 5. Em mundo de teste, obtenha `/give @s tupinicraft:icone_tigrinho` e use botão direito no ar. Selecione aposta, gire e verifique saldo. A tecla Tab navega pelos botões; Escape fecha; a tela não pausa o servidor integrado.
 6. Obtenha `/give @s tupinicraft:tigrinho_machine`, posicione e clique com botão direito. Também há receita de bancada: `IGI / IRI / III`, com I=ferro, G=ouro, R=redstone. Quebre e recoloque; o bloco deve cair como item e o saldo deve continuar igual.
@@ -159,9 +160,9 @@ Mascote: textura original `textures/item/skilltree/tigrinho.png`, reutilizada se
 - Ledger em `<mundo>/data/tupinicraft_tigrinho.dat`, usando o armazenamento do overworld; contas compartilhadas pelas dimensões. O arquivo é salvo pelo ciclo normal de `SavedData`, não após cada pacote.
 - Logout descarta a sessão, não o saldo. Cooldown é persistido em ticks globais do mundo e não é contornado por sair/entrar, fechar/reabrir ou trocar de acesso. Sessões expiradas são limpas a cada segundo; servidor parado libera o cache.
 - Queda abrupta do processo antes do save pode perder a última transação. Não foi implementado journal em disco nem atomicidade entre o save do inventário e o ledger. Faça backup e use encerramento normal; não há garantia de recuperação transacional após crash.
-- Nenhum teste de jogo, benchmark de FPS ou ensaio de rede foi executado. A revisão de sintaxe não garante compatibilidade de todas as assinaturas externas. O build com dependências e a homologação descrita acima são pendências reais, e esta versão permanece `-dev` até passarem.
+- Build completo e teste de fumaça de servidor dedicado executados e aprovados. Não foram executados cliente gráfico, benchmark de FPS, ensaio dos payloads com jogadores, giros completos ou persistência de fichas após reconexão/reinício. A versão permanece `-dev` até essa homologação funcional; compilar e iniciar o servidor não comprova a interface nem todas as regras em multiplayer.
 - A tela mostra textos em português; nomes do bloco possuem entradas pt_br/en_us. Localização completa da nova interface é uma melhoria futura.
-- Não houve criação de repositório externo, PR, merge ou publicação. A entrega é o ZIP de fontes atualizado.
+- Não houve criação de repositório externo, PR, merge ou publicação. A entrega inclui fontes atualizados e o JAR compilado.
 
 ## Referências consultadas
 

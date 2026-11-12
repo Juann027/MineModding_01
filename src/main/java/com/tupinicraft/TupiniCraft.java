@@ -46,6 +46,7 @@ public final class TupiniCraft {
         com.tupinicraft.tigrinho.TigrinhoService.registerEvents();
 
         NeoForge.EVENT_BUS.addListener(BrasilCommands::register);
+        NeoForge.EVENT_BUS.addListener(com.tupinicraft.command.LeaoDoFimCommands::register);
         NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onLogin);
         NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onRespawn);
         NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onChangedDimension);
