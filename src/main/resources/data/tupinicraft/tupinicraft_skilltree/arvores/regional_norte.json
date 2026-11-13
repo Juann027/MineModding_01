@@ -1,8 +1,0 @@
-{
-  "nome": "Regional: Norte",
-  "tipo": "regional",
-  "regiao": "norte",
-  "icone": "tupinicraft:icone_amazonia",
-  "fundo": "minecraft:textures/block/moss_block.png",
-  "ordem": 20
-}

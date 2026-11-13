@@ -26,18 +26,6 @@ public final class TupiniCraft {
         modBus.addListener(ModItems::addToCreativeTabs);
         NeoForge.EVENT_BUS.addListener(LeaoDoFimCommands::register);
         // Biomas e dimensões ainda não foram implementados neste projeto.
-        com.tupinicraft.registry.ModAttachments.ATTACHMENT_TYPES.register(modBus);
-        modBus.addListener(com.tupinicraft.network.ModNetwork::register);
-        NeoForge.EVENT_BUS.addListener(com.tupinicraft.player.PlayerEventHandler::onLogin);
-        NeoForge.EVENT_BUS.addListener(com.tupinicraft.skilltree.SkillCatalog::onAddReloadListener);
-        NeoForge.EVENT_BUS.addListener(com.tupinicraft.skilltree.SkillTreeService::onDatapackSync);
-        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) ->
-                com.tupinicraft.skilltree.SkillTreeService.tick(event.getServer()));
-        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.RegisterCommandsEvent event) -> {
-            event.getDispatcher().register(com.tupinicraft.command.SkillCommands.player());
-            event.getDispatcher().register(com.tupinicraft.command.SkillCommands.adminTest()
-                    .requires(source -> source.hasPermission(2)));
-        });
     }
 
     public static ResourceLocation id(String path) {

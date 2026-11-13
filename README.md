@@ -3,7 +3,7 @@
 ## Conteúdo ativo
 - **NPCs/mobs:** Cabo Eleitoral (mob de teste) e Leão do Fim, com registries, renderers GeckoLib, IA SmartBrainLib e ovos de spawn.
 - **Biomas e dimensões:** ainda não existem implementações no ZIP original. Pastas `biome`, `dimension` e `npc` são apenas pontos de partida.
-- **Skill trees:** ativas, tecla K, com dados em `data/tupinicraft/tupinicraft_skilltree/`.  Requisitos regionais continuam usando origem e regras antigas de pontos de cargo/filiação. **Sem eleição/mandato**, habilidades que dependem de mandato não podem ativar seus efeitos. Economia foi retirada; há somente **créditos internos legados** para permitir testar compras de skills, configuráveis por comando de OP `/skilladmin dinheiro set <jogador> <valor>`. `/skills` lista e compra as skills. Sem progressão econômica automática.
+- **Skill trees:** desativadas (código e datapack guardados no backup; assets preservados).
 
 ## Desativado nesta variante
 Tigrinho, eleições, mandatos políticos, HUD/urna cívica e economia geral. Essas classes não ficam em `src/main/java` ativo.
@@ -15,7 +15,7 @@ Tigrinho, eleições, mandatos políticos, HUD/urna cívica e economia geral. Es
 - O ZIP original fornecido pelo usuário é a referência integral para restauração.
 
 ## Dependências e execução
-Minecraft 1.21.1, NeoForge 21.1.x, Java 21, GeckoLib 4 e SmartBrainLib. UI Lib e Architectury no cliente para a variante com skill trees.
+Minecraft 1.21.1, NeoForge 21.1.x, Java 21, GeckoLib 4 e SmartBrainLib. Não precisa mais de UI Lib nem Architectury.
 
 Com Java/Gradle configurados e dependências disponíveis, execute `./gradlew build` (Linux/macOS) ou `gradlew.bat build` (Windows). O JAR ficará em `build/libs/`. Este pacote entregue contém **código-fonte, não um JAR compilado**.
 

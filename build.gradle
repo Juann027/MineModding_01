@@ -146,9 +146,7 @@ dependencies {
     implementation "net.tslat.smartbrainlib:SmartBrainLib-neoforge-${minecraft_version}:${smartbrainlib_version}"
     // UI Lib (DAQEM): componentes de tela usados SÓ pelo cliente (árvore de habilidades). O servidor dedicado
     // não precisa dele (neoforge.mods.toml declara side="CLIENT"). Modrinth: ID da versão 9.0.0 para NeoForge.
-    implementation "maven.modrinth:ui-lib:${uilib_modrinth_version_id}"
     // Architectury API: exigida pelo UI Lib; o código do TupiniCraft não a usa (só ambiente de execução local).
-    localRuntime "maven.modrinth:architectury-api:${architectury_version}"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
@@ -228,3 +226,10 @@ idea {
 
 // Não há testes antigos ativos: os self-tests eleitorais/Tigrinho foram arquivados.
 tasks.named('test', Test) { failOnNoDiscoveredTests = false }
+
+// Permite digitar comandos no console do servidor de desenvolvimento (usado pelo teste de fumaça do CI).
+tasks.matching { it.name == 'runServer' }.configureEach {
+    if (it instanceof JavaExec) {
+        it.standardInput = System.in
+    }
+}

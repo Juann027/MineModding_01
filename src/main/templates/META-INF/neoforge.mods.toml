@@ -39,20 +39,3 @@ TupiniCraft: base experimental para NPCs, biomas e dimensões. Sistemas de elei�
     versionRange="[${smartbrainlib_version},)"
     ordering="AFTER"
     side="BOTH"
-
-# UI Lib (DAQEM): telas da árvore de habilidades (tecla K). Só o CLIENTE precisa; o servidor dedicado não.
-[[dependencies.${mod_id}]]
-    modId="uilib"
-    type="required"
-    versionRange="[${uilib_version},10)"
-    ordering="AFTER"
-    side="CLIENT"
-
-# Architectury API: dependência do UI Lib (o TupiniCraft não usa). Declarada para o jogo avisar se faltar.
-[[dependencies.${mod_id}]]
-    modId="architectury"
-    type="required"
-    reason="Dependência do UI Lib."
-    versionRange="[13.0.6,)"
-    ordering="NONE"
-    side="CLIENT"

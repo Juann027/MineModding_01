@@ -1,8 +1,0 @@
-{
-  "nome": "Cargo: Deputado Federal",
-  "tipo": "cargo",
-  "cargo": "deputado_federal",
-  "icone": "tupinicraft:icone_constituicao",
-  "fundo": "minecraft:textures/block/polished_andesite.png",
-  "ordem": 43
-}

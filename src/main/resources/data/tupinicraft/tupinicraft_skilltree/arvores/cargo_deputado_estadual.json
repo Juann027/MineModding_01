@@ -1,8 +1,0 @@
-{
-  "nome": "Cargo: Deputado Estadual / Distrital",
-  "tipo": "cargo",
-  "cargo": "deputado_estadual",
-  "icone": "tupinicraft:icone_carteira_trabalho",
-  "fundo": "minecraft:textures/block/polished_andesite.png",
-  "ordem": 41
-}

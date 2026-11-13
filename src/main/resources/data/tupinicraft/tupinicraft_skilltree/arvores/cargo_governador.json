@@ -1,8 +1,0 @@
-{
-  "nome": "Cargo: Governador",
-  "tipo": "cargo",
-  "cargo": "governador",
-  "icone": "tupinicraft:icone_receita_federal",
-  "fundo": "minecraft:textures/block/polished_andesite.png",
-  "ordem": 45
-}

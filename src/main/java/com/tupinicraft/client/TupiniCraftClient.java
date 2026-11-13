@@ -14,13 +14,6 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 public final class TupiniCraftClient {
     public TupiniCraftClient(IEventBus modBus) {
         modBus.addListener(TupiniCraftClient::registerRenderers);
-        modBus.addListener(com.tupinicraft.client.skilltree.SkillTreeKeys::register);
-        modBus.addListener(com.tupinicraft.client.skilltree.LegacyAdvancementWidgets::register);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                com.tupinicraft.client.skilltree.SkillTreeKeys::onClientTick);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                (net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) ->
-                        com.tupinicraft.client.skilltree.ClientSkillCache.clear());
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {

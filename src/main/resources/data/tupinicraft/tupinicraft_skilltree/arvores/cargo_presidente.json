@@ -1,8 +1,0 @@
-{
-  "nome": "Cargo: Presidente da República",
-  "tipo": "cargo",
-  "cargo": "presidente",
-  "icone": "tupinicraft:icone_bandeira_brasil",
-  "fundo": "minecraft:textures/block/polished_andesite.png",
-  "ordem": 46
-}

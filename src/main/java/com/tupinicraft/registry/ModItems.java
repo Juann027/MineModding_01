@@ -17,18 +17,6 @@ public final class ModItems {
             "leao_do_fim_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.LEAO_DO_FIM, 0xB87521, 0x6236D9, new Item.Properties()));
 
-    // Ícones sem comportamento próprio, registrados exclusivamente para as árvores de habilidades.
-    static {
-        for (String icon : java.util.List.of(
-                "cristo_redentor", "mao_em_l", "rejeicao", "policia_federal", "vacina", "moeda_real", "receita_federal",
-                "chimarrao", "bandeira_brasil", "caveira", "favela", "estadio", "amazonia", "tigrinho",
-                "pix", "vira_lata", "trevo", "comprimido", "mito", "identidade_dinheiro", "niobio",
-                "picanha", "jumento", "cus", "bolsa", "constituicao", "carteira_trabalho", "montanha",
-                "cedulas", "mst", "intelectual", "painho", "sertao")) {
-            ITEMS.register("icone_" + icon, () -> new Item(new Item.Properties()));
-        }
-    }
-
     private ModItems() {}
 
     public static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {

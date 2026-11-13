@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Teste de fumaça do servidor dedicado (variante foco em NPCs + skill trees):
-# sobe o servidor, confirma carregamento sem classes de cliente, árvores/skills e mobs invocáveis.
+# Teste de fumaça do servidor dedicado (variante foco em NPCs):
+# sobe o servidor, confirma carregamento sem classes de cliente e mobs invocáveis.
 set -uo pipefail
 export LC_ALL=C.UTF-8
 
@@ -42,8 +42,6 @@ fi
 
 grep -v DEBUG "$log" | grep -E 'tupinicraft|TupiniCraft|Exception|Error|Summon|summon|Unknown|entity' | head -60
 [ "$(grep -c 'Summoned new' "$log")" -ge 2 ] || fail "mobs não foram invocados no servidor dedicado"
-grep -qE '[0-9]+ .{1,3}rvores e [0-9]+ skills carregadas' "$log" || fail "árvores e skills não carregaram"
-if grep -E 'Skill inv.{1,3}lida|.{1,3}rvore inv.{1,3}lida' "$log"; then fail "datapack de skills com erro"; fi
 if grep -E 'NoClassDefFoundError|ClassNotFoundException|invalid dist|RuntimeDistCleaner' "$log"; then
   fail "erro de classe exclusiva do cliente no servidor dedicado"
 fi
