@@ -1,44 +1,23 @@
 package com.tupinicraft.client;
 
 import com.tupinicraft.TupiniCraft;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.common.Mod;
-import com.tupinicraft.client.skilltree.ClientSkillCache;
-import com.tupinicraft.client.skilltree.LegacyAdvancementWidgets;
-import com.tupinicraft.client.skilltree.SkillTreeKeys;
 import com.tupinicraft.client.render.CaboEleitoralRenderer;
 import com.tupinicraft.client.render.LeaoDoFimRenderer;
 import com.tupinicraft.registry.ModEntities;
-import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.common.NeoForge;
 
-/** Ponto de entrada exclusivo do cliente (não é carregado no servidor dedicado). */
+/** Renderização GeckoLib isolada do servidor dedicado. */
 @Mod(value = TupiniCraft.MOD_ID, dist = Dist.CLIENT)
 public final class TupiniCraftClient {
     public TupiniCraftClient(IEventBus modBus) {
-        modBus.addListener(PoliticalHud::registerLayers);
         modBus.addListener(TupiniCraftClient::registerRenderers);
-        NeoForge.EVENT_BUS.addListener(TupiniCraftClient::onLoggingOut);
-        // Só mede a área das barras de chefe; quem desenha é a camada registrada em PoliticalHud.
-        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, BossBarArea::onBossEventProgress);
-        // Árvores de habilidades (UI Lib): tecla K.
-        modBus.addListener(SkillTreeKeys::register);
-        modBus.addListener(LegacyAdvancementWidgets::register);
-        NeoForge.EVENT_BUS.addListener(SkillTreeKeys::onClientTick);
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.CABO_ELEITORAL.get(), CaboEleitoralRenderer::new);
         event.registerEntityRenderer(ModEntities.LEAO_DO_FIM.get(), LeaoDoFimRenderer::new);
-    }
-
-    private static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        ClientPoliticalCache.clear();
-        ClientElectionCache.clear();
-        AnnouncementOverlay.clear();
-        ClientSkillCache.clear();
     }
 }

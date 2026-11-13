@@ -1,1 +1,0 @@
-Syntax parse: 110 Java files, 0 errors (not type checking)
