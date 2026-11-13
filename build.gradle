@@ -226,3 +226,10 @@ idea {
 
 // Não há testes antigos ativos: os self-tests eleitorais/Tigrinho foram arquivados.
 tasks.named('test', Test) { failOnNoDiscoveredTests = false }
+
+// Permite digitar comandos no console do servidor de desenvolvimento (usado pelo teste de fumaça do CI).
+tasks.matching { it.name == 'runServer' }.configureEach {
+    if (it instanceof JavaExec) {
+        it.standardInput = System.in
+    }
+}
