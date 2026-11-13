@@ -31,8 +31,8 @@ if [ "$ready" != 1 ]; then
   fail "servidor não ficou pronto"
   exec 3>&-; kill "$pid" 2>/dev/null; wait "$pid"
 else
-  for cmd in "summon tupinicraft:cabo_eleitoral 0 -60 0" "summon tupinicraft:leao_do_fim 10 -60 10"; do
-    echo "$cmd" >&3; sleep 2
+  for cmd in "summon tupinicraft:cabo_eleitoral 0 -60 0" "summon tupinicraft:leao_do_fim 0 -60 0"; do
+    echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
   exec 3>&-
@@ -40,7 +40,7 @@ else
   kill "$pid" 2>/dev/null; wait "$pid"
 fi
 
-grep -E 'tupinicraft|TupiniCraft|Exception|Error' "$log" | head -60
+grep -v DEBUG "$log" | grep -E 'tupinicraft|TupiniCraft|Exception|Error|Summon|summon|Unknown|entity' | head -60
 [ "$(grep -c 'Summoned new' "$log")" -ge 2 ] || fail "mobs não foram invocados no servidor dedicado"
 grep -qE '[0-9]+ .{1,3}rvores e [0-9]+ skills carregadas' "$log" || fail "árvores e skills não carregaram"
 if grep -E 'Skill inv.{1,3}lida|.{1,3}rvore inv.{1,3}lida' "$log"; then fail "datapack de skills com erro"; fi
