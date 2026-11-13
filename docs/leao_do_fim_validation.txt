@@ -1,6 +1,0 @@
-PASS: exporter and resource regression checks.
-45 bones; 127 cubes; 14 original clips; 1777 keyframes; 5 overlays.
-Texture checksums match input; dimensions 128x128.
-PASS: Java 21 syntax parsing of 109 main source files.
-NOT VERIFIED: Java type checking, full Gradle build, Minecraft runtime.
-Gradle blocked before compilation: Network is unreachable downloading gradle-9.2.1-bin.zip.

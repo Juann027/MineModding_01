@@ -3,6 +3,12 @@
 Mod brasileiro de sátira política para **Minecraft 1.21.1 / NeoForge 21.1.x / Java 21**.
 Base: MDK oficial `NeoForgeMDKs/MDK-1.21.1-ModDevGradle` (plugin `net.neoforged.moddev`).
 
+> **Variante atual (v0.5.4-focus-npcs-base):** Tigrinho, eleições, mandatos, economia geral, HUD/urna cívica e
+> `rulesTest` foram **desativados/arquivados** (cópia em `backups/*.zip`; não extraia nem reintroduza sem pedido
+> explícito). Skill trees também foram desativadas (código/datapack no backup). Ficam ativos: Cabo Eleitoral, Leão do Fim e pastas `biome`/`dimension`/`npc` como pontos de partida. Leia o `README.md` e o
+> `AGENTS.md`. As seções abaixo sobre eleições, mandatos, economia, HUD e testes descrevem o sistema arquivado.
+> O CI agora roda `./gradlew build` + teste de fumaça (servidor sobe e mobs são invocados).
+
 ## Fluxo de entrega e merge automático (política do dono do repositório)
 
 O dono do repositório autorizou merge automático dos PRs ao concluir cada tarefa, sem aguardar aprovação manual.

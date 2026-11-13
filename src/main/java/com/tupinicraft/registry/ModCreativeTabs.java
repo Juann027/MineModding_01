@@ -8,20 +8,18 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/** Aba própria com todos os itens registrados pelo mod, inclusive os ícones das árvores. */
+/** Aba enxuta com os mobs disponíveis; os assets inativos ficam preservados. */
 public final class ModCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, TupiniCraft.MOD_ID);
-
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TUPINICRAFT = TABS.register(
             "tupinicraft", () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.tupinicraft"))
-                    .icon(() -> ModItems.URNA_ELETRONICA.get().getDefaultInstance())
+                    .icon(() -> ModItems.LEAO_DO_FIM_SPAWN_EGG.get().getDefaultInstance())
                     .withTabsBefore(CreativeModeTabs.TOOLS_AND_UTILITIES)
-                    .displayItems((parameters, output) ->
-                            ModItems.ITEMS.getEntries().forEach(entry -> output.accept(entry.get())))
-                    .build());
-
-    private ModCreativeTabs() {
-    }
+                    .displayItems((parameters, output) -> {
+                        output.accept(ModItems.CABO_ELEITORAL_SPAWN_EGG.get());
+                        output.accept(ModItems.LEAO_DO_FIM_SPAWN_EGG.get());
+                    }).build());
+    private ModCreativeTabs() {}
 }
