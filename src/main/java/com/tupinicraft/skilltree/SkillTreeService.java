@@ -1,10 +1,10 @@
 package com.tupinicraft.skilltree;
 
 import com.tupinicraft.TupiniCraft;
-import com.tupinicraft.config.ServerSettings;
-import com.tupinicraft.economy.Money;
-import com.tupinicraft.economy.WalletService;
-import com.tupinicraft.mandate.MandateService;
+
+
+
+
 import com.tupinicraft.network.SkillDefinitionsPayload;
 import com.tupinicraft.network.SkillNoticePayload;
 import com.tupinicraft.network.SkillStatePayload;
@@ -38,7 +38,7 @@ import java.util.WeakHashMap;
  */
 public final class SkillTreeService {
     /** Frequência da checagem de requisitos (4x por segundo): um efeito sem requisito some em até 0,25 s. */
-    private static final int ENFORCE_INTERVAL_TICKS = ServerSettings.TICKS_PER_SECOND / 4;
+    private static final int ENFORCE_INTERVAL_TICKS = 20 / 4;
 
     /**
      * Último estado enviado a cada jogador, só para não reenviar o mesmo pacote (cache de rede, não é estado do
@@ -67,9 +67,9 @@ public final class SkillTreeService {
         return new SkillPlayerContext(
                 data.origin().map(origin -> origin.macroregion()),
                 player.getData(ModAttachments.PARTY).partyId(),
-                MandateService.activeOffice(player.server, player.getUUID()),
+                Optional.empty(), // Mandatos desativados; skills de cargo ficam suspensas.
                 data.politicalXp(),
-                WalletService.balance(player),
+                SkillCreditsService.balance(player),
                 points);
     }
 
@@ -103,7 +103,7 @@ public final class SkillTreeService {
             if (!changeOfficePoints(player, rule.office().orElseThrow(), -rule.officePointCost())) {
                 return Outcome.fail("Pontos de " + rule.office().orElseThrow().displayName() + " insuficientes.");
             }
-        } else if (!WalletService.debit(player, rule.moneyCost())) {
+        } else if (!SkillCreditsService.debit(player, rule.moneyCost())) {
             return Outcome.fail("Saldo insuficiente.");
         }
         player.setData(ModAttachments.SKILL_TREE_STATE, state.withUnlocked(skillId));
@@ -242,7 +242,7 @@ public final class SkillTreeService {
     public static String cost(SkillRule rule) {
         String base = rule.kind() == SkillTreeKind.OFFICE
                 ? rule.officePointCost() + " ponto(s) de " + rule.office().orElseThrow().displayName()
-                : Money.format(rule.moneyCost());
+                : SkillCreditFormatter.format(rule.moneyCost());
         return rule.minPoliticalXp() > 0 ? base + ", exige " + rule.minPoliticalXp() + " XP político (não consumido)" : base;
     }
 
@@ -263,8 +263,8 @@ public final class SkillTreeService {
                     + context.party().map(p -> "é filiado a " + p).orElse("não é filiado a nenhum partido") + ".";
             case INSUFFICIENT_XP -> "XP político insuficiente: você tem " + context.politicalXp() + ", precisa de "
                     + rule.minPoliticalXp() + " (o XP não é gasto).";
-            case INSUFFICIENT_MONEY -> "Saldo insuficiente: você tem " + Money.format(context.money()) + ", custa "
-                    + Money.format(rule.moneyCost()) + ".";
+            case INSUFFICIENT_MONEY -> "Saldo insuficiente: você tem " + SkillCreditFormatter.format(context.money()) + ", custa "
+                    + SkillCreditFormatter.format(rule.moneyCost()) + ".";
             case INSUFFICIENT_OFFICE_POINTS -> "Pontos de " + rule.office().orElseThrow().displayName()
                     + " insuficientes: você tem " + context.pointsOf(rule.office().orElseThrow()) + ", custa "
                     + rule.officePointCost() + " (ganhos exercendo o mandato online).";

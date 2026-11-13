@@ -1,7 +1,7 @@
 package com.tupinicraft.registry;
 
 import com.tupinicraft.TupiniCraft;
-import com.tupinicraft.economy.Wallet;
+import com.tupinicraft.skilltree.SkillCredits;
 import com.tupinicraft.party.PartyAffiliation;
 import com.tupinicraft.player.PoliticalData;
 import com.tupinicraft.skilltree.SkillTreeState;
@@ -23,10 +23,10 @@ public final class ModAttachments {
                     .copyOnDeath()
                     .build());
 
-    /** Saldo em reais fictícios (contrato da futura economia). */
-    public static final Supplier<AttachmentType<Wallet>> WALLET = ATTACHMENT_TYPES.register(
+    /** Créditos internos legados da skill tree (sem economia geral). */
+    public static final Supplier<AttachmentType<SkillCredits>> SKILL_CREDITS = ATTACHMENT_TYPES.register(
             "wallet",
-            () -> AttachmentType.builder(() -> Wallet.EMPTY).serialize(Wallet.CODEC).copyOnDeath().build());
+            () -> AttachmentType.builder(() -> SkillCredits.EMPTY).serialize(SkillCredits.CODEC).copyOnDeath().build());
 
     /** Filiação partidária (hoje só por comando de teste). */
     public static final Supplier<AttachmentType<PartyAffiliation>> PARTY = ATTACHMENT_TYPES.register(

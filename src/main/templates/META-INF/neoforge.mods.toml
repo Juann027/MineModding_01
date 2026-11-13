@@ -8,7 +8,7 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="Juann027"
 description='''
-TupiniCraft: um mod brasileiro de sátira política. Origens regionais, cargos políticos, XP político, popularidade e eleições multiplayer.
+TupiniCraft: base experimental para NPCs, biomas e dimensões. Sistemas de eleições, economia e Tigrinho desativados.
 '''
 
 [[dependencies.${mod_id}]]

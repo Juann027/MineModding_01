@@ -1,2 +1,0 @@
-JSON: 63 arquivos válidos. Texturas: 7 dimensões/referências válidas. Modelo/receita/loot/tag presentes.
-P(trinca)=4.174000%; retorno esperado bruto=90.087000%; pesos totais=100.

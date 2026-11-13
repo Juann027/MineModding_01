@@ -7,9 +7,12 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.tupinicraft.economy.Money;
-import com.tupinicraft.economy.Wallet;
-import com.tupinicraft.economy.WalletService;
+
+
+
+import com.tupinicraft.skilltree.SkillCredits;
+import com.tupinicraft.skilltree.SkillCreditsService;
+import com.tupinicraft.skilltree.SkillCreditFormatter;
 import com.tupinicraft.party.PartyAffiliation;
 import com.tupinicraft.player.OfficeProgress;
 import com.tupinicraft.player.PoliticalData;
@@ -36,18 +39,18 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * /brasil skills [comprar &lt;skill&gt;] e os comandos administrativos de TESTE
- * (/brasil admin teste dinheiro|partido|pontos). Economia e partidos ainda não existem: esses comandos
+ * /skills [comprar &lt;skill&gt;] e os comandos administrativos de TESTE
+ * (/skilladmin dinheiro|partido|pontos). Economia e partidos gerais não existem: esses comandos
  * só servem para validar as árvores de habilidades.
  */
-final class SkillCommands {
+public final class SkillCommands {
     private static final SuggestionProvider<CommandSourceStack> SKILL_SUGGESTIONS = (context, builder) ->
             SharedSuggestionProvider.suggest(SkillCatalog.get().allSkills().stream().map(SkillDef::id), builder);
 
     private SkillCommands() {
     }
 
-    static LiteralArgumentBuilder<CommandSourceStack> player() {
+    public static LiteralArgumentBuilder<CommandSourceStack> player() {
         return Commands.literal("skills")
                 .executes(SkillCommands::list)
                 .then(Commands.literal("comprar")
@@ -56,15 +59,15 @@ final class SkillCommands {
                                 .executes(SkillCommands::purchase)));
     }
 
-    /** Sob /brasil admin (já exige OP). */
-    static LiteralArgumentBuilder<CommandSourceStack> adminTest() {
-        return Commands.literal("teste")
+    /** Sob /skilladmin (já exige OP). */
+    public static LiteralArgumentBuilder<CommandSourceStack> adminTest() {
+        return Commands.literal("skilladmin")
                 .then(Commands.literal("dinheiro")
                         .then(Commands.literal("set").then(Commands.argument("jogador", EntityArgument.player())
-                                .then(Commands.argument("valor", LongArgumentType.longArg(0, Wallet.MAX_BALANCE))
+                                .then(Commands.argument("valor", LongArgumentType.longArg(0, SkillCredits.MAX_BALANCE))
                                         .executes(context -> money(context, false)))))
                         .then(Commands.literal("add").then(Commands.argument("jogador", EntityArgument.player())
-                                .then(Commands.argument("valor", LongArgumentType.longArg(-Wallet.MAX_BALANCE, Wallet.MAX_BALANCE))
+                                .then(Commands.argument("valor", LongArgumentType.longArg(-SkillCredits.MAX_BALANCE, SkillCredits.MAX_BALANCE))
                                         .executes(context -> money(context, true))))))
                 .then(Commands.literal("partido")
                         .then(Commands.literal("set").then(Commands.argument("jogador", EntityArgument.player())
@@ -75,7 +78,9 @@ final class SkillCommands {
                 .then(Commands.literal("pontos")
                         .then(Commands.literal("set").then(Commands.argument("jogador", EntityArgument.player())
                                 .then(Commands.argument("cargo", StringArgumentType.word())
-                                        .suggests(BrasilCommands.ELECTIVE_OFFICE_SUGGESTIONS)
+                                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                java.util.Arrays.stream(PoliticalOffice.values())
+                                                        .filter(PoliticalOffice::isElective).map(PoliticalOffice::id), builder))
                                         .then(Commands.argument("quantidade", IntegerArgumentType.integer(0, PoliticalData.MAX_VALUE))
                                                 .executes(SkillCommands::setPoints))))));
     }
@@ -85,7 +90,7 @@ final class SkillCommands {
         CommandSourceStack source = context.getSource();
         SkillPlayerContext ctx = SkillTreeService.context(player);
         SkillTreeState state = SkillTreeService.state(player);
-        source.sendSuccess(() -> Component.literal("[SKILLS] Saldo: " + Money.format(ctx.money()) + " | Partido: "
+        source.sendSuccess(() -> Component.literal("[SKILLS] Saldo: " + SkillCreditFormatter.format(ctx.money()) + " | Partido: "
                 + ctx.party().orElse("nenhum") + " | Mandato: " + ctx.activeOffice().map(PoliticalOffice::displayName).orElse("nenhum")
                 + " | Árvores: tecla K").withStyle(ChatFormatting.AQUA), false);
         for (SkillTreeKind kind : SkillTreeKind.values()) {
@@ -117,15 +122,15 @@ final class SkillCommands {
     private static int money(CommandContext<CommandSourceStack> context, boolean add) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(context, "jogador");
         long value = LongArgumentType.getLong(context, "valor");
-        long before = WalletService.balance(target);
+        long before = SkillCreditsService.balance(target);
         long after = add ? before + value : value;
-        if (after < 0 || after > Wallet.MAX_BALANCE) {
-            context.getSource().sendFailure(Component.literal("Saldo inválido: " + after + " (de 0 a " + Wallet.MAX_BALANCE + ")."));
+        if (after < 0 || after > SkillCredits.MAX_BALANCE) {
+            context.getSource().sendFailure(Component.literal("Saldo inválido: " + after + " (de 0 a " + SkillCredits.MAX_BALANCE + ")."));
             return 0;
         }
-        WalletService.set(target, after);
+        SkillCreditsService.set(target, after);
         context.getSource().sendSuccess(() -> Component.literal("[TESTE] Saldo de " + target.getGameProfile().getName() + ": "
-                + Money.format(before) + " → " + Money.format(after)).withStyle(ChatFormatting.GREEN), true);
+                + SkillCreditFormatter.format(before) + " → " + SkillCreditFormatter.format(after)).withStyle(ChatFormatting.GREEN), true);
         return 1;
     }
 

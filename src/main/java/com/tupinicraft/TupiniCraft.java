@@ -1,64 +1,43 @@
 package com.tupinicraft;
 
 import com.mojang.logging.LogUtils;
-import com.tupinicraft.command.BrasilCommands;
-import com.tupinicraft.config.BrasilServerConfig;
-import com.tupinicraft.election.ElectionManager;
-import com.tupinicraft.mandate.MandateService;
-import com.tupinicraft.network.ModNetwork;
-import com.tupinicraft.player.PlayerEventHandler;
-import com.tupinicraft.registry.ModAttachments;
+import com.tupinicraft.command.LeaoDoFimCommands;
 import com.tupinicraft.registry.ModCreativeTabs;
 import com.tupinicraft.registry.ModEntities;
 import com.tupinicraft.registry.ModItems;
-import com.tupinicraft.skilltree.SkillCatalog;
-import com.tupinicraft.skilltree.SkillTreeService;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.slf4j.Logger;
 
-/**
- * Ponto de entrada comum (cliente e servidor dedicado).
- * Não referencie classes do pacote {@code client} aqui.
- */
+/** Nova base de desenvolvimento: mobs/NPCs, biomas e dimensões. */
 @Mod(TupiniCraft.MOD_ID)
 public final class TupiniCraft {
     public static final String MOD_ID = "tupinicraft";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public TupiniCraft(IEventBus modBus, ModContainer container) {
-        ModAttachments.ATTACHMENT_TYPES.register(modBus);
-        com.tupinicraft.registry.ModBlocks.BLOCKS.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
         ModEntities.ENTITY_TYPES.register(modBus);
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(ModItems::addToCreativeTabs);
-        modBus.addListener(ModNetwork::register);
-
-        container.registerConfig(ModConfig.Type.SERVER, BrasilServerConfig.SPEC);
-        container.registerConfig(ModConfig.Type.SERVER, com.tupinicraft.tigrinho.TigrinhoConfig.SPEC, "tupinicraft-tigrinho-server.toml");
-        com.tupinicraft.tigrinho.TigrinhoService.registerEvents();
-
-        NeoForge.EVENT_BUS.addListener(BrasilCommands::register);
-        NeoForge.EVENT_BUS.addListener(com.tupinicraft.command.LeaoDoFimCommands::register);
-        NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onLogin);
-        NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onRespawn);
-        NeoForge.EVENT_BUS.addListener(PlayerEventHandler::onChangedDimension);
-        NeoForge.EVENT_BUS.addListener(TupiniCraft::onServerTick);
-        NeoForge.EVENT_BUS.addListener(SkillCatalog::onAddReloadListener);
-        NeoForge.EVENT_BUS.addListener(SkillTreeService::onDatapackSync);
-    }
-
-    private static void onServerTick(ServerTickEvent.Post event) {
-        ElectionManager.tick(event.getServer());
-        MandateService.tick(event.getServer());
-        SkillTreeService.tick(event.getServer());
+        NeoForge.EVENT_BUS.addListener(LeaoDoFimCommands::register);
+        // Biomas e dimensões ainda não foram implementados neste projeto.
+        com.tupinicraft.registry.ModAttachments.ATTACHMENT_TYPES.register(modBus);
+        modBus.addListener(com.tupinicraft.network.ModNetwork::register);
+        NeoForge.EVENT_BUS.addListener(com.tupinicraft.player.PlayerEventHandler::onLogin);
+        NeoForge.EVENT_BUS.addListener(com.tupinicraft.skilltree.SkillCatalog::onAddReloadListener);
+        NeoForge.EVENT_BUS.addListener(com.tupinicraft.skilltree.SkillTreeService::onDatapackSync);
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) ->
+                com.tupinicraft.skilltree.SkillTreeService.tick(event.getServer()));
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.RegisterCommandsEvent event) -> {
+            event.getDispatcher().register(com.tupinicraft.command.SkillCommands.player());
+            event.getDispatcher().register(com.tupinicraft.command.SkillCommands.adminTest()
+                    .requires(source -> source.hasPermission(2)));
+        });
     }
 
     public static ResourceLocation id(String path) {
