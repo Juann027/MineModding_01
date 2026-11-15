@@ -1,18 +1,20 @@
 Mod brasileiro de sátira política para **Minecraft 1.21.1** com **NeoForge 21.1.x**.
 
-## Correções da v0.5.2
+## Novidades da v0.5.5
 
-- Nova aba TupiniCraft no criativo com os 35 itens registrados pelo mod.
-- Texturas dos ícones corrigidas: agora estão na pasta carregada pelo atlas padrão de itens.
-- Teste do JAR verifica caminhos e inclusão das texturas, além da integridade dos PNGs.
+- Criador de personagem inicial (tecla **K**).
+- Sete penteados e seis cores de cabelo.
+- Personalização e sincronização da aparência entre jogadores.
+- Emotion Orb na HUD.
+- Painel Body & Traits no inventário.
+- Contador de derrotas acima do nickname.
+- Protótipo de finalizações (comando `/stopitstopnow`).
 
-## Correções e arte da v0.5.1
+## Observações
 
-- `/reload` remove bônus de skills excluídas e atualiza efeitos alterados, inclusive atributo, operação e quantidade.
-- Mandatos vencidos são encerrados antes de novas posses, mantendo o cargo dos antigos ocupantes consistente.
-- Pontuações eleitorais usam 64 bits no servidor e na sincronização do HUD.
-- 33 ícones do pacote de arte foram adaptados para as árvores e habilidades, com transparência e resolução de 128 × 128.
-- Cliente e servidor devem usar a v0.5.1: o protocolo de rede foi atualizado para 2. Os IDs e formatos dos dados salvos foram mantidos.
+- Algumas funcionalidades ainda estão em fase experimental.
+- Os visuais e as animações definitivas ainda não foram integrados.
+- Testes multiplayer manuais ainda são recomendados.
 
 ## Como instalar
 1. Instale o **NeoForge 21.1.x para Minecraft 1.21.1** (instalador em https://neoforged.net → "Install client").
@@ -33,15 +35,8 @@ Mod brasileiro de sátira política para **Minecraft 1.21.1** com **NeoForge 21.
 **Multiplayer:** o servidor precisa de NeoForge 21.1.x com TupiniCraft, GeckoLib e SmartBrainLib em `mods/`; os jogadores precisam também do UI Lib e do Architectury.
 Comandos de administração (`/brasil admin ...`) exigem OP.
 
-## O que tem nesta versão
-- Origem regional sorteada (27 estados, com gentílico) no primeiro login.
-- Cargos políticos de Desempregado a Presidente da República, com XP político e popularidade.
-- HUD com cargo, popularidade e barra de XP político.
-- Eleições globais com inscrição, votação na **Urna Eletrônica**, peso de voto por popularidade e apuração gradual.
-- Mandatos por território (Brasil, 27 estados e 27 capitais), candidatos aldeões e configurações administrativas.
-- Árvores de habilidades (pessoais, regionais, partidárias e de cargo) numa tela no estilo de Progressos (tecla **K**):
-  clique numa skill para comprá-la; cada skill exige a anterior da árvore. Cada jogador começa com R$ 1.000 (saldo no HUD). 4 skills de teste.
-- Mob de teste "Cabo Eleitoral" com animações (GeckoLib) e IA (SmartBrainLib).
-- Comandos `/brasil perfil`, `/brasil skills`, `/brasil mandatos`, `/brasil eleicao ...` e `/brasil admin ...`.
+## Base do projeto
+- Cabo Eleitoral (GeckoLib + SmartBrainLib), Leão do Fim e pastas de bioma/dimensão/NPC como pontos de partida.
+- Tigrinho, eleições, mandatos, economia e árvores de habilidades estão arquivados nesta variante.
 
 A lista completa de comandos está no README do repositório.

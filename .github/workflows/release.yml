@@ -58,5 +58,5 @@ jobs:
           gh release create "${{ steps.version.outputs.tag }}" build/libs/*.jar \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "TupiniCraft ${{ steps.version.outputs.tag }} (Minecraft 1.21.1 / NeoForge)" \
+            --title "$(cat .github/release-title.txt)" \
             --notes-file .github/release-notes.md
