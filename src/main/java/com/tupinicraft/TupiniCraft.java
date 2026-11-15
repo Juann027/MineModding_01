@@ -2,6 +2,11 @@ package com.tupinicraft;
 
 import com.mojang.logging.LogUtils;
 import com.tupinicraft.command.LeaoDoFimCommands;
+import com.tupinicraft.character.CharacterAppearanceService;
+import com.tupinicraft.testgame.FinisherTestMechanic;
+import com.tupinicraft.testgame.DefeatCounter;
+import com.tupinicraft.testgame.TestGameCommands;
+import com.tupinicraft.network.TestGameNetworking;
 import com.tupinicraft.registry.ModCreativeTabs;
 import com.tupinicraft.registry.ModEntities;
 import com.tupinicraft.registry.ModItems;
@@ -25,6 +30,30 @@ public final class TupiniCraft {
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(ModItems::addToCreativeTabs);
         NeoForge.EVENT_BUS.addListener(LeaoDoFimCommands::register);
+        // Contador e finisher de combate nao explicito para testes: somente eventos comuns.
+        modBus.addListener(TestGameNetworking::register);
+        NeoForge.EVENT_BUS.addListener(TestGameCommands::register);
+        NeoForge.EVENT_BUS.addListener(CharacterAppearanceService::onLogin);
+        NeoForge.EVENT_BUS.addListener(CharacterAppearanceService::onLogout);
+        NeoForge.EVENT_BUS.addListener(CharacterAppearanceService::onStartTracking);
+        NeoForge.EVENT_BUS.addListener(CharacterAppearanceService::onClone);
+        NeoForge.EVENT_BUS.addListener(CharacterAppearanceService::onRespawn);
+        NeoForge.EVENT_BUS.addListener(DefeatCounter::onLogin);
+        NeoForge.EVENT_BUS.addListener(DefeatCounter::onLogout);
+        NeoForge.EVENT_BUS.addListener(DefeatCounter::onStartTracking);
+        NeoForge.EVENT_BUS.addListener(DefeatCounter::onClone);
+        NeoForge.EVENT_BUS.addListener(DefeatCounter::onRespawn);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onEntityInteract);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onIncomingDamage);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onDeath);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onPlayerTick);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onLogout);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onClone);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockAttack);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockEntityInteract);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockBlockInteract);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockItemInteract);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockMining);
         // Biomas e dimensões ainda não foram implementados neste projeto.
     }
 
