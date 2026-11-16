@@ -48,7 +48,12 @@ public final class BodyStatusInventoryPanel {
         int y = Math.min(inventory.getGuiTop() + 2, graphics.guiHeight() - PANEL_HEIGHT - 2);
         y = Math.max(2, y);
 
+        // O evento Foreground chega com a pose ja deslocada para (guiLeft, guiTop); as contas acima estao em
+        // coordenadas de tela. Sem desfazer o deslocamento o painel era desenhado fora da tela.
+        graphics.pose().pushPose();
+        graphics.pose().translate(-inventory.getGuiLeft(), -inventory.getGuiTop(), 0F);
         drawPanel(graphics, x, y, width, HudStatusClient.current());
+        graphics.pose().popPose();
     }
 
     private static void drawPanel(GuiGraphics graphics, int x, int y, int width, HudMeters status) {

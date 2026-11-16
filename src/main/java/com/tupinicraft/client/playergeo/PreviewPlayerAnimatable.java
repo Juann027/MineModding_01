@@ -19,6 +19,12 @@ public final class PreviewPlayerAnimatable implements GeoAnimatable {
     private boolean wasWaving = false;
 
     public void setPlayer(AbstractClientPlayer player) {
+        if (this.player != player) {
+            // Respawn e troca de dimensao criam outro LocalPlayer com tickCount zerado: sem limpar o prazo,
+            // o controller ficaria preso no ultimo quadro do wave (sem idle) ate o tickCount alcanca-lo.
+            waveEndsAt = Integer.MIN_VALUE;
+            wasWaving = false;
+        }
         this.player = player;
     }
 

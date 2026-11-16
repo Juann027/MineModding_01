@@ -31,11 +31,12 @@ public final class PlayerBustLayer extends RenderLayer<AbstractClientPlayer, Pla
     public PlayerBustLayer(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> parent) {
         super(parent);
         MeshDefinition mesh = new MeshDefinition();
-        // Coordenadas locais ao bone body do modelo vanilla: Y=-12..0; frente em Z=-2.
-        // Prototipo vestido com uma pequena saliencia na frente do tronco.
+        // Coordenadas locais ao bone body do modelo vanilla: Y cresce para BAIXO, de 0 (pescoco) a 12
+        // (cintura); frente em Z=-2. O bone FemaleBust do rig ocupa Y=18..22 a partir do chao, ou seja,
+        // 2..6 abaixo do pescoco. (Com Y negativo o volume aparecia em cima da cabeca.)
         mesh.getRoot().addOrReplaceChild("bust",
                 CubeListBuilder.create().texOffs(20, 22)
-                        .addBox(-3.75F, -9.5F, -3.5F, 7.5F, 3.5F, 1.6F),
+                        .addBox(-3.75F, 2.5F, -3.5F, 7.5F, 3.5F, 1.6F),
                 PartPose.ZERO);
         this.bust = LayerDefinition.create(mesh, 64, 64).bakeRoot().getChild("bust");
     }

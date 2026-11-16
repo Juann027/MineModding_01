@@ -1,0 +1,8 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.client {
+            gameDirectory = file('build/run-client-' + (System.getenv('MC_USER') ?: 'Dev'))
+            programArguments.addAll('--quickPlayMultiplayer', 'localhost:25565', '--username', System.getenv('MC_USER') ?: 'Dev', '--width', '854', '--height', '480')
+        }
+    }
+}

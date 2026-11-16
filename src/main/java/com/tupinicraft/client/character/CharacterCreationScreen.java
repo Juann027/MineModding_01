@@ -138,6 +138,13 @@ public final class CharacterCreationScreen extends Screen {
         }
     }
 
+    /**
+     * Sem fundo vanilla: na 1.21.1 o Screen#render chama renderBackground, que aplica o blur em tudo o que
+     * ja foi desenhado (painel, textos e retrato ficavam borrados). O fundo e desenhado em render().
+     */
+    @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         // Nao usar Screen#renderBackground: aplica blur ao mundo na 1.21.1.

@@ -48,4 +48,7 @@ Aperte F8 para voltar ao renderer vanilla. Se o preview causar problemas de rend
 
 ## Validação
 
-Os arquivos JSON e PNG fornecidos foram lidos e a correspondência dos bones das animações com a geometria foi verificada. **Compilação e execução no Minecraft não foram realizadas**: o Gradle wrapper 9.2.1 depende de `services.gradle.org`, indisponível neste ambiente. Rode o build no CI antes de instalar o JAR no cliente e, se houver erros, envie o log.
+Compilado e testado no cliente real (tela virtual) contra servidor dedicado na Etapa 1. Resultados, correções,
+capturas e o que ficou pendente estão em `HANDOFF_GECKOLIB_STAGE1.md` e `docs/evidencias/geckolib_stage1/`.
+A observação acima sobre pivôs e posição "precisarem de teste visual" foi resolvida: pivôs e direções estão
+corretos; a escala foi ajustada para 15/16.
