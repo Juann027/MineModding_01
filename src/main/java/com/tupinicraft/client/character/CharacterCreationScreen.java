@@ -19,6 +19,12 @@ public final class CharacterCreationScreen extends Screen {
     private int bodyType, hairStyle, hairColor, skinTone, face;
     private Button[] selectors;
     private int px, py, pw;
+    private Button saveButton;
+    private boolean waitingForServer = false;
+    private int requestedAppearance;
+    private long revisionBeforeSave;
+    private int waitTicks;
+    private boolean saveError = false;
 
     public CharacterCreationScreen() {
         super(Component.translatable("gui.tupinicraft.creator.title"));
@@ -35,7 +41,7 @@ public final class CharacterCreationScreen extends Screen {
     protected void init() {
         pw = Math.min(width - 12, 356);
         px = (width - pw) / 2;
-        py = Math.max(3, (height - 235) / 2);
+        py = Math.max(2, (height - 220) / 2);
         int right = px + 132;
         int buttonWidth = Math.max(72, pw - 143);
         selectors = new Button[5];
@@ -44,15 +50,66 @@ public final class CharacterCreationScreen extends Screen {
             selectors[i] = addRenderableWidget(Button.builder(label(i), button -> {
                 cycle(field);
                 button.setMessage(label(field));
-            }).bounds(right, py + 43 + i * 29, buttonWidth, 23).build());
+            }).bounds(right, py + 40 + i * 25, buttonWidth, 22).build());
         }
-        addRenderableWidget(Button.builder(Component.translatable("gui.tupinicraft.creator.save"), button -> {
-            CharacterAppearance appearance = new CharacterAppearance(true, bodyType, hairStyle, hairColor, skinTone, face);
-            PacketDistributor.sendToServer(new CharacterAppearanceUpdatePayload(appearance.pack()));
-            onClose();
-        }).bounds(px + pw - 99, py + 198, 89, 20).build());
+        saveButton = addRenderableWidget(Button.builder(Component.translatable("gui.tupinicraft.creator.save"), button -> saveCharacter())
+                .bounds(px + pw - 99, py + 195, 89, 20).build());
+        saveButton.active = !waitingForServer;
         addRenderableWidget(Button.builder(Component.translatable("gui.tupinicraft.creator.back"), button -> onClose())
-                .bounds(px + 10, py + 198, 84, 20).build());
+                .bounds(px + 10, py + 195, 84, 20).build());
+    }
+
+    /** Só considera a criação concluída quando o servidor confirma a aparência via sync. */
+    private void saveCharacter() {
+        Minecraft mc = Minecraft.getInstance();
+        if (waitingForServer || mc.player == null) return;
+        CharacterAppearance appearance = new CharacterAppearance(true, bodyType, hairStyle, hairColor, skinTone, face);
+        requestedAppearance = appearance.pack();
+        revisionBeforeSave = CharacterAppearanceClientCache.revision(mc.player.getUUID());
+        waitTicks = 0;
+        waitingForServer = true;
+        saveError = false;
+        saveButton.active = false;
+        PacketDistributor.sendToServer(new CharacterAppearanceUpdatePayload(requestedAppearance));
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (!waitingForServer) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            waitingForServer = false;
+            return;
+        }
+        var uuid = mc.player.getUUID();
+        if (CharacterAppearanceClientCache.revision(uuid) > revisionBeforeSave) {
+            CharacterAppearance confirmed = CharacterAppearanceClientCache.get(uuid);
+            if (confirmed.created() && confirmed.pack() == requestedAppearance) {
+                mc.setScreen(new CharacterHubScreen());
+                return;
+            }
+            // Ignorar sincronizacoes antigas/concorrentes; aguardar a confirmacao correta.
+        }
+        if (++waitTicks >= 200) { // 10 segundos sem confirmacao do servidor
+            failSaving();
+        }
+    }
+
+    private void failSaving() {
+        waitingForServer = false;
+        saveError = true;
+        saveButton.active = true;
+    }
+
+    @Override
+    public void onClose() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && CharacterAppearanceClientCache.get(mc.player.getUUID()).created()) {
+            mc.setScreen(new CharacterHubScreen());
+        } else {
+            super.onClose();
+        }
     }
 
     private Component label(int field) {
@@ -83,15 +140,23 @@ public final class CharacterCreationScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
-        graphics.fill(px, py, px + pw, py + 226, 0xFF_88949C);
-        graphics.fill(px + 2, py + 2, px + pw - 2, py + 224, 0xFF_262F38);
+        // Nao usar Screen#renderBackground: aplica blur ao mundo na 1.21.1.
+        // Escurecimento sutil sem desfoque para manter o jogo visivel ao fundo.
+        graphics.fill(0, 0, width, height, 0x66000000);
+        graphics.fill(px, py, px + pw, py + 219, 0xFF_88949C);
+        graphics.fill(px + 2, py + 2, px + pw - 2, py + 217, 0xFF_262F38);
         graphics.fill(px + 3, py + 3, px + pw - 3, py + 30, 0xFF_131B24);
         graphics.drawString(font, title, px + 10, py + 13, 0xFF_E7F0F7, false);
         graphics.drawString(font, Component.translatable("gui.tupinicraft.creator.preview"), px + 13, py + 39, 0xFF_CDD9E3, false);
         drawPortrait(graphics, px + 16, py + 55);
-        graphics.drawString(font, Component.translatable("gui.tupinicraft.creator.note"), px + 12, py + 177, 0xFF_BCC8D0, false);
-        graphics.drawString(font, Component.translatable("gui.tupinicraft.creator.note2"), px + 12, py + 188, 0xFF_BCC8D0, false);
+        if (waitingForServer || saveError) {
+            graphics.drawString(font, Component.translatable(waitingForServer
+                    ? "gui.tupinicraft.creator.saving" : "gui.tupinicraft.creator.save_error"),
+                    px + 12, py + 174, saveError ? 0xFFFF9999 : 0xFFB3E1BB, false);
+        } else {
+            graphics.drawString(font, Component.translatable("gui.tupinicraft.creator.note"), px + 12, py + 172, 0xFF_BCC8D0, false);
+            graphics.drawString(font, Component.translatable("gui.tupinicraft.creator.note2"), px + 12, py + 183, 0xFF_BCC8D0, false);
+        }
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 

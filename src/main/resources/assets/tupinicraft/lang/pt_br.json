@@ -47,7 +47,7 @@
   "gui.tupinicraft.emotion": "Emoção",
   "gui.tupinicraft.traits": "Traços",
   "gui.tupinicraft.hud_preview": "Valores de teste",
-  "key.tupinicraft.creator": "Criador de personagem (K)",
+  "key.tupinicraft.creator": "Menu TupiniCraft (K)",
   "gui.tupinicraft.creator.title": "TupiniCraft | Criar personagem",
   "gui.tupinicraft.creator.preview": "Prévia do rosto",
   "gui.tupinicraft.creator.body": "Modelo",
@@ -79,5 +79,12 @@
   "gui.tupinicraft.creator.skin.escura": "Escura",
   "gui.tupinicraft.creator.face.neutro": "Neutro",
   "gui.tupinicraft.creator.face.feliz": "Feliz",
-  "gui.tupinicraft.creator.face.serio": "Sério"
+  "gui.tupinicraft.creator.face.serio": "Sério",
+  "gui.tupinicraft.creator.saving": "Salvando no servidor...",
+  "gui.tupinicraft.creator.save_error": "Sem confirmacao do servidor. Tente salvar novamente.",
+  "gui.tupinicraft.hub.title": "TupiniCraft | Menu principal",
+  "gui.tupinicraft.hub.created": "Personagem salvo",
+  "gui.tupinicraft.hub.edit": "Editar aparencia",
+  "gui.tupinicraft.hub.close": "Voltar ao jogo",
+  "gui.tupinicraft.hub.future": "Habilidades e atributos: em desenvolvimento."
 }

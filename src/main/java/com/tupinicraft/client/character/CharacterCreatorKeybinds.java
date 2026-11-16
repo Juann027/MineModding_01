@@ -7,7 +7,7 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.lwjgl.glfw.GLFW;
 
-/** Tecla K: interface de criação/reedição, sem interferir no inventário vanilla. */
+/** Tecla K: criacao inicial, depois menu principal do mod; inventario vanilla intacto. */
 public final class CharacterCreatorKeybinds {
     private static final KeyMapping OPEN_CREATOR = new KeyMapping(
             "key.tupinicraft.creator", InputConstants.Type.KEYSYM,
@@ -20,7 +20,11 @@ public final class CharacterCreatorKeybinds {
     public static void onTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         while (OPEN_CREATOR.consumeClick()) {
-            if (mc.player != null && mc.screen == null) mc.setScreen(new CharacterCreationScreen());
+            if (mc.player != null && mc.screen == null) {
+                boolean created = com.tupinicraft.network.CharacterAppearanceClientCache
+                        .get(mc.player.getUUID()).created();
+                mc.setScreen(created ? new CharacterHubScreen() : new CharacterCreationScreen());
+            }
         }
     }
 }
