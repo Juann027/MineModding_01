@@ -1,1 +1,1 @@
-TupiniCraft v0.5.5 — Character Creator & HUD (Minecraft 1.21.1 / NeoForge)
+TupiniCraft v0.5.6 — Correção do Criador de Personagem e Menu K (Minecraft 1.21.1 / NeoForge)

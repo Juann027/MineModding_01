@@ -1,5 +1,11 @@
 Mod brasileiro de sátira política para **Minecraft 1.21.1** com **NeoForge 21.1.x**.
 
+## Correções da v0.5.6
+
+- Tela do criador de personagem sem desfoque do mundo e com botões que não saem do painel.
+- **Salvar** espera a confirmação do servidor antes de abrir o menu.
+- Novo menu principal da tecla **K** depois da criação (Editar aparência / Voltar ao jogo).
+
 ## Novidades da v0.5.5
 
 - Criador de personagem inicial (tecla **K**).
