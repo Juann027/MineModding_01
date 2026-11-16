@@ -59,5 +59,9 @@ public final class CharacterHubScreen extends Screen {
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
+    /** Sem fundo vanilla: o Screen#render da 1.21.1 chamaria o blur por cima do painel ja desenhado. */
+    @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
+
     @Override public boolean isPauseScreen() { return false; }
 }
