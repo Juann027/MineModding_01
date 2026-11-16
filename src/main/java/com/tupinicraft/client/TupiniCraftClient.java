@@ -3,6 +3,8 @@ package com.tupinicraft.client;
 import com.tupinicraft.TupiniCraft;
 import com.tupinicraft.client.character.CharacterCreatorKeybinds;
 import com.tupinicraft.client.character.PlayerHairLayer;
+import com.tupinicraft.client.character.PlayerBustLayer;
+import com.tupinicraft.client.playergeo.PlayerGeoTestKeys;
 import com.tupinicraft.client.hud.BodyStatusInventoryPanel;
 import com.tupinicraft.client.hud.EmotionOrbOverlay;
 import com.tupinicraft.client.render.CaboEleitoralRenderer;
@@ -29,8 +31,11 @@ public final class TupiniCraftClient {
     public TupiniCraftClient(IEventBus modBus) {
         modBus.addListener(TupiniCraftClient::registerRenderers);
         modBus.addListener(CharacterCreatorKeybinds::register);
+        modBus.addListener(PlayerGeoTestKeys::register);
         modBus.addListener(TupiniCraftClient::registerHairLayers);
         NeoForge.EVENT_BUS.addListener(CharacterCreatorKeybinds::onTick);
+        NeoForge.EVENT_BUS.addListener(PlayerGeoTestKeys::onTick);
+        NeoForge.EVENT_BUS.addListener(PlayerGeoTestKeys::onRenderPlayer);
         modBus.addListener(TupiniCraftClient::registerGuiLayers);
         NeoForge.EVENT_BUS.addListener(BodyStatusInventoryPanel::onInventoryForeground);
         NeoForge.EVENT_BUS.addListener(DefeatCounterNameplate::render);
@@ -38,6 +43,7 @@ public final class TupiniCraftClient {
             DefeatCountClientCache.clear();
             CharacterAppearanceClientCache.clear();
             FinisherVisualClientCache.clear();
+            PlayerGeoTestKeys.clear();
         });
     }
 
@@ -50,6 +56,7 @@ public final class TupiniCraftClient {
         for (PlayerSkin.Model model : event.getSkins()) {
             if (event.getSkin(model) instanceof PlayerRenderer renderer) {
                 renderer.addLayer(new PlayerHairLayer(renderer));
+                renderer.addLayer(new PlayerBustLayer(renderer));
             }
         }
     }

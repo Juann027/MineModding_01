@@ -86,5 +86,7 @@
   "gui.tupinicraft.hub.created": "Personagem salvo",
   "gui.tupinicraft.hub.edit": "Editar aparencia",
   "gui.tupinicraft.hub.close": "Voltar ao jogo",
-  "gui.tupinicraft.hub.future": "Habilidades e atributos: em desenvolvimento."
+  "gui.tupinicraft.hub.future": "Habilidades e atributos: em desenvolvimento.",
+  "key.tupinicraft.geo_toggle": "[Teste] Alternar rig GeckoLib (F8)",
+  "key.tupinicraft.geo_wave": "[Teste] Acenar com GeckoLib (F9)"
 }
