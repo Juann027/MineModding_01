@@ -278,6 +278,26 @@ def report(clips, rig):
         print(f"{label}: ponta a {dist:.1f} px da superficie do tronco do alvo no tick {tick} (altura {tip[1]:.1f} px)")
 
 
+# Pares tocados em sequencia sem transicao visivel (PlayerAnimations.FALL_AND_RECOVER): fim de um = inicio do outro.
+CHAINS = (("knockdown", "hands_and_knees"), ("hands_and_knees", "hands_and_knees"), ("hands_and_knees", "get_up"))
+
+
+def chain_gaps(clips):
+    """[(a, b, maior diferenca em graus/px entre o ultimo quadro de a e o primeiro de b)]."""
+    out = []
+    for a, b in CHAINS:
+        ja, jb = clips[a].to_json(), clips[b].to_json()
+        pa, pb = sample_clip(ja, ja["animation_length"]), sample_clip(jb, 0)
+        gap = 0.0
+        for bone in set(pa) | set(pb):
+            for ch in ("rotation", "position"):
+                va = np.array(pa.get(bone, {}).get(ch, (0, 0, 0)), float)
+                vb = np.array(pb.get(bone, {}).get(ch, (0, 0, 0)), float)
+                gap = max(gap, float(np.abs(va - vb).max()))
+        out.append((a, b, gap))
+    return out
+
+
 def to_pose(p):
     return p
 
@@ -323,6 +343,7 @@ def main(argv=None):
     clips = C.all_clips()
     data = build_animation_data(clips)
     errors = validate_animations(data)
+    errors += [f"encadeamento {a} -> {b}: pose salta {gap:.2f} (graus/px)" for a, b, gap in chain_gaps(clips) if gap > 0.05]
     if not errors:
         texts = build_outputs(clips, data)
         errors = validate_outputs(data, texts)
@@ -331,7 +352,7 @@ def main(argv=None):
         for e in errors[:40]:
             print("  ", e)
         return 4
-    print("validacao: ok (estrutura, bones do rig, ida e volta pelo formato do Blockbench)")
+    print("validacao: ok (estrutura, bones do rig, encadeamentos, ida e volta pelo formato do Blockbench)")
 
     if not args.no_report and not args.check:
         rig = Rig()

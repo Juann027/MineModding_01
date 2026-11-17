@@ -45,20 +45,83 @@ public final class PlayerAnimationService {
     /** Como acima, escolhendo nesta execucao se o clip repete ate ser interrompido (ex.: pose mantida). */
     public static boolean play(ServerPlayer player, PlayerAnimationDef def, long startGameTime,
                                Optional<UUID> partner, CompoundTag params, boolean force, boolean loop) {
+        if (!canStart(player, def, force)) return false;
+        PlayerAnimationTracker tracker = player.getData(ModAttachments.PLAYER_ANIMATION);
+        begin(player, tracker, def, new PlayerAnimationState(def.id(), startGameTime, def.durationTicks(), loop,
+                tracker.sequence + 1, partner, params.copy()));
+        return true;
+    }
+
+    /**
+     * Toca varios clips em sequencia sem voltar a pose vanilla entre eles. Todos os instantes de troca saem do
+     * relogio do servidor e vao num pacote so; clientes e servidor trocam de segmento no mesmo tick.
+     * Cancelamento, morte, saida, dano ({@code stopOnHurt} do segmento vigente) e animacoes de prioridade maior
+     * encerram a sequencia inteira, como uma animacao comum.
+     */
+    public static boolean playSequence(ServerPlayer player, AnimationSequence sequence, CompoundTag params, boolean force) {
+        if (sequence.problem().isPresent() || !canStart(player, sequence.entries().get(0).def(), force)) return false;
+        PlayerAnimationTracker tracker = player.getData(ModAttachments.PLAYER_ANIMATION);
+        begin(player, tracker, sequence.entries().get(0).def(),
+                sequence.toState(now(player), tracker.sequence + 1, Optional.empty(), params));
+        return true;
+    }
+
+    /**
+     * Sai agora do segmento vigente e passa ao seguinte (ex.: deixar o loop de quatro apoios quando uma condicao
+     * do servidor for cumprida). Retorna false se nao ha sequencia ou se o segmento vigente e o ultimo.
+     */
+    public static boolean advance(ServerPlayer player) {
+        PlayerAnimationTracker tracker = player.getExistingData(ModAttachments.PLAYER_ANIMATION).orElse(null);
+        long now = now(player);
+        if (tracker == null || tracker.state == null || tracker.state.finished(now)) return false;
+        PlayerAnimationState segment = tracker.state.at(now);
+        if (!segment.hasNext()) return false;
+        tracker.state = segment.next(now);
+        enterSegment(player, tracker, tracker.state);
+        broadcast(player, Optional.of(tracker.state));
+        return true;
+    }
+
+    private static boolean canStart(ServerPlayer player, PlayerAnimationDef def, boolean force) {
         if (!player.isAlive() || player.isSpectator() || player.hasDisconnected()) return false;
         PlayerAnimationTracker tracker = player.getData(ModAttachments.PLAYER_ANIMATION);
         if (tracker.state != null && !tracker.state.finished(now(player))) {
-            if (!force && def.priority() < tracker.definition.priority()) return false;
+            if (!force && def.priority() < currentDefinition(player, tracker).priority()) return false;
             finish(player, tracker, PlayerAnimationEvent.EndReason.REPLACED, false);
         }
-        tracker.sequence++;
-        tracker.definition = def;
-        tracker.state = new PlayerAnimationState(def.id(), startGameTime, def.durationTicks(), loop,
-                tracker.sequence, partner, params.copy());
-        tracker.cursor = new TimedEventCursor();
-        NeoForge.EVENT_BUS.post(new PlayerAnimationEvent.Start(player, def, tracker.state));
-        broadcast(player, Optional.of(tracker.state));
         return true;
+    }
+
+    private static void begin(ServerPlayer player, PlayerAnimationTracker tracker, PlayerAnimationDef def,
+                              PlayerAnimationState state) {
+        tracker.sequence = state.sequence();
+        tracker.definition = def;
+        tracker.state = state;
+        tracker.segment = state;
+        tracker.cursor = new TimedEventCursor();
+        NeoForge.EVENT_BUS.post(new PlayerAnimationEvent.Start(player, def, state));
+        broadcast(player, Optional.of(state));
+    }
+
+    /** Troca de segmento: fecha o anterior (FINISHED) e abre o seguinte, sem pacote (o cliente calcula igual). */
+    private static void enterSegment(ServerPlayer player, PlayerAnimationTracker tracker, PlayerAnimationState segment) {
+        PlayerAnimationDef next = PlayerAnimations.get(segment.animation());
+        if (next == null) { // nao acontece: a sequencia so aceita animacoes registradas
+            finish(player, tracker, PlayerAnimationEvent.EndReason.STOPPED, true);
+            return;
+        }
+        NeoForge.EVENT_BUS.post(new PlayerAnimationEvent.End(player, tracker.definition, tracker.segment,
+                PlayerAnimationEvent.EndReason.FINISHED));
+        tracker.definition = next;
+        tracker.segment = segment;
+        tracker.cursor = new TimedEventCursor();
+        NeoForge.EVENT_BUS.post(new PlayerAnimationEvent.Start(player, next, segment));
+    }
+
+    /** Definicao do segmento vigente (numa sequencia, muda com o tempo). */
+    private static PlayerAnimationDef currentDefinition(ServerPlayer player, PlayerAnimationTracker tracker) {
+        PlayerAnimationDef def = PlayerAnimations.get(tracker.state.at(now(player)).animation());
+        return def != null ? def : tracker.definition;
     }
 
     /** Duas entidades na mesma sequencia: mesmo instante de inicio e referencia cruzada do parceiro. */
@@ -81,7 +144,8 @@ public final class PlayerAnimationService {
     public static Optional<PlayerAnimationState> current(ServerPlayer player) {
         return player.getExistingData(ModAttachments.PLAYER_ANIMATION)
                 .map(tracker -> tracker.state)
-                .filter(state -> !state.finished(now(player)));
+                .filter(state -> !state.finished(now(player)))
+                .map(state -> state.at(now(player)));
     }
 
     /** Pedido vindo do cliente: so a intencao; tudo e revalidado aqui. */
@@ -92,7 +156,7 @@ public final class PlayerAnimationService {
         tracker.lastRequestTime = now;
         if (stop) {
             // O jogador so cancela o que ele mesmo poderia ter iniciado; cenas do servidor nao.
-            if (tracker.state != null && tracker.definition.playerTriggerable()) {
+            if (tracker.state != null && currentDefinition(player, tracker).playerTriggerable()) {
                 stop(player, PlayerAnimationEvent.EndReason.STOPPED);
             }
             return;
@@ -109,11 +173,14 @@ public final class PlayerAnimationService {
             PlayerAnimationTracker tracker = player.getExistingData(ModAttachments.PLAYER_ANIMATION).orElse(null);
             if (tracker == null || tracker.state == null) continue;
             PlayerAnimationState state = tracker.state;
-            PlayerAnimationDef def = tracker.definition;
             long now = now(player);
             if (now < state.startGameTime()) continue;
-            tracker.cursor.advance(def, state.loop(), state.elapsed(now),
-                    timed -> NeoForge.EVENT_BUS.post(new PlayerAnimationEvent.Timed(player, def, state, timed)));
+            PlayerAnimationState segment = state.at(now);
+            if (segment.segment() != tracker.segment.segment()) enterSegment(player, tracker, segment);
+            if (tracker.state != state) continue;
+            PlayerAnimationDef def = tracker.definition;
+            tracker.cursor.advance(def, segment.loop(), segment.elapsed(now),
+                    timed -> NeoForge.EVENT_BUS.post(new PlayerAnimationEvent.Timed(player, def, segment, timed)));
             // Os clientes encerram sozinhos pelo tempo; nao e preciso pacote no fim natural.
             if (tracker.state == state && state.finished(now)) {
                 finish(player, tracker, PlayerAnimationEvent.EndReason.FINISHED, false);
@@ -147,7 +214,7 @@ public final class PlayerAnimationService {
     public static void onDamage(LivingDamageEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || event.getNewDamage() <= 0) return;
         PlayerAnimationTracker tracker = player.getExistingData(ModAttachments.PLAYER_ANIMATION).orElse(null);
-        if (tracker != null && tracker.state != null && tracker.definition.stopOnHurt()) {
+        if (tracker != null && tracker.state != null && currentDefinition(player, tracker).stopOnHurt()) {
             stop(player, PlayerAnimationEvent.EndReason.HURT);
         }
     }
@@ -168,14 +235,15 @@ public final class PlayerAnimationService {
         if (!player.isAlive() || player.isSpectator() || player.hasDisconnected()) return false;
         PlayerAnimationTracker tracker = player.getExistingData(ModAttachments.PLAYER_ANIMATION).orElse(null);
         return tracker == null || tracker.state == null || tracker.state.finished(now(player))
-                || def.priority() >= tracker.definition.priority();
+                || def.priority() >= currentDefinition(player, tracker).priority();
     }
 
     private static void finish(ServerPlayer player, PlayerAnimationTracker tracker,
                                PlayerAnimationEvent.EndReason reason, boolean notifyClients) {
-        PlayerAnimationState state = tracker.state;
+        PlayerAnimationState state = tracker.segment != null ? tracker.segment : tracker.state;
         PlayerAnimationDef def = tracker.definition;
         tracker.state = null;
+        tracker.segment = null;
         tracker.definition = null;
         NeoForge.EVENT_BUS.post(new PlayerAnimationEvent.End(player, def, state, reason));
         if (notifyClients) broadcast(player, Optional.empty());

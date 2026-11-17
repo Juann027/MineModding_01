@@ -41,6 +41,7 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
 
     private ClientPlayerAnimations.Clip currentClip;
     private int lastSequence = NO_SEQUENCE;
+    private int lastSegment = NO_SEQUENCE;
     // Sincronizacao temporal: transicao usada nesta execucao e avanco pendente do clip (quem entrou no meio).
     private int usedTransition;
     private boolean catchUpPending;
@@ -95,9 +96,12 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
             PlayerAnimationState server = ClientPlayerAnimations.active(uuid);
             ClientPlayerAnimations.Clip clip = server == null ? null : ClientPlayerAnimations.clip(server.animation());
             if (clip != null) {
-                if (server.sequence() != lastSequence || clip != currentClip) {
-                    // Novo inicio (inclusive repetir a mesma animacao): recomeca e alinha ao relogio do servidor.
+                if (server.sequence() != lastSequence || server.segment() != lastSegment || clip != currentClip) {
+                    // Novo inicio (inclusive repetir a mesma animacao) ou proximo segmento de uma sequencia:
+                    // recomeca e alinha ao relogio do servidor, misturando a partir da pose atual (sem passar
+                    // pela pose vanilla).
                     lastSequence = server.sequence();
+                    lastSegment = server.segment();
                     currentClip = clip;
                     syncedState = server;
                     // Quem comeca a ver no meio pula a transicao e avanca o clip ate o instante certo.
@@ -106,9 +110,10 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
                     state.getController().forceAnimationReset();
                 }
                 state.getController().transitionLength(usedTransition);
-                return state.setAndContinue(clip.raw(server.loop()));
+                return state.setAndContinue(clip.raw(server));
             }
             lastSequence = NO_SEQUENCE;
+            lastSegment = NO_SEQUENCE;
             currentClip = null;
             syncedState = null;
             catchUpPending = false;

@@ -78,6 +78,15 @@ public final class PlayerAnimations {
     /** Recuperacao: de quatro apoios ate em pe, passando por um joelho. */
     public static final PlayerAnimationDef GET_UP = register(library("get_up", 40, 2, 40).build());
 
+    // ------------------------------------------------------------------ sequencias (Etapa 4.1)
+
+    /**
+     * Queda, dois segundos em quatro apoios e recuperacao, sem voltar a pose em pe entre os clips
+     * (o fim de KNOCKDOWN e o inicio de GET_UP sao a pose de HANDS_AND_KNEES).
+     */
+    public static final AnimationSequence FALL_AND_RECOVER =
+            AnimationSequence.of(KNOCKDOWN).thenFor(HANDS_AND_KNEES, 40).then(GET_UP);
+
     private PlayerAnimations() {}
 
     /** Clip da biblioteca: id tupinicraft:<nome>, clip animation.tupinicraft.player.<nome> em COMBAT_FILE. */

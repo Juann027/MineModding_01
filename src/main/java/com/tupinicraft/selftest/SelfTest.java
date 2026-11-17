@@ -1,6 +1,9 @@
 package com.tupinicraft.selftest;
 
+import com.tupinicraft.animation.AnimationSequence;
+import com.tupinicraft.animation.PlayerAnimationCommands;
 import com.tupinicraft.animation.PlayerAnimationDef;
+import com.tupinicraft.animation.PlayerAnimationState;
 import com.tupinicraft.animation.PlayerAnimations;
 import com.tupinicraft.finisher.CameraTrack;
 import com.tupinicraft.finisher.FinisherDef;
@@ -17,8 +20,11 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.random.RandomGenerator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
@@ -39,6 +45,7 @@ public final class SelfTest {
             skills(f);
             finishers(f);
             codecs(f);
+            sequences(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
@@ -211,5 +218,61 @@ public final class SelfTest {
         CharacterProfile broken = new CharacterProfile(true, "x", List.of(99, -4), -1, 0, -3, -2, List.of("a", "a"));
         check(f, broken.attributes().size() == 6 && broken.attribute(CharacterAttribute.FORCA) == 10
                 && broken.skills().size() == 1 && broken.skillPoints() == 0, "ficha: normalização de dados inválidos");
+    }
+
+    /** Etapa 4.1: sequencias de animacao (queda -> quatro apoios -> levantar) sem buraco entre os segmentos. */
+    private static void sequences(List<String> f) {
+        AnimationSequence fall = PlayerAnimations.FALL_AND_RECOVER;
+        check(f, fall.problem().isEmpty(), "sequência: queda inválida " + fall.problem().orElse(""));
+        int k = PlayerAnimations.KNOCKDOWN.durationTicks();
+        int g = PlayerAnimations.GET_UP.durationTicks();
+        check(f, fall.totalTicks() == k + 40 + g, "sequência: duração total");
+        long t0 = 1000;
+        PlayerAnimationState state = fall.toState(t0, 7, Optional.empty(), new CompoundTag());
+        long end = t0 + fall.totalTicks();
+        boolean continuous = true;
+        for (long t = t0; t < end; t++) {
+            PlayerAnimationState seg = state.at(t);
+            // Nenhum tick sem animacao (seria a pose em pe) e cada tick dentro do proprio segmento.
+            continuous &= !state.finished(t) && seg.startGameTime() <= t && t < seg.segmentEnd() && seg.sequence() == 7;
+        }
+        check(f, continuous, "sequência: há tick sem segmento entre o início e o fim");
+        check(f, state.finished(end), "sequência: não termina no fim do último clip");
+        check(f, state.at(t0 + k - 1).animation().equals(PlayerAnimations.KNOCKDOWN.id())
+                && state.at(t0 + k).animation().equals(PlayerAnimations.HANDS_AND_KNEES.id())
+                && state.at(t0 + k).startGameTime() == t0 + k && state.at(t0 + k).segment() == 1
+                && state.at(t0 + k + 39).animation().equals(PlayerAnimations.HANDS_AND_KNEES.id())
+                && state.at(t0 + k + 40).animation().equals(PlayerAnimations.GET_UP.id())
+                && state.at(t0 + k + 40).segment() == 2, "sequência: instantes de troca");
+        check(f, state.hasNext() && state.at(t0 + k).hasNext() && !state.at(t0 + k + 40).hasNext(),
+                "sequência: só o último segmento solta o quadro final");
+        // Sair do loop antes da hora (advance): o proximo segmento comeca no instante pedido.
+        PlayerAnimationState early = state.at(t0 + k + 5).next(t0 + k + 10);
+        check(f, early.animation().equals(PlayerAnimations.GET_UP.id()) && early.segment() == 2
+                && !early.finished(t0 + k + 10 + g - 1) && early.finished(t0 + k + 10 + g), "sequência: avanço antecipado");
+        // Animacao avulsa continua igual (compatibilidade).
+        PlayerAnimationState single = new PlayerAnimationState(PlayerAnimations.PUNCH.id(), 0, 26, false, 1,
+                Optional.empty(), new CompoundTag());
+        PlayerAnimationState loop = new PlayerAnimationState(PlayerAnimations.COMBAT_IDLE.id(), 0, 40, true, 1,
+                Optional.empty(), new CompoundTag());
+        check(f, !single.finished(25) && single.finished(26) && single.at(30) == single && !loop.finished(1_000_000),
+                "sequência: animação avulsa mudou de comportamento");
+        // Nenhum estado sem fim: loop sem duração é recusado; duração absurda também.
+        check(f, AnimationSequence.of(PlayerAnimations.KNOCKDOWN).then(PlayerAnimations.HANDS_AND_KNEES).problem().isPresent(),
+                "sequência: loop sem duração aceito");
+        check(f, AnimationSequence.of(PlayerAnimations.KNOCKDOWN, AnimationSequence.MAX_SEGMENT_TICKS + 1).problem().isPresent(),
+                "sequência: duração acima do limite aceita");
+        // Pacote: ida e volta.
+        ByteBuf buf = Unpooled.buffer();
+        PlayerAnimationState.STREAM_CODEC.encode(buf, state);
+        check(f, PlayerAnimationState.STREAM_CODEC.decode(buf).equals(state), "sequência: pacote ida e volta");
+        buf.release();
+        // Comando: texto -> sequencia.
+        StringBuilder error = new StringBuilder();
+        check(f, PlayerAnimationCommands.parseSequence("knockdown hands_and_knees@40 tupinicraft:get_up", error)
+                .map(fall::equals).orElse(false), "sequência: comando não reproduz a queda " + error);
+        check(f, PlayerAnimationCommands.parseSequence("knockdown hands_and_knees", new StringBuilder()).isEmpty()
+                && PlayerAnimationCommands.parseSequence("nada_disso", new StringBuilder()).isEmpty(),
+                "sequência: comando aceitou passo inválido");
     }
 }
