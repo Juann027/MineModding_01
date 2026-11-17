@@ -6,7 +6,6 @@ import com.tupinicraft.client.animation.ClientPlayerAnimations;
 import com.tupinicraft.client.bodylayer.BodyLayers;
 import com.tupinicraft.client.bodylayer.BodyLayersRenderLayer;
 import com.tupinicraft.client.cinematic.CinematicCamera;
-import com.tupinicraft.client.hud.NeedsHudOverlay;
 import com.tupinicraft.network.ProfileClientCache;
 import com.tupinicraft.client.playergeo.PlayerRigController;
 import com.tupinicraft.client.hud.BodyStatusInventoryPanel;
@@ -69,8 +68,7 @@ public final class TupiniCraftClient {
     private static void registerGuiLayers(RegisterGuiLayersEvent event) {
         event.registerAbove(VanillaGuiLayers.EXPERIENCE_BAR, TupiniCraft.id("emotion_orb"),
                 (graphics, deltaTracker) -> EmotionOrbOverlay.render(graphics));
-        event.registerAbove(VanillaGuiLayers.FOOD_LEVEL, TupiniCraft.id("needs"),
-                (graphics, deltaTracker) -> NeedsHudOverlay.render(graphics));
+        // Etapa 3.1: sem grade permanente de necessidades na tela; os medidores ficam no painel Body & Traits.
         event.registerAboveAll(TupiniCraft.id("cinematic_letterbox"),
                 (graphics, deltaTracker) -> CinematicCamera.renderLetterbox(graphics, deltaTracker.getGameTimeDeltaPartialTick(false)));
     }
