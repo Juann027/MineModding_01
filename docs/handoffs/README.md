@@ -17,6 +17,7 @@ e o `CLAUDE.md`.
 | 4.1 | Blockbench (`bbsync`, mestre), sequências de animação | [HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md](HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md) | Concluída | Sem importação Blockbench → gerador |
 | 4.2 | Contador de derrotas 🍆💦 acima do nick | [HANDOFF_DEFEAT_COUNTER_STAGE4_2.md](HANDOFF_DEFEAT_COUNTER_STAGE4_2.md) | Concluída | Finalização contra mob não conta |
 | 4.4 | Remoção do legado político, migração `familia_politica` → `familia_artistica` | [HANDOFF_LEGACY_CLEANUP.md](HANDOFF_LEGACY_CLEANUP.md) | Concluída (PR #25) | Cabo Eleitoral some de mundos antigos |
+| 4.5 | Rebranding RespectCraft, handoffs em `docs/handoffs/`, correção do giro infinito da roleta | [HANDOFF_STAGE4_5.md](HANDOFF_STAGE4_5.md) | Concluída | Nome novo só na marca; ids seguem `tupinicraft` |
 
 Não há handoff da Etapa 4.3 neste repositório.
 
@@ -24,6 +25,6 @@ Não há handoff da Etapa 4.3 neste repositório.
 
 - Rig, render do jogador, Body Layers → Etapa 2 (e 1 para o teste visual em Xvfb).
 - Animações do jogador, Blockbench → Etapas 4 e 4.1 (e `tools/player_anim/README.md`).
-- Telas, criador, roleta, skills, necessidades, finalizações → Etapas 3 e 3.1.
+- Telas, criador, roleta, skills, necessidades, finalizações → Etapas 3 e 3.1; protocolo da roleta → 4.5.
 - Contador de derrotas → Etapa 4.2.
-- Ids aposentados, compatibilidade de saves, nome do mod → Etapa 4.4.
+- Ids aposentados, compatibilidade de saves, nome do mod → Etapas 4.4 e 4.5.

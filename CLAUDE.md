@@ -62,6 +62,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
   `SkillService.refreshModifiers`; nunca grave no save.
 - **Roleta:** 8 origens com peso e bônus (`BirthOrigin`); sorteio no servidor; no máximo **1** novo giro
   (`CharacterProfile.canReroll`), que zera habilidades e devolve os pontos. A tela só apresenta o resultado.
+  Todo `BirthRollRequest` (com o `rollCount` esperado) recebe um `BirthRollReply`; nunca descarte pedido em silêncio.
 - **Rig/render:** não cancele `RenderPlayerEvent.Pre` nem desenhe o jogador fora do renderer vanilla. Em
   `PlayerRigModel.compose` mantenha o `GeoBone::resetStateChanges` no fim. Peça de corpo nova = `BodyLayerDefinition`
   (não crie `RenderLayer` por peça). Pele/rosto do criador são Body Layers sobre a skin da conta; não troque a textura.
@@ -148,5 +149,6 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 - Handoffs das etapas em [`docs/handoffs/`](docs/handoffs/README.md): o índice diz etapa, sistema, status e
   limitações. **Abra só o handoff do sistema que a tarefa toca** (nunca todos): rig/Body Layers → Etapa 2; telas,
   criador, roleta, skills, necessidades, finalizações → Etapas 3/3.1; animações e Blockbench → Etapas 4/4.1;
-  contador de derrotas → 4.2; legado, saves e ids aposentados → 4.4.
+  contador de derrotas → 4.2; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
+  roleta → 4.5.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.
