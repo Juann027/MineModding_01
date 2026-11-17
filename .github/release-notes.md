@@ -1,4 +1,4 @@
-Mod brasileiro de sátira política para **Minecraft Java 1.21.1** com **NeoForge 21.1.x**.
+RPG de humor para **Minecraft Java 1.21.1** com **NeoForge 21.1.x**: criador de personagem, habilidades, necessidades, animações GeckoLib do jogador e finalizações cinematográficas.
 
 > **Pre-release.** Esta versão reúne tudo o que foi desenvolvido nas etapas 1 a 4.2 depois da v0.5.6. Vários
 > recursos ainda são prévias com arte provisória. **Faça backup dos seus mundos antes de atualizar.**
@@ -46,7 +46,6 @@ Mod brasileiro de sátira política para **Minecraft Java 1.21.1** com **NeoForg
   apoios aproximações.
 - Finalizações contra mobs só animam quem executa e não contam derrota.
 - Testes com mais de dois clientes simultâneos ainda são recomendados.
-- Tigrinho, eleições, mandatos e economia seguem arquivados nesta variante.
 
 ## Como instalar
 
@@ -56,8 +55,6 @@ Mod brasileiro de sátira política para **Minecraft Java 1.21.1** com **NeoForg
    (Modrinth ou CurseForge):
    - **GeckoLib 4.9.3** (4.x, não use a 5) — cliente e servidor — https://modrinth.com/mod/geckolib
    - **SmartBrainLib 1.16.11** — cliente e servidor — https://modrinth.com/mod/smartbrainlib
-   - **UI Lib 9.0.0** — só no cliente — https://modrinth.com/mod/ui-lib
-   - **Architectury API 13.0.x** — só no cliente (exigido pelo UI Lib) — https://modrinth.com/mod/architectury-api
 3. Coloque os jars na pasta `mods` do Minecraft:
    - Windows: `%APPDATA%\.minecraft\mods`
    - macOS: `~/Library/Application Support/minecraft/mods`
@@ -65,7 +62,8 @@ Mod brasileiro de sátira política para **Minecraft Java 1.21.1** com **NeoForg
 4. Abra o jogo com o perfil **NeoForge**. Remova o jar da versão anterior do TupiniCraft.
 
 **Multiplayer:** instale o TupiniCraft no **cliente e no servidor**. O servidor dedicado precisa de NeoForge
-21.1.x com TupiniCraft, GeckoLib e SmartBrainLib; os jogadores precisam também do UI Lib e do Architectury.
+21.1.x com TupiniCraft, GeckoLib e SmartBrainLib; os jogadores usam os mesmos três jars. UI Lib e Architectury
+não são mais necessários.
 
 ## Mundos anteriores
 

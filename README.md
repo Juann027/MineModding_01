@@ -1,29 +1,63 @@
-# TupiniCraft – Foco em biomas, dimensões e NPCs
+# TupiniCraft
 
-## Conteúdo ativo
-- **NPCs/mobs:** Cabo Eleitoral (mob de teste) e Leão do Fim, com registries, renderers GeckoLib, IA SmartBrainLib e ovos de spawn.
-- **Biomas e dimensões:** ainda não existem implementações no ZIP original. Pastas `biome`, `dimension` e `npc` são apenas pontos de partida.
-- **Skill trees:** desativadas (código e datapack guardados no backup; assets preservados).
+RPG de humor para **Minecraft Java 1.21.1** com **NeoForge 21.1.x**. Versão atual: **0.5.7 — RPG & Animation
+Preview** (pre-release: vários recursos ainda têm arte provisória).
 
-## Desativado nesta variante
-Tigrinho, eleições, mandatos políticos, HUD/urna cívica e economia geral. Essas classes não ficam em `src/main/java` ativo.
+## Funcionalidades
 
-## Assets e recuperação
-- A pasta `src/main/resources/assets/tupinicraft/` mantém **todos os assets originais**, incluindo PNG, JSON e modelos atualmente sem uso.
-- `backups/codigo-e-documentacao-original.zip` guarda uma cópia dos códigos, testes, docs e CI originais.
-- `backups/datapacks-desativados.zip` guarda receitas, loot tables, tags e JSONs de datapacks retirados da versão ativa.
-- O ZIP original fornecido pelo usuário é a referência integral para restauração.
+- **Character Creator** (tecla **K**): menu do personagem com prévia 3D, corpo, pele, rosto, cabelos e cores.
+- **Roleta de nascimento:** sorteio no servidor de uma entre 8 origens (Favela, Sertão, Pampa, Amazônia, Classe Média,
+  Família Intelectual, Família Artística, Berço de Ouro) e de 6 atributos, com **um** novo giro opcional.
+- **Skill Trees:** abas Combate, Sobrevivência e Malandragem, 18 habilidades compradas com pontos ganhos por nível
+  de XP.
+- **Necessidades:** Coom, Bexiga, Intestino, Emoção, Hidratação e Energia, com orbe de Emoção na tela e painel
+  Body & Traits no inventário.
+- **Consumíveis:** Água de Coco, Cafezinho, Guaraná, Pão de Queijo, Coxinha, Brigadeiro, Penico e itens fictícios
+  (laxante, antidiarreico, chás, café extraforte, energético, pílula azul, afrodisíaco) com efeitos temporários.
+- **Animações do jogador com GeckoLib:** o jogador é desenhado por um rig integrado ao `PlayerRenderer` vanilla
+  (skins, armaduras e itens preservados), com biblioteca de combate e sequências sincronizadas pelo servidor.
+- **Finalizações cinematográficas** entre dois personagens, com câmera dinâmica.
+- **Contador de derrotas** acima do nick, com ícones próprios 🍆💦.
+- **Leão do Fim:** mob neutro de teste (GeckoLib + SmartBrainLib), com ovo na aba do mod.
 
-## Dependências e execução
-Minecraft 1.21.1, NeoForge 21.1.x, Java 21, GeckoLib 4 e SmartBrainLib. Não precisa mais de UI Lib nem Architectury.
+## Instalação
 
-Com Java/Gradle configurados e dependências disponíveis, execute `./gradlew build` (Linux/macOS) ou `gradlew.bat build` (Windows). O JAR ficará em `build/libs/`. Este pacote entregue contém **código-fonte, não um JAR compilado**.
+1. NeoForge **21.1.265 ou mais novo (21.1.x)** para Minecraft 1.21.1, com **Java 21**.
+2. Na pasta `mods`: `tupinicraft-<versão>.jar`, **GeckoLib 4.9.3** (não a 5) e **SmartBrainLib 1.16.11**.
+3. Multiplayer: os mesmos três jars no servidor dedicado e em cada cliente.
 
-## Aviso sobre saves
-**Não teste esta versão diretamente em um mundo existente sem backup.** A remoção de registros de blocos/itens (Tigrinho e urna) e sistemas pode produzir remapeamentos de IDs e perda de dados. Clone o mundo ou use um mundo de desenvolvimento novo.
+UI Lib e Architectury **não** são mais necessários.
 
-## Desenvolvimento futuro
-1. Criar registros NeoForge de biomas e worldgen baseados em dados.
-2. Criar um primeiro registro de dimensão e testes de teleporte/geração.
-3. Definir NPCs em `entity/` + renderização em `client/render/`, com assets em `assets/tupinicraft/`.
-4. Reativar os sistemas antigos somente quando fizer sentido.
+**Faça backup dos mundos antes de atualizar.** A partir da limpeza da Etapa 4.4, o mob de teste Cabo Eleitoral e o
+seu ovo deixaram de existir: em mundos antigos eles somem ao carregar. Fichas com a antiga origem política são
+convertidas automaticamente para Família Artística (mesmos atributos e habilidades).
+
+## Compilar e testar
+
+```bash
+./gradlew build                           # jar em build/libs/
+bash .github/scripts/server-smoke-test.sh # sobe o servidor dedicado e roda /tupini selftest
+python3 tools/player_anim/bbsync.py       # confere .bbmodel x .animation.json
+./gradlew runClient                       # cliente de desenvolvimento
+./gradlew runServer                       # servidor de desenvolvimento
+```
+
+O CI do GitHub roda os três primeiros em cada push e PR. Comandos úteis no jogo: `/tupini perfil`,
+`/tupini skills list`, `/tupini finishers`, `/tupinianim list` e, para admins, `/tupini selftest` e `/tupini admin ...`.
+
+## Animações no Blockbench
+
+Os projetos ficam em `model_sources/player/`. Use Blockbench 5.x com o plugin **GeckoLib Models & Animations**,
+edite só keyframes e exporte o `.animation.json`. O arquivo `tools/player_anim/master.json` diz se a fonte de verdade
+é o gerador (`poses.py`/`clips.py` + `export.py`) ou o Blockbench; o exportador nunca sobrescreve edições manuais
+sem `--force`. Guia completo: [`tools/player_anim/README.md`](tools/player_anim/README.md).
+
+## Estado e limitações
+
+- Pre-release: arte provisória em rostos, mãos e ícones; sons usam eventos vanilla.
+- Finalizações contra mobs só animam quem executa e não contam derrota.
+- Pernas sem joelho tornam ajoelhar e quatro apoios aproximações.
+- Testado com renderização por software e até dois clientes simultâneos.
+- `biome`, `dimension` e `npc` são pastas reservadas, ainda sem conteúdo.
+
+Para desenvolvedores e agentes: [`CLAUDE.md`](CLAUDE.md) e [`AGENTS.md`](AGENTS.md).

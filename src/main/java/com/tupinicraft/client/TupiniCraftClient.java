@@ -10,7 +10,6 @@ import com.tupinicraft.network.ProfileClientCache;
 import com.tupinicraft.client.playergeo.PlayerRigController;
 import com.tupinicraft.client.hud.BodyStatusInventoryPanel;
 import com.tupinicraft.client.hud.EmotionOrbOverlay;
-import com.tupinicraft.client.render.CaboEleitoralRenderer;
 import com.tupinicraft.client.render.LeaoDoFimRenderer;
 import com.tupinicraft.client.testgame.DefeatCounterNameplate;
 import com.tupinicraft.network.CharacterAppearanceClientCache;
@@ -93,7 +92,6 @@ public final class TupiniCraftClient {
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerEntityRenderer(ModEntities.CABO_ELEITORAL.get(), CaboEleitoralRenderer::new);
         event.registerEntityRenderer(ModEntities.LEAO_DO_FIM.get(), LeaoDoFimRenderer::new);
     }
 }

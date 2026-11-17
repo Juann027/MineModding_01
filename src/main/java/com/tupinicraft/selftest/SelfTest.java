@@ -216,6 +216,18 @@ public final class SelfTest {
         check(f, empty.equals(CharacterProfile.DEFAULT), "codec: ficha vazia = padrão");
         Needs n = new Needs(1, 2, 3, 4, 5);
         check(f, Needs.CODEC.parse(NbtOps.INSTANCE, Needs.CODEC.encodeStart(NbtOps.INSTANCE, n).getOrThrow()).getOrThrow().equals(n), "codec: necessidades");
+        // Save da v0.5.7 com a origem aposentada: vira Familia Artistica sem perder nascimento, atributos e habilidades.
+        CompoundTag legacy = (CompoundTag) tag.copy();
+        legacy.putString("origin", "familia_politica");
+        CharacterProfile migrated = CharacterProfile.CODEC.parse(NbtOps.INSTANCE, legacy).getOrThrow();
+        check(f, migrated.born() && migrated.originOrNull() == BirthOrigin.FAMILIA_ARTISTICA
+                && migrated.attributes().equals(p.attributes()) && migrated.skills().equals(p.skills())
+                && migrated.rerolls() == p.rerolls() && migrated.skillPoints() == p.skillPoints(),
+                "codec: origem antiga familia_politica migrada para familia_artistica");
+        Tag rewritten = CharacterProfile.CODEC.encodeStart(NbtOps.INSTANCE, migrated).getOrThrow();
+        check(f, ((CompoundTag) rewritten).getString("origin").equals("familia_artistica"), "codec: ficha migrada grava o id novo");
+        check(f, BirthOrigin.byId("familia_politica") == null && BirthOrigin.values().length == 8,
+                "roleta: oito origens, sem a origem antiga no catálogo");
         CharacterProfile broken = new CharacterProfile(true, "x", List.of(99, -4), -1, 0, -3, -2, List.of("a", "a"));
         check(f, broken.attributes().size() == 6 && broken.attribute(CharacterAttribute.FORCA) == 10
                 && broken.skills().size() == 1 && broken.skillPoints() == 0, "ficha: normalização de dados inválidos");

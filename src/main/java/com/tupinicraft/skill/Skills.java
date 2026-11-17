@@ -27,7 +27,7 @@ public final class Skills {
     private static final ResourceLocation KNOCKBACK_RES = ResourceLocation.withDefaultNamespace("generic.knockback_resistance");
 
     // ------------------------------------------------------------- Combate
-    public static final SkillDef PUNHOS = register("combate/punhos_de_aco", SkillBranch.COMBATE, 1, 0, 0, "mao_em_l",
+    public static final SkillDef PUNHOS = register("combate/punhos_de_aco", SkillBranch.COMBATE, 1, 0, 0, "estadio",
             List.of(), SkillEffect.add(ATTACK, 1));
     public static final SkillDef PELE_GROSSA = register("combate/pele_grossa", SkillBranch.COMBATE, 1, 1, -1, "caveira",
             List.of(PUNHOS), SkillEffect.add(ARMOR, 2));
@@ -37,7 +37,7 @@ public final class Skills {
             List.of(PELE_GROSSA), SkillEffect.finisher(Finishers.RASTEIRA_ID), SkillEffect.add(KNOCKBACK_RES, 0.1));
     public static final SkillDef RACA = register("combate/raca", SkillBranch.COMBATE, 2, 2, 1, "vira_lata",
             List.of(FOLEGO), SkillEffect.multiply(ATTACK_SPEED, 0.1));
-    public static final SkillDef MITO = register("combate/mito", SkillBranch.COMBATE, 3, 3, 0, "mito",
+    public static final SkillDef MITO = register("combate/mito", SkillBranch.COMBATE, 3, 3, 0, "favela",
             List.of(RASTEIRA, RACA), SkillEffect.add(ATTACK, 2), SkillEffect.add(HEALTH, 4));
 
     // ------------------------------------------------------- Sobrevivencia
@@ -45,7 +45,7 @@ public final class Skills {
             List.of(), SkillEffect.needRate("hidratacao", 0.8));
     public static final SkillDef REDE = register("sobrevivencia/rede", SkillBranch.SOBREVIVENCIA, 1, 1, -1, "sertao",
             List.of(CANTIL), SkillEffect.needRate("energia", 0.8));
-    public static final SkillDef BEXIGA = register("sobrevivencia/bexiga_de_aco", SkillBranch.SOBREVIVENCIA, 1, 1, 1, "comprimido",
+    public static final SkillDef BEXIGA = register("sobrevivencia/bexiga_de_aco", SkillBranch.SOBREVIVENCIA, 1, 1, 1, "penico",
             List.of(CANTIL), SkillEffect.needRate("bexiga", 0.7));
     public static final SkillDef VACINADO = register("sobrevivencia/vacinado", SkillBranch.SOBREVIVENCIA, 2, 2, -1, "vacina",
             List.of(REDE), SkillEffect.add(HEALTH, 4));
@@ -60,7 +60,7 @@ public final class Skills {
             List.of(), SkillEffect.add(LUCK, 1));
     public static final SkillDef GINGA = register("malandragem/ginga", SkillBranch.MALANDRAGEM, 1, 1, -1, "estadio",
             List.of(JEITINHO), SkillEffect.multiply(SPEED, 0.05));
-    public static final SkillDef LABIA = register("malandragem/labia", SkillBranch.MALANDRAGEM, 1, 1, 1, "painho",
+    public static final SkillDef LABIA = register("malandragem/labia", SkillBranch.MALANDRAGEM, 1, 1, 1, "cafezinho",
             List.of(JEITINHO), SkillEffect.mood(800));
     public static final SkillDef ROLEZINHO = register("malandragem/rolezinho", SkillBranch.MALANDRAGEM, 2, 2, -1, "favela",
             List.of(GINGA), SkillEffect.multiply(SPEED, 0.05), SkillEffect.needRate("energia", 0.9));

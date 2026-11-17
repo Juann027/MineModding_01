@@ -38,7 +38,7 @@ public final class CharacterHubScreen extends TupiScreen {
                 b -> minecraft.setScreen(new BirthRouletteScreen())).icon(SkillDef.iconTexture("trevo"))
                 .accent(profile.born() ? Ui.GOLD : Ui.GREEN).badge(profile.born() ? "" : "!"));
         addRenderableWidget(new TupiButton(bx, y + 52, bw, 22, Component.translatable(KEY + "skills"),
-                b -> minecraft.setScreen(new SkillTreeScreen())).icon(SkillDef.iconTexture("constituicao"))
+                b -> minecraft.setScreen(new SkillTreeScreen())).icon(SkillDef.iconTexture("niobio"))
                 .badge(profile.skillPoints() > 0 ? String.valueOf(profile.skillPoints()) : ""));
         addRenderableWidget(new TupiButton(bx, top + panelHeight - 30, bw, 20, Component.translatable(KEY + "close"), b -> onClose()));
     }

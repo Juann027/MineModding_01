@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Teste de fumaça do servidor dedicado (variante foco em NPCs):
-# sobe o servidor, confirma carregamento sem classes de cliente e mobs invocáveis.
+# Teste de fumaça do servidor dedicado: sobe o servidor, confirma carregamento sem classes de cliente,
+# invoca o Leão do Fim e consulta os catálogos e o autoteste das regras.
 set -uo pipefail
 export LC_ALL=C.UTF-8
 
@@ -31,7 +31,7 @@ if [ "$ready" != 1 ]; then
   fail "servidor não ficou pronto"
   exec 3>&-; kill "$pid" 2>/dev/null; wait "$pid"
 else
-  for cmd in "summon tupinicraft:cabo_eleitoral 0 -60 0" "summon tupinicraft:leao_do_fim 0 -60 0" "tupinianim list" "tupini selftest" "tupini skills list" "tupini finishers"; do
+  for cmd in "summon tupinicraft:leao_do_fim 0 -60 0" "tupinianim list" "tupini selftest" "tupini skills list" "tupini finishers"; do
     echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
@@ -41,7 +41,7 @@ else
 fi
 
 grep -v DEBUG "$log" | grep -E 'tupinicraft|TupiniCraft|Exception|Error|Summon|summon|Unknown|entity' | head -60
-[ "$(grep -c 'Summoned new' "$log")" -ge 2 ] || fail "mobs não foram invocados no servidor dedicado"
+[ "$(grep -c 'Summoned new' "$log")" -ge 1 ] || fail "Leão do Fim não foi invocado no servidor dedicado"
 # Animation Manager carregado no servidor dedicado (catalogo e comando), sem classes de cliente.
 grep -q 'Animações de jogador: tupinicraft:idle, tupinicraft:wave' "$log" || fail "catálogo de animações de jogador não respondeu no servidor"
 # Etapa 3: autoteste das regras (roleta, necessidades, habilidades, camera, Codecs) e catalogos.
