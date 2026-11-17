@@ -27,5 +27,16 @@ public final class TestGameNetworking {
                 FinisherVisualSyncPayload.STREAM_CODEC,
                 (payload, context) -> FinisherVisualClientCache.receive(payload)
         );
+        // Animacoes de jogador: o servidor decide e distribui; o cliente so envia a intencao.
+        event.registrar("1").playToServer(
+                PlayerAnimationRequestPayload.TYPE,
+                PlayerAnimationRequestPayload.STREAM_CODEC,
+                PlayerAnimationRequestPayload::receive
+        );
+        event.registrar("1").playToClient(
+                PlayerAnimationSyncPayload.TYPE,
+                PlayerAnimationSyncPayload.STREAM_CODEC,
+                (payload, context) -> PlayerAnimationClientCache.receive(payload)
+        );
     }
 }

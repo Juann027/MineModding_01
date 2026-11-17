@@ -1,12 +1,16 @@
 package com.tupinicraft;
 
 import com.mojang.logging.LogUtils;
+import com.tupinicraft.animation.PlayerAnimationCommands;
+import com.tupinicraft.animation.PlayerAnimationService;
+import com.tupinicraft.animation.PlayerAnimations;
 import com.tupinicraft.command.LeaoDoFimCommands;
 import com.tupinicraft.character.CharacterAppearanceService;
 import com.tupinicraft.testgame.FinisherTestMechanic;
 import com.tupinicraft.testgame.DefeatCounter;
 import com.tupinicraft.testgame.TestGameCommands;
 import com.tupinicraft.network.TestGameNetworking;
+import com.tupinicraft.registry.ModAttachments;
 import com.tupinicraft.registry.ModCreativeTabs;
 import com.tupinicraft.registry.ModEntities;
 import com.tupinicraft.registry.ModItems;
@@ -27,6 +31,8 @@ public final class TupiniCraft {
         ModItems.ITEMS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
         ModEntities.ENTITY_TYPES.register(modBus);
+        ModAttachments.ATTACHMENT_TYPES.register(modBus);
+        PlayerAnimations.bootstrap();
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(ModItems::addToCreativeTabs);
         NeoForge.EVENT_BUS.addListener(LeaoDoFimCommands::register);
@@ -54,6 +60,15 @@ public final class TupiniCraft {
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockBlockInteract);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockItemInteract);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockMining);
+        // Animation Manager: estado no servidor, sincronizado com quem esta vendo o jogador.
+        NeoForge.EVENT_BUS.addListener(PlayerAnimationCommands::register);
+        NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onServerTick);
+        NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onStartTracking);
+        NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onChangedDimension);
+        NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onRespawn);
+        NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onDeath);
+        NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onDamage);
+        NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onLogout);
         // Biomas e dimensões ainda não foram implementados neste projeto.
     }
 

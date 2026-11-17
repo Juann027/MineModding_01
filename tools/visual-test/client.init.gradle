@@ -2,7 +2,7 @@ allprojects {
     afterEvaluate {
         neoForge.runs.client {
             gameDirectory = file('build/run-client-' + (System.getenv('MC_USER') ?: 'Dev'))
-            programArguments.addAll('--quickPlayMultiplayer', 'localhost:25565', '--username', System.getenv('MC_USER') ?: 'Dev', '--width', '854', '--height', '480')
+            programArguments.addAll('--quickPlayMultiplayer', 'localhost:25565', '--username', System.getenv('MC_USER') ?: 'Dev', '--width', (System.getenv('MC_SIZE') ?: '854x480').split('x')[0], '--height', (System.getenv('MC_SIZE') ?: '854x480').split('x')[1])
         }
     }
 }
