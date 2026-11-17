@@ -98,7 +98,7 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
                     state.getController().forceAnimationReset();
                 }
                 state.getController().transitionLength(clip.def().transitionTicks());
-                return state.setAndContinue(clip.raw());
+                return state.setAndContinue(clip.raw(server.loop()));
             }
             lastSequence = NO_SEQUENCE;
             currentClip = null;
@@ -106,7 +106,7 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
             ClientPlayerAnimations.Clip idle = PlayerRigController.debugRig() ? PlayerRigController.idleClipOrNull() : null;
             if (idle == null) return PlayState.STOP;
             state.getController().transitionLength(idle.def().transitionTicks());
-            return state.setAndContinue(idle.raw());
+            return state.setAndContinue(idle.raw(true));
         });
         // Keyframes de som/particula/instrucao do proprio clip viram eventos do Animation Manager.
         main.setSoundKeyframeHandler(event -> forward(PlayerAnimations.EVENT_CLIP_SOUND,

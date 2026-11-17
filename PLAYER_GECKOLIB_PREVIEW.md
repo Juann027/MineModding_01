@@ -1,3 +1,8 @@
+> **Atualização (Etapa 2):** este documento descreve o preview da Etapa 1. O rig agora é desenhado dentro do
+> `PlayerRenderer` vanilla, com armadura, itens, cabelo, caminhada, agachamento e olhar, e o aceno é sincronizado
+> pelo servidor. F8 passou a ser um modo de teste (rig sempre ligado para todos os jogadores deste cliente) e F9
+> pede o aceno ao servidor. As "limitações intencionais" abaixo não valem mais; veja `HANDOFF_GECKOLIB_STAGE2.md`.
+
 # TupiniCraft 0.5.6 — teste de rig GeckoLib do jogador
 
 ## O que foi integrado

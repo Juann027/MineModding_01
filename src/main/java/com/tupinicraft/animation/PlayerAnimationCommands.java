@@ -4,6 +4,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -35,7 +36,8 @@ public final class PlayerAnimationCommands {
                 .then(Commands.literal("play")
                         .then(Commands.argument("jogadores", EntityArgument.players())
                                 .then(Commands.argument("animacao", ResourceLocationArgument.id()).suggests(IDS)
-                                        .executes(PlayerAnimationCommands::play))))
+                                        .executes(ctx -> play(ctx, false))
+                                        .then(Commands.literal("loop").executes(ctx -> play(ctx, true))))))
                 .then(Commands.literal("together")
                         .then(Commands.argument("primeiro", EntityArgument.player())
                                 .then(Commands.argument("segundo", EntityArgument.player())
@@ -60,13 +62,14 @@ public final class PlayerAnimationCommands {
         return def;
     }
 
-    private static int play(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+    private static int play(CommandContext<CommandSourceStack> ctx, boolean forceLoop) throws CommandSyntaxException {
         PlayerAnimationDef def = definition(ctx);
         if (def == null) return 0;
         Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "jogadores");
         int started = 0;
         for (ServerPlayer player : players) {
-            if (PlayerAnimationService.play(player, def.id())) started++;
+            if (PlayerAnimationService.play(player, def, player.serverLevel().getGameTime(), Optional.empty(),
+                    new CompoundTag(), false, forceLoop || def.loop())) started++;
         }
         int total = started;
         if (total == 0) {

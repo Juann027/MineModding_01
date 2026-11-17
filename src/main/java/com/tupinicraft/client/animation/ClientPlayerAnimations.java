@@ -39,7 +39,10 @@ public final class ClientPlayerAnimations {
     public static final ResourceLocation RIG_GEO = TupiniCraft.id("geo/player/tupinicraft_animated_player.geo.json");
 
     /** Animacao pronta para tocar: clip encontrado e todos os bones existem no rig. */
-    public record Clip(PlayerAnimationDef def, RawAnimation raw, Set<PlayerPart> overridden) {}
+    public record Clip(PlayerAnimationDef def, RawAnimation once, RawAnimation looping, Set<PlayerPart> overridden) {
+        /** O servidor decide, a cada execucao, se o clip repete. */
+        public RawAnimation raw(boolean loop) { return loop ? looping : once; }
+    }
 
     private static final class Tracked {
         PlayerAnimationState state;
@@ -114,9 +117,8 @@ public final class ClientPlayerAnimations {
             TupiniCraft.LOGGER.warn("Animação {}: duração registrada ({} ticks) difere do clip ({} ticks)",
                     id, def.durationTicks(), animation.length());
         }
-        RawAnimation raw = def.loop() ? RawAnimation.begin().thenLoop(def.clip())
-                : RawAnimation.begin().thenPlay(def.clip());
-        return Optional.of(new Clip(def, raw, overridden));
+        return Optional.of(new Clip(def, RawAnimation.begin().thenPlay(def.clip()),
+                RawAnimation.begin().thenLoop(def.clip()), overridden));
     }
 
     private static Optional<Clip> invalid(ResourceLocation id, String reason) {

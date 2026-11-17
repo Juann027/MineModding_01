@@ -39,6 +39,12 @@ public final class PlayerAnimationService {
      */
     public static boolean play(ServerPlayer player, PlayerAnimationDef def, long startGameTime,
                                Optional<UUID> partner, CompoundTag params, boolean force) {
+        return play(player, def, startGameTime, partner, params, force, def.loop());
+    }
+
+    /** Como acima, escolhendo nesta execucao se o clip repete ate ser interrompido (ex.: pose mantida). */
+    public static boolean play(ServerPlayer player, PlayerAnimationDef def, long startGameTime,
+                               Optional<UUID> partner, CompoundTag params, boolean force, boolean loop) {
         if (!player.isAlive() || player.isSpectator() || player.hasDisconnected()) return false;
         PlayerAnimationTracker tracker = player.getData(ModAttachments.PLAYER_ANIMATION);
         if (tracker.state != null && !tracker.state.finished(now(player))) {
@@ -47,7 +53,7 @@ public final class PlayerAnimationService {
         }
         tracker.sequence++;
         tracker.definition = def;
-        tracker.state = new PlayerAnimationState(def.id(), startGameTime, def.durationTicks(), def.loop(),
+        tracker.state = new PlayerAnimationState(def.id(), startGameTime, def.durationTicks(), loop,
                 tracker.sequence, partner, params.copy());
         tracker.cursor = new TimedEventCursor();
         NeoForge.EVENT_BUS.post(new PlayerAnimationEvent.Start(player, def, tracker.state));
