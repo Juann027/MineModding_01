@@ -1,6 +1,7 @@
 package com.tupinicraft.skill;
 
 import com.tupinicraft.TupiniCraft;
+import com.tupinicraft.profile.BirthTrait;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
 import com.tupinicraft.profile.ProfileService;
@@ -22,13 +23,16 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import org.joml.Vector3f;
 
 /**
- * Compra de habilidades e modificadores de atributo (atributos de nascimento + habilidades). Servidor apenas.
+ * Compra de habilidades e modificadores de atributo (atributos de nascimento + habilidades + efeitos definidos
+ * nos tracos de nascimento). Servidor apenas.
  * Os modificadores sao transitorios ({@code tupinicraft:stat/...}) e recolocados a partir da ficha no login,
  * respawn e a cada mudanca: nunca ficam presos no save.
  */
 public final class SkillService {
     private static final String PREFIX = "stat/";
     private record Applied(Holder<Attribute> attribute, ResourceLocation id) {}
+    /** Quem traz efeitos: uma habilidade comprada ou um traco de nascimento ({@code path} forma o id do modificador). */
+    private record Source(String path, List<SkillEffect> effects) {}
 
     private SkillService() {}
 
@@ -81,20 +85,18 @@ public final class SkillService {
             add(player, now, Attributes.MAX_HEALTH, "attr/vigor", 1.0 * v, AttributeModifier.Operation.ADD_VALUE);
             add(player, now, Attributes.LUCK, "attr/sorte", 0.5 * s, AttributeModifier.Operation.ADD_VALUE);
         }
-        for (String skillId : profile.skills()) {
-            SkillDef def = Skills.get(skillId);
-            if (def == null) continue; // habilidade removida em versao futura: ignora sem apagar o dado
-            for (int i = 0; i < def.effects().size(); i++) {
-                SkillEffect effect = def.effects().get(i);
+        for (Source source : sources(profile)) {
+            for (int i = 0; i < source.effects().size(); i++) {
+                SkillEffect effect = source.effects().get(i);
                 if (effect.kind() != SkillEffect.Kind.ATTRIBUTE_ADD && effect.kind() != SkillEffect.Kind.ATTRIBUTE_MULTIPLY) continue;
                 ResourceLocation attributeId = ResourceLocation.tryParse(effect.target());
                 Holder<Attribute> attribute = attributeId == null ? null
                         : BuiltInRegistries.ATTRIBUTE.getHolder(attributeId).orElse(null);
                 if (attribute == null) {
-                    TupiniCraft.LOGGER.warn("Habilidade {}: atributo desconhecido {}", def.id(), effect.target());
+                    TupiniCraft.LOGGER.warn("Efeito {}: atributo desconhecido {}", source.path(), effect.target());
                     continue;
                 }
-                add(player, now, attribute, "skill/" + def.id().getPath() + "/" + i, effect.amount(),
+                add(player, now, attribute, source.path() + "/" + i, effect.amount(),
                         effect.kind() == SkillEffect.Kind.ATTRIBUTE_ADD ? AttributeModifier.Operation.ADD_VALUE
                                 : AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
             }
@@ -113,13 +115,32 @@ public final class SkillService {
         list.add(new Applied(attribute, id));
     }
 
-    /** Produto dos multiplicadores de uma necessidade nas habilidades compradas. */
-    public static float needRate(CharacterProfile profile, String need) {
-        float rate = 1F;
+    /** Habilidades compradas e tracos de nascimento da ficha (ids desconhecidos sao ignorados sem apagar o dado). */
+    private static List<Source> sources(CharacterProfile profile) {
+        List<Source> list = new ArrayList<>();
         for (String skillId : profile.skills()) {
             SkillDef def = Skills.get(skillId);
-            if (def == null) continue;
-            for (SkillEffect effect : def.effects()) {
+            if (def != null) list.add(new Source("skill/" + def.id().getPath(), def.effects()));
+        }
+        if (profile.born()) {
+            for (BirthTrait trait : profile.birthTraits()) list.add(new Source("trait/" + trait.id(), trait.effects()));
+        }
+        return list;
+    }
+
+    /** Todas as fontes de efeito que esta versao conhece (para remover modificadores antigos). */
+    private static List<Source> allSources() {
+        List<Source> list = new ArrayList<>();
+        for (SkillDef def : Skills.all()) list.add(new Source("skill/" + def.id().getPath(), def.effects()));
+        for (BirthTrait trait : BirthTrait.values()) list.add(new Source("trait/" + trait.id(), trait.effects()));
+        return list;
+    }
+
+    /** Produto dos multiplicadores de uma necessidade nas habilidades compradas e nos tracos de nascimento. */
+    public static float needRate(CharacterProfile profile, String need) {
+        float rate = 1F;
+        for (Source source : sources(profile)) {
+            for (SkillEffect effect : source.effects()) {
                 if (effect.kind() == SkillEffect.Kind.NEED_RATE && effect.target().equals(need)) rate *= (float) effect.amount();
             }
         }
@@ -128,10 +149,8 @@ public final class SkillService {
 
     public static int moodBonus(CharacterProfile profile) {
         int bonus = 0;
-        for (String skillId : profile.skills()) {
-            SkillDef def = Skills.get(skillId);
-            if (def == null) continue;
-            for (SkillEffect effect : def.effects()) {
+        for (Source source : sources(profile)) {
+            for (SkillEffect effect : source.effects()) {
                 if (effect.kind() == SkillEffect.Kind.MOOD_BONUS) bonus += (int) effect.amount();
             }
         }
@@ -145,13 +164,13 @@ public final class SkillService {
         all.add(new Applied(Attributes.MOVEMENT_SPEED, TupiniCraft.id(PREFIX + "attr/agilidade")));
         all.add(new Applied(Attributes.MAX_HEALTH, TupiniCraft.id(PREFIX + "attr/vigor")));
         all.add(new Applied(Attributes.LUCK, TupiniCraft.id(PREFIX + "attr/sorte")));
-        for (SkillDef def : Skills.all()) {
-            for (int i = 0; i < def.effects().size(); i++) {
-                ResourceLocation attributeId = ResourceLocation.tryParse(def.effects().get(i).target());
+        for (Source source : allSources()) {
+            for (int i = 0; i < source.effects().size(); i++) {
+                ResourceLocation attributeId = ResourceLocation.tryParse(source.effects().get(i).target());
                 if (attributeId == null) continue;
                 int index = i;
                 BuiltInRegistries.ATTRIBUTE.getHolder(attributeId).ifPresent(holder -> all.add(
-                        new Applied(holder, TupiniCraft.id(PREFIX + "skill/" + def.id().getPath() + "/" + index))));
+                        new Applied(holder, TupiniCraft.id(PREFIX + source.path() + "/" + index))));
             }
         }
         return all;

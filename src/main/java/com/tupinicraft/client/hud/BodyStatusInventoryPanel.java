@@ -24,13 +24,13 @@ import net.neoforged.neoforge.client.event.ContainerScreenEvent;
  * Painel Body & Traits ao lado do inventario normal (somente leitura). E o unico lugar com os medidores
  * detalhados (a tela de jogo so tem o orbe de emocao): nome, icone, valor, barra, dica e estado critico.
  *
- * <p>Ordem: medidores principais do projeto (Coom, Bexiga, Intestino, Emocao) e, abaixo, os de sobrevivencia
- * (Hidratacao, Energia). Os valores vem da copia sincronizada pelo servidor; nada e calculado aqui.
+ * <p>Mostra so as quatro necessidades ativas (Coom, Bexiga, Intestino, Emocao); Hidratacao e Energia sao dados
+ * legados inativos e nao aparecem. Embaixo, a origem e o traco de nascimento (sistemas separados). Os valores vem
+ * da copia sincronizada pelo servidor; nada e calculado aqui.
  * Usa o lado livre do inventario; em GUIs pequenas, estreita e abrevia, sem cobrir os slots.
  */
 public final class BodyStatusInventoryPanel {
-    private static final Need[] MAIN = {Need.COOM, Need.BLADDER, Need.BOWEL, Need.MOOD};
-    private static final Need[] SURVIVAL = {Need.HYDRATION, Need.ENERGY};
+    private static final Need[] MAIN = Need.ACTIVE;
     private static final int PANEL_WIDTH = 128;
     private static final int SPACING = 7;
     private static final int ROW = 17;
@@ -45,7 +45,7 @@ public final class BodyStatusInventoryPanel {
     private BodyStatusInventoryPanel() {}
 
     private static int panelHeight() {
-        return 22 + MAIN.length * ROW + 11 + SURVIVAL.length * ROW + 34;
+        return 22 + MAIN.length * ROW + 45;
     }
 
     public static void onInventoryForeground(ContainerScreenEvent.Render.Foreground event) {
@@ -104,22 +104,30 @@ public final class BodyStatusInventoryPanel {
             }
             rowY += ROW;
         }
-        if (!compact) graphics.drawString(font, Component.translatable("gui.tupinicraft.needs.survival"), x + padding, rowY + 1, MUTED, false);
-        rect(graphics, x + padding, rowY + (compact ? 4 : 10), width - padding * 2, 1, 0xFF_5A636C);
-        rowY += 11;
-        for (Need need : SURVIVAL) {
-            if (meter(graphics, font, x + padding, rowY, width - 2 * padding, need, needs, compact, mouseX, mouseY)) {
-                tooltip = needTooltip(need, needs, effects);
-            }
-            rowY += ROW;
-        }
-
         rect(graphics, x + padding, rowY + 1, width - padding * 2, 1, BORDER);
-        var origin = ProfileClientCache.profile().originOrNull();
+        var profile = ProfileClientCache.profile();
+        var origin = profile.originOrNull();
         String originName = origin == null ? "--" : Component.translatable("origin.tupinicraft." + origin.id()).getString();
-        String traits = compact ? "O: " + (origin == null ? "--" : originName.substring(0, Math.min(3, originName.length())))
-                : Component.translatable("gui.tupinicraft.traits").getString() + ": " + originName;
-        graphics.drawString(font, traits, x + padding, rowY + 5, TEXT, false);
+        String originLine = compact ? "O: " + (origin == null ? "--" : originName.substring(0, Math.min(3, originName.length())))
+                : Component.translatable("gui.tupinicraft.origin").getString() + ": " + originName;
+        graphics.drawString(font, originLine, x + padding, rowY + 5, TEXT, false);
+        // Traco de nascimento (nao confundir com a origem).
+        var traits = profile.birthTraits();
+        var trait = traits.isEmpty() ? null : traits.get(0);
+        String traitName = trait == null ? "--" : Component.translatable(trait.translationKey()).getString();
+        String traitLine = compact ? "T: " + traitName.substring(0, Math.min(3, traitName.length()))
+                : Component.translatable("gui.tupinicraft.traits").getString() + ": " + traitName;
+        int traitY = rowY + 16;
+        graphics.drawString(font, font.plainSubstrByWidth(traitLine, width - 2 * padding), x + padding, traitY,
+                trait == null ? MUTED : trait.polarity().color(), false);
+        if (trait != null && inside(mouseX, mouseY, x + padding, traitY - 2, width - 2 * padding, 11)) {
+            tooltip = List.of(Component.translatable(trait.translationKey()).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD),
+                    Component.translatable("gui.tupinicraft.trait.polarity." + trait.polarity().id()).withStyle(ChatFormatting.GRAY),
+                    Component.translatable(trait.translationKey() + ".desc").withStyle(ChatFormatting.GRAY),
+                    Component.translatable(trait.hasEffect() ? "gui.tupinicraft.trait.has_effect"
+                            : "gui.tupinicraft.trait.no_effect").withStyle(ChatFormatting.DARK_GRAY));
+        }
+        rowY += 11;
         String footer = compact ? (effects.isEmpty() ? "K" : "+" + effects.size())
                 : effects.isEmpty() ? Component.translatable("gui.tupinicraft.hud_hint").getString()
                 : Component.translatable("gui.tupinicraft.needs.effects", effects.size()).getString();
@@ -198,8 +206,7 @@ public final class BodyStatusInventoryPanel {
             case BLADDER -> new ItemStack(ModItems.CHA_DIURETICO.get());
             case BOWEL -> new ItemStack(ModItems.PENICO.get());
             case MOOD -> new ItemStack(Items.SUNFLOWER);
-            case HYDRATION -> new ItemStack(ModItems.AGUA_DE_COCO.get());
-            case ENERGY -> new ItemStack(ModItems.CAFEZINHO.get());
+            case HYDRATION, ENERGY -> ItemStack.EMPTY; // legadas: nunca exibidas
         };
     }
 

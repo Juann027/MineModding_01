@@ -9,6 +9,7 @@ import com.tupinicraft.network.GameplayNetworking;
 import com.tupinicraft.network.ProfileClientCache;
 import com.tupinicraft.profile.BirthOrigin;
 import com.tupinicraft.profile.BirthRoulette;
+import com.tupinicraft.profile.BirthTrait;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
 import com.tupinicraft.registry.ModSounds;
@@ -28,7 +29,9 @@ import org.joml.Matrix4f;
  *
  * <p>Maquina de estados (Etapa 4.5): {@code IDLE} aguardando sorteio -> {@code WAITING} pedido enviado, girando
  * -> {@code SPINNING} resposta recebida, desacelerando ate a origem -> {@code REVEAL} atributos -> {@code DONE}
- * resultado disponivel (Continuar ou o unico novo giro). A animacao nunca decide dados: o servidor responde a
+ * resultado disponivel (Continuar ou o unico novo giro). O traco de nascimento aparece junto do resultado.
+ * Continuar confirma o nascimento no servidor ({@link GameplayNetworking.BirthConfirmRequest}): o novo giro que
+ * sobrou e descartado. A animacao nunca decide dados: o servidor responde a
  * todo pedido ({@link GameplayNetworking.BirthRollReply}) e a tela so mostra a ficha recebida. Sem resposta em
  * {@link #TIMEOUT_TICKS}, a tela volta ao estado real com um aviso; um pedido atrasado nao gera resultado
  * duplicado nem gasta o novo giro (o servidor confere o {@code rollCount} esperado).
@@ -53,6 +56,7 @@ public final class BirthRouletteScreen extends TupiScreen {
     private Component status;
     private int cx, cy, radius;
     private TupiButton spinButton, continueButton;
+    private boolean continueWarns;
 
     public BirthRouletteScreen() {
         super(Component.translatable(KEY + "title"));
@@ -82,6 +86,7 @@ public final class BirthRouletteScreen extends TupiScreen {
                 .item(new ItemStack(Items.EMERALD)).accent(Ui.GREEN));
         continueButton = addRenderableWidget(new TupiButton(bx, top + panelHeight - 30, 120, 20,
                 Component.translatable(KEY + "continue"), b -> confirm()));
+        continueWarns = false;
         updateButtons();
     }
 
@@ -102,6 +107,13 @@ public final class BirthRouletteScreen extends TupiScreen {
         spinButton.active = idle && (!p.born() || p.canReroll());
         spinButton.setMessage(spinLabel());
         continueButton.active = idle && phase == Phase.DONE && hasResult(p);
+        // Quem ainda tem o novo giro fica sabendo que Continuar o descarta.
+        boolean warn = continueButton.active && p.canReroll();
+        if (warn != continueWarns) {
+            continueWarns = warn;
+            continueButton.setTooltip(warn ? net.minecraft.client.gui.components.Tooltip.create(
+                    Component.translatable(KEY + "continue.tooltip")) : null);
+        }
     }
 
     private void spin() {
@@ -116,9 +128,15 @@ public final class BirthRouletteScreen extends TupiScreen {
         updateButtons();
     }
 
-    /** Aceita o resultado: a ficha ja esta salva no servidor; segue para o menu do personagem. */
+    /**
+     * Aceita o resultado: a ficha ja esta salva no servidor; o servidor confirma o nascimento (o novo giro restante
+     * e descartado, entao reabrir a roleta nao troca mais o resultado) e a tela segue para o menu do personagem.
+     */
     private void confirm() {
-        if (phase == Phase.DONE && hasResult(ProfileClientCache.profile())) minecraft.setScreen(new CharacterHubScreen());
+        CharacterProfile p = ProfileClientCache.profile();
+        if (phase != Phase.DONE || !hasResult(p)) return;
+        if (!p.birthConfirmed()) PacketDistributor.sendToServer(new GameplayNetworking.BirthConfirmRequest(p.rollCount()));
+        minecraft.setScreen(new CharacterHubScreen());
     }
 
     /** Desacelera ate a origem da ficha atual (com revelacao quando e um resultado novo). */
@@ -290,9 +308,35 @@ public final class BirthRouletteScreen extends TupiScreen {
         }
         if (phase == Phase.DONE && p.born()) {
             g.drawString(font, Component.translatable(KEY + "points", p.skillPoints()), left + 12, top + panelHeight - 16, Ui.GOLD, false);
+            drawTraits(g, p, x, attrY(CharacterAttribute.values().length) + 2, mouseX, mouseY);
         }
         if (status != null && phase != Phase.WAITING) {
             g.drawString(font, status, left + 12, top + panelHeight - 28, Ui.RED, false);
+        }
+    }
+
+    /** Traco de nascimento sorteado junto (separado da origem): nome e Buff/Debuff/Neutro; descricao na dica. */
+    private void drawTraits(GuiGraphics g, CharacterProfile p, int x, int y, int mouseX, int mouseY) {
+        java.util.List<BirthTrait> traits = p.birthTraits();
+        String label = Component.translatable("gui.tupinicraft.traits").getString() + ": ";
+        g.drawString(font, label, x, y, Ui.MUTED, false);
+        int nx = x + font.width(label);
+        if (traits.isEmpty()) {
+            g.drawString(font, Component.translatable("gui.tupinicraft.trait.none_short"), nx, y, Ui.MUTED, false);
+            return;
+        }
+        for (BirthTrait trait : traits) {
+            Component name = Component.translatable(trait.translationKey()).append(" (")
+                    .append(Component.translatable("gui.tupinicraft.trait.polarity." + trait.polarity().id())).append(")");
+            g.drawString(font, name, nx, y, trait.polarity().color(), true);
+            if (mouseX >= nx && mouseX < nx + font.width(name) && mouseY >= y - 2 && mouseY < y + 10) {
+                g.renderComponentTooltip(font, java.util.List.of(Component.translatable(trait.translationKey()),
+                        Component.translatable(trait.translationKey() + ".desc").withStyle(net.minecraft.ChatFormatting.GRAY),
+                        Component.translatable(trait.hasEffect() ? "gui.tupinicraft.trait.has_effect"
+                                : "gui.tupinicraft.trait.no_effect").withStyle(net.minecraft.ChatFormatting.DARK_GRAY)),
+                        mouseX, mouseY);
+            }
+            y += 11;
         }
     }
 
