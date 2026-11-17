@@ -14,6 +14,8 @@ public final class ProfileClientCache {
     private static long effectsReceivedAt;
     private static long profileRevision;
     private static boolean received;
+    private static GameplayNetworking.BirthRollReply lastRollReply;
+    private static long rollReplyRevision;
 
     private ProfileClientCache() {}
 
@@ -24,6 +26,16 @@ public final class ProfileClientCache {
     }
 
     static void receive(Needs value) { needs = value; }
+
+    static void receive(GameplayNetworking.BirthRollReply reply) {
+        lastRollReply = reply;
+        rollReplyRevision++;
+    }
+
+    /** Ultima resposta do servidor a um pedido de giro (null se nenhuma nesta sessao). */
+    public static GameplayNetworking.BirthRollReply lastRollReply() { return lastRollReply; }
+    /** Muda a cada resposta de giro recebida (a roleta detecta a resposta ao seu pedido). */
+    public static long rollReplyRevision() { return rollReplyRevision; }
 
     static void receive(ActiveNeedEffects value) {
         effects = value;
@@ -56,5 +68,7 @@ public final class ProfileClientCache {
         effects = ActiveNeedEffects.EMPTY;
         profileRevision = 0;
         received = false;
+        lastRollReply = null;
+        rollReplyRevision = 0;
     }
 }

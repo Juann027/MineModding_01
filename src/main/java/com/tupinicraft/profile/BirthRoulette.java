@@ -13,6 +13,40 @@ public final class BirthRoulette {
 
     public record Result(BirthOrigin origin, int[] attributes) {}
 
+    /**
+     * Resposta do servidor a um pedido de giro. Todo pedido recebe uma resposta (a tela nunca fica esperando).
+     * O ordinal viaja na rede: so acrescente valores no fim.
+     */
+    public enum Outcome {
+        /** Sorteou: a ficha nova ja foi enviada antes da resposta. */
+        ROLLED,
+        /** Ja nasceu e nao tem mais novo giro. */
+        NO_REROLLS,
+        /** O pedido foi feito sobre uma ficha desatualizada (outro giro ja aconteceu, ficha zerada etc.). */
+        STALE;
+
+        public static Outcome byOrdinal(int ordinal) {
+            Outcome[] all = values();
+            return ordinal >= 0 && ordinal < all.length ? all[ordinal] : STALE;
+        }
+    }
+
+    /**
+     * Valida um pedido de giro contra a ficha atual do servidor. {@code expectedRollCount} e o {@code rollCount}
+     * que o cliente via ao pedir: se outro giro ja aconteceu, o pedido e recusado (sem resultado duplicado e sem
+     * gastar o novo giro por engano, mesmo com resposta atrasada ou clique repetido).
+     */
+    public static Outcome validate(CharacterProfile profile, boolean reroll, int expectedRollCount) {
+        if (expectedRollCount != profile.rollCount() || reroll != profile.born()) return Outcome.STALE;
+        if (profile.born() && !profile.canReroll()) return Outcome.NO_REROLLS;
+        return Outcome.ROLLED;
+    }
+
+    /** Novos giros que restam depois de um giro aceito por {@link #validate}. */
+    public static int rerollsAfter(CharacterProfile profile) {
+        return profile.born() ? profile.rerolls() - 1 : FREE_REROLLS;
+    }
+
     private BirthRoulette() {}
 
     public static BirthOrigin pickOrigin(RandomGenerator random) {
