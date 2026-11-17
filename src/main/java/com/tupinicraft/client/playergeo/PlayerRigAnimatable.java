@@ -81,6 +81,13 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
         float elapsed = Double.isNaN(lastFrameTick) ? 0F : (float) Mth.clamp(now - lastFrameTick, 0, 20);
         lastFrameTick = now;
         ClientPlayerAnimations.Clip clip = serverClip(uuid);
+        if (clip != null && now - lastClipTick >= RECOVERY_TICKS) {
+            // O rig volta a ser desenhado depois de ficar parado: os snapshots dos bones guardam a pose de quando
+            // ele parou (ex.: quatro apoios de uma sequencia cancelada) e a transicao do clip novo partiria dela,
+            // mostrando essa pose por um quadro. Sem snapshots, o GeckoLib recomeca da pose de repouso.
+            // (Aqui, antes do processamento do GeckoLib; nunca dentro do handler, que usa o mesmo mapa.)
+            cache.getManagerForId(uuid.getLeastSignificantBits()).clearSnapshotCache();
+        }
         if (clip != null) lastClipTick = now;
         float step = elapsed / Math.max(1, clip != null ? clip.def().transitionTicks() : 3);
         for (PlayerPart part : PlayerPart.values()) {

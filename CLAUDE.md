@@ -46,12 +46,24 @@ Base: MDK oficial `NeoForgeMDKs/MDK-1.21.1-ModDevGradle` (plugin `net.neoforged.
 ## Etapa 4 — animações do jogador (ativo; detalhes em `HANDOFF_PLAYER_ANIMATIONS_STAGE4.md`)
 
 - Biblioteca de combate/chão e coreografias em `animations/player/tupinicraft_player_combat.animation.json`
-  (`PlayerAnimations.COMBAT_FILE`), geradas por `tools/player_anim/export.py` (que **sobrescreve** esse arquivo e os
-  `.bbmodel` de `model_sources/player/`). Edite `poses.py`/`clips.py` ou o Blockbench, não os dois.
+  (`PlayerAnimations.COMBAT_FILE`), geradas por `tools/player_anim/export.py` junto com os `.bbmodel` de
+  `model_sources/player/`. Edite `poses.py`/`clips.py` ou o Blockbench, não os dois (ver Etapa 4.1).
 - Convenções do GeckoLib 4.9.3: rotação do keyframe com X e Y invertidos; posição com X invertido; ordem Z·Y·X.
 - Cenas de dois participantes: um clip `FULL_BODY` por participante, mesmo comprimento, iniciados por
   `playTogether`; a posição no mundo é da sessão (`FinisherTestMechanic`), keyframes só com deslocamentos que voltam
   a zero. `FinisherDef.recoveryInScene` quando o alvo se levanta no próprio clip.
+
+## Etapa 4.1 — Blockbench e sequências (ativo; detalhes em `HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md`)
+
+- Fonte de verdade dos arquivos do `export.py` em `tools/player_anim/master.json` (`gerador` | `blockbench`). O
+  script recusa sobrescrever arquivo editado fora dele (manifesto de hashes); só `--force` regrava (com cópia em
+  `.backup/`), e nunca com mestre `blockbench`. Use `--dry-run`/`--check`/`--out`. Guia: `tools/player_anim/README.md`.
+- `.bbmodel` guarda a convenção do Blockbench: X e Y da rotação e X da posição invertidos em relação ao
+  `.animation.json` (`bbsync.flip`). `python3 tools/player_anim/bbsync.py` confere os dois (roda no CI);
+  `tools/player_anim/blockbench/check.sh` usa o Blockbench real (versão web) para conferir o export.
+- Vários clips sem voltar à pose vanilla: `AnimationSequence` + `PlayerAnimationService.playSequence/advance`. O
+  estado sincronizado leva os segmentos seguintes e todos trocam pelo relógio do servidor (`PlayerAnimationState.at`);
+  não mande um pacote por clip. Loops dentro de sequência exigem duração.
 
 ## Fluxo de entrega e merge automático (política do dono do repositório)
 
