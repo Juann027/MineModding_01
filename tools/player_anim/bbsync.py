@@ -187,7 +187,7 @@ def check_repo():
         total += len(problems)
     if total:
         print("\nO .bbmodel e o .animation.json divergem. Se voce editou no Blockbench, exporte de la (Export Animations);"
-              "\nse editou clips.py/poses.py, rode tools/player_anim/export.py. Veja HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md.")
+              "\nse editou clips.py/poses.py, rode tools/player_anim/export.py. Veja docs/handoffs/HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md.")
     return total
 
 

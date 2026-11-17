@@ -8,7 +8,8 @@ finalizações cinematográficas, contador de derrotas e o mob Leão do Fim. Ver
 identificadores internos continuam `tupinicraft`**: mod id, pacote `com.tupinicraft`, classes `TupiniCraft*`,
 namespace de recursos, ids de registro/saves e comandos `/tupini*`. Não renomeie identificadores para a marca nova.
 
-Leia este arquivo, o `README.md` e só os arquivos do pedido. Os handoffs (fim do arquivo) têm os detalhes.
+Leia este arquivo, o `README.md` e só os arquivos do pedido. Handoffs ficam em `docs/handoffs/` (consulte só os do
+sistema em que vai mexer; veja o fim deste arquivo).
 
 ## Identidade e stack
 
@@ -144,10 +145,8 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 ## Documentação complementar
 
 - `README.md` — visão geral, instalação e uso. `AGENTS.md` — resumo para agentes.
-- `HANDOFF_GECKOLIB_STAGE1.md` (teste visual), `HANDOFF_GECKOLIB_STAGE2.md` (rig, Body Layers, Animation Manager).
-- `HANDOFF_ETAPA3.md` (UI, criador, roleta, skills, necessidades, finalizações) e `HANDOFF_ETAPA3_1.md` (necessidades
-  e consumíveis).
-- `HANDOFF_PLAYER_ANIMATIONS_STAGE4.md` e `HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md` (biblioteca de combate, Blockbench,
-  sequências), `HANDOFF_DEFEAT_COUNTER_STAGE4_2.md` (contador de derrotas).
-- `HANDOFF_LEGACY_CLEANUP.md` — remoção do legado político (Etapa 4.4) e migração da origem antiga.
+- Handoffs das etapas em [`docs/handoffs/`](docs/handoffs/README.md): o índice diz etapa, sistema, status e
+  limitações. **Abra só o handoff do sistema que a tarefa toca** (nunca todos): rig/Body Layers → Etapa 2; telas,
+  criador, roleta, skills, necessidades, finalizações → Etapas 3/3.1; animações e Blockbench → Etapas 4/4.1;
+  contador de derrotas → 4.2; legado, saves e ids aposentados → 4.4.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

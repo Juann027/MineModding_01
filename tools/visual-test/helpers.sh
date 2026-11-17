@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ajudantes do teste visual do cliente real em tela virtual (Linux, sem GPU). Uso: `. tools/visual-test/helpers.sh`
-# Requisitos: xvfb, openbox, xdotool, imagemagick, ffmpeg e Mesa (llvmpipe). Veja HANDOFF_GECKOLIB_STAGE1.md.
+# Requisitos: xvfb, openbox, xdotool, imagemagick, ffmpeg e Mesa (llvmpipe). Veja docs/handoffs/HANDOFF_GECKOLIB_STAGE1.md.
 export DISPLAY=${DISPLAY:-:99} LIBGL_ALWAYS_SOFTWARE=1
 OUT=${OUT:-smoke/visual}; mkdir -p "$OUT"
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
