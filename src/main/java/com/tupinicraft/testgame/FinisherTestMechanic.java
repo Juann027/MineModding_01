@@ -176,6 +176,14 @@ public final class FinisherTestMechanic {
         return 1;
     }
 
+    private static boolean stageable(LivingEntity attacker, LivingEntity target) {
+        if (!attacker.isAlive() || !target.isAlive() || attacker == target || attacker.level() != target.level()) return false;
+        if (attacker.distanceToSqr(target) > 64.0D) return false;
+        if (attacker.isPassenger() || target.isPassenger()) return false;
+        return !SESSIONS.containsKey(attacker.getUUID()) && !SESSIONS.containsKey(target.getUUID())
+                && !INCAPACITATED.containsKey(attacker.getUUID()) && !INCAPACITATED.containsKey(target.getUUID());
+    }
+
     private static boolean available(LivingEntity attacker, LivingEntity target) {
         if (!attacker.isAlive() || !target.isAlive() || attacker == target || attacker.level() != target.level()) return false;
         if (attacker.distanceToSqr(target) > RANGE_SQUARED) return false;
@@ -190,8 +198,20 @@ public final class FinisherTestMechanic {
     }
 
     private static boolean start(LivingEntity attacker, LivingEntity target) {
-        if (!available(attacker, target)) return false;
-        FinisherDef finisher = attacker instanceof ServerPlayer player
+        return start(attacker, target, null, false);
+    }
+
+    /**
+     * Ferramenta de administracao/teste ({@code /tupini admin finisher}): inicia a cena sem convite, sem exigir
+     * vida baixa e sem cooldown. As demais travas (distancia, sessao ativa, montaria) continuam valendo.
+     */
+    public static boolean forceStart(LivingEntity attacker, LivingEntity target, FinisherDef finisher) {
+        return start(attacker, target, finisher, true);
+    }
+
+    private static boolean start(LivingEntity attacker, LivingEntity target, FinisherDef chosen, boolean force) {
+        if (force ? !stageable(attacker, target) : !available(attacker, target)) return false;
+        FinisherDef finisher = chosen != null ? chosen : attacker instanceof ServerPlayer player
                 ? Finishers.pick(skill -> ProfileService.get(player).hasSkill(skill.toString()), java.util.random.RandomGenerator.of("L64X128MixRandom"))
                 : Finishers.TAKEDOWN;
         // Palco: vitima de frente para o executor, a STAGE_DISTANCE blocos, se houver espaco.

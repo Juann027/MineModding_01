@@ -103,7 +103,7 @@ public final class CharacterCreationScreen extends TupiScreen {
                         hairColor = color;
                         preview();
                         rebuildWidgets();
-                    }).selected(i == hairColor).accent(CharacterAppearance.COLOR_ARGB[i])
+                    }).selected(i == hairColor).accent(CharacterAppearance.COLOR_ARGB[i]).swatch(CharacterAppearance.COLOR_ARGB[i])
                             .tooltip(Component.translatable(KEY + "color." + CharacterAppearance.COLOR_IDS[i])));
                 }
             }

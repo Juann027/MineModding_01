@@ -54,6 +54,13 @@ public final class TupiniCommands {
                                         .suggests((c, b) -> SharedSuggestionProvider.suggestResource(
                                                 Skills.all().stream().map(SkillDef::id), b))
                                         .executes(TupiniCommands::grantSkill))))
+                        .then(Commands.literal("finisher").then(Commands.argument("executor", EntityArgument.entity())
+                                .then(Commands.argument("alvo", EntityArgument.entity())
+                                        .executes(c -> forceFinisher(c, null))
+                                        .then(Commands.argument("id", ResourceLocationArgument.id())
+                                                .suggests((c, b) -> SharedSuggestionProvider.suggestResource(
+                                                        Finishers.all().stream().map(FinisherDef::id), b))
+                                                .executes(c -> forceFinisher(c, Finishers.get(ResourceLocationArgument.getId(c, "id"))))))))
                         .then(Commands.literal("necessidade").then(Commands.argument("jogador", EntityArgument.player())
                                 .then(Commands.argument("tipo", StringArgumentType.word())
                                         .suggests((c, b) -> SharedSuggestionProvider.suggest(
@@ -139,6 +146,20 @@ public final class TupiniCommands {
             return 0;
         }
         c.getSource().sendSuccess(() -> Component.literal("Habilidade liberada: " + id), true);
+        return 1;
+    }
+
+    private static int forceFinisher(CommandContext<CommandSourceStack> c, FinisherDef def) throws CommandSyntaxException {
+        if (!(EntityArgument.getEntity(c, "executor") instanceof net.minecraft.world.entity.LivingEntity attacker)
+                || !(EntityArgument.getEntity(c, "alvo") instanceof net.minecraft.world.entity.LivingEntity target)) {
+            c.getSource().sendFailure(Component.literal("Executor e alvo precisam ser entidades vivas."));
+            return 0;
+        }
+        if (!com.tupinicraft.testgame.FinisherTestMechanic.forceStart(attacker, target, def)) {
+            c.getSource().sendFailure(Component.literal("Não foi possível iniciar (distância, sessão ativa ou montaria)."));
+            return 0;
+        }
+        c.getSource().sendSuccess(() -> Component.literal("Finalização iniciada."), true);
         return 1;
     }
 

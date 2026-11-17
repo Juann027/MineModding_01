@@ -195,7 +195,7 @@ public final class BirthRouletteScreen extends TupiScreen {
 
     private int attrX() { return cx + radius + 26; }
     private int attrW() { return left + panelWidth - 10 - attrX(); }
-    private int attrY(int index) { return top + 58 + index * 18; }
+    private int attrY(int index) { return top + 66 + index * 18; }
 
     @Override
     protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
@@ -210,7 +210,7 @@ public final class BirthRouletteScreen extends TupiScreen {
             g.drawString(font, Component.translatable("origin.tupinicraft." + origin.id()), x + 24, top + 30, origin.color(), true);
             g.drawString(font, Component.translatable("origin.tupinicraft." + origin.id() + ".desc"), x + 24, top + 41, Ui.MUTED, false);
         } else {
-            g.drawWordWrap(font, Component.translatable(KEY + "intro"), x, top + 32, attrW(), Ui.MUTED);
+            g.drawWordWrap(font, Component.translatable(KEY + "intro"), x, top + 28, attrW(), Ui.MUTED);
         }
         int shown = phase == Phase.DONE ? 99 : phase == Phase.REVEAL ? revealTick / 6 : 0;
         for (CharacterAttribute attr : CharacterAttribute.values()) {
@@ -232,7 +232,7 @@ public final class BirthRouletteScreen extends TupiScreen {
             }
         }
         if (phase == Phase.DONE && p.born()) {
-            g.drawString(font, Component.translatable(KEY + "points", p.skillPoints()), x, attrY(6) + 2, Ui.GOLD, false);
+            g.drawString(font, Component.translatable(KEY + "points", p.skillPoints()), left + 12, top + panelHeight - 16, Ui.GOLD, false);
         }
     }
 

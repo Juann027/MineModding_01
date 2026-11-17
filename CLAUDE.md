@@ -20,6 +20,19 @@ Base: MDK oficial `NeoForgeMDKs/MDK-1.21.1-ModDevGradle` (plugin `net.neoforged.
 - Animações são dados em `animation.PlayerAnimations` (sem classe por animação). Só `PlayerAnimationService` inicia e
   para animações; o cliente envia apenas a intenção. Som, VFX e câmera entram por `PlayerAnimationEvent`.
 
+## Etapa 3 (ativo; detalhes em `HANDOFF_ETAPA3.md`)
+
+- Telas novas herdam `client.ui.TupiScreen` e usam os widgets de `client.ui` (sem blur vanilla, texturas próprias).
+- Ficha (`profile.CharacterProfile`, attachment `tupinicraft:character_profile`) só muda por `ProfileService`;
+  necessidades (`needs.Needs`, attachment `tupinicraft:needs`) só por `NeedsService`. Sorteio da roleta e compra de
+  habilidades acontecem **só no servidor**; o cliente envia a intenção. Ids de origens, atributos, necessidades e
+  habilidades são persistidos (não renomear).
+- Modificadores de atributo do mod são transitórios (`tupinicraft:stat/...`) e recolocados por
+  `SkillService.refreshModifiers`; nunca os grave no save.
+- Finalizações são dados (`finisher.Finishers`); a câmera cinematográfica (`client.cinematic.CinematicCamera`) segue
+  o estado de animação sincronizado e precisa restaurar a perspectiva em qualquer saída. Regras puras novas entram no
+  `selftest.SelfTest` (rodado por `/tupini selftest` no teste de fumaça).
+
 ## Fluxo de entrega e merge automático (política do dono do repositório)
 
 O dono do repositório autorizou merge automático dos PRs ao concluir cada tarefa, sem aguardar aprovação manual.

@@ -22,6 +22,7 @@ public class TupiButton extends AbstractButton {
     private boolean selected;
     private int accent = Ui.GOLD;
     private String badge = "";
+    private int swatch;
     private float hover; // 0..1 suavizado
     private long lastFrame = System.nanoTime();
 
@@ -34,6 +35,8 @@ public class TupiButton extends AbstractButton {
     public TupiButton item(ItemStack stack) { this.itemIcon = stack; return this; }
     public TupiButton accent(int color) { this.accent = color; return this; }
     public TupiButton selected(boolean value) { this.selected = value; return this; }
+    /** Amostra de cor ocupando o miolo do botao (paletas). */
+    public TupiButton swatch(int argb) { this.swatch = argb; return this; }
     public TupiButton badge(String text) { this.badge = text == null ? "" : text; return this; }
     public TupiButton tooltip(Component text) { setTooltip(net.minecraft.client.gui.components.Tooltip.create(text)); return this; }
     public boolean isSelected() { return selected; }
@@ -58,6 +61,7 @@ public class TupiButton extends AbstractButton {
         if (hover > 0.01F && active) Ui.glow(g, x + w / 2F, y + h / 2F, Math.max(w, h) * 0.7F, Ui.alpha(accent, 0.25F * hover));
         Ui.nineSlice(g, Ui.BUTTON, x, y, w, h, 0, state * 20, 64, 20, 4, 64, 80);
 
+        if (swatch != 0) g.fill(x + 3, y + 3, x + w - 3, y + h - 4, swatch);
         var font = Minecraft.getInstance().font;
         int textColor = !active ? 0xFF6E7883 : selected ? 0xFF2B1E05 : Ui.lerpColor(Ui.TEXT, 0xFFFFFFFF, hover);
         int contentX = x + 6;
