@@ -1,6 +1,18 @@
 package com.tupinicraft.testgame;
 
+import com.tupinicraft.animation.PlayerAnimationDef;
+import com.tupinicraft.animation.PlayerAnimationEvent;
+import com.tupinicraft.animation.PlayerAnimationService;
+import com.tupinicraft.finisher.FinisherDef;
+import com.tupinicraft.finisher.Finishers;
 import com.tupinicraft.network.FinisherVisualSyncPayload;
+import com.tupinicraft.profile.ProfileService;
+import com.tupinicraft.registry.ModSounds;
+import java.util.Optional;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -39,17 +51,24 @@ public final class FinisherTestMechanic {
     private static final class Session {
         final LivingEntity attacker;
         final LivingEntity target;
+        final FinisherDef finisher;
         final Vec3 attackerAnchor;
+        final Vec3 targetAnchor;
         final long finishAt;
         long lastProcessed = Long.MIN_VALUE;
 
-        Session(LivingEntity attacker, LivingEntity target, long finishAt) {
+        Session(LivingEntity attacker, LivingEntity target, FinisherDef finisher, Vec3 targetAnchor, long finishAt) {
             this.attacker = attacker;
             this.target = target;
+            this.finisher = finisher;
             this.attackerAnchor = attacker.position();
+            this.targetAnchor = targetAnchor;
             this.finishAt = finishAt;
         }
     }
+
+    /** Distancia entre os participantes durante a cena (frente a frente). */
+    private static final double STAGE_DISTANCE = 1.15;
 
     private static final Map<UUID, Invite> PENDING = new HashMap<>();
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
@@ -172,36 +191,116 @@ public final class FinisherTestMechanic {
 
     private static boolean start(LivingEntity attacker, LivingEntity target) {
         if (!available(attacker, target)) return false;
-        if (!target.startRiding(attacker, true)) return false;
-        Session session = new Session(attacker, target, attacker.level().getGameTime() + FinisherRules.ANIMATION_TICKS);
+        FinisherDef finisher = attacker instanceof ServerPlayer player
+                ? Finishers.pick(skill -> ProfileService.get(player).hasSkill(skill.toString()), java.util.random.RandomGenerator.of("L64X128MixRandom"))
+                : Finishers.TAKEDOWN;
+        // Palco: vitima de frente para o executor, a STAGE_DISTANCE blocos, se houver espaco.
+        float yaw = attacker.getYRot();
+        Vec3 facing = Vec3.directionFromRotation(0, yaw);
+        Vec3 staged = attacker.position().add(facing.scale(STAGE_DISTANCE));
+        Vec3 targetAnchor = target.level().noCollision(target, target.getBoundingBox().move(staged.subtract(target.position())))
+                ? staged : target.position();
+        float targetYaw = Mth.wrapDegrees(yaw + 180F);
+        place(target, targetAnchor, targetYaw);
+        place(attacker, attacker.position(), yaw);
+
+        long now = attacker.level().getGameTime();
+        Session session = new Session(attacker, target, finisher, targetAnchor, now + finisher.durationTicks());
         SESSIONS.put(attacker.getUUID(), session);
         SESSIONS.put(target.getUUID(), session);
         PENDING.remove(target.getUUID());
-        attacker.swing(InteractionHand.MAIN_HAND); // Animacao vanilla PROVISORIA.
-        target.swing(InteractionHand.MAIN_HAND);
+
+        CompoundTag params = new CompoundTag();
+        Vec3 middle = attacker.position().add(targetAnchor).scale(0.5);
+        params.putString(Finishers.PARAM_FINISHER, finisher.id().toString());
+        params.putDouble(Finishers.PARAM_X, middle.x);
+        params.putDouble(Finishers.PARAM_Y, Math.min(attacker.getY(), targetAnchor.y));
+        params.putDouble(Finishers.PARAM_Z, middle.z);
+        params.putFloat(Finishers.PARAM_YAW, yaw);
+        if (attacker instanceof ServerPlayer a && target instanceof ServerPlayer v) {
+            PlayerAnimationService.playTogether(a, finisher.attacker(), v, finisher.victim(), params);
+        } else if (attacker instanceof ServerPlayer a) {
+            PlayerAnimationService.play(a, finisher.attacker(), now, Optional.of(target.getUUID()), params, true);
+        } else if (target instanceof ServerPlayer v) {
+            PlayerAnimationService.play(v, finisher.victim(), now, Optional.of(attacker.getUUID()), params, true);
+        }
         sendVisual(session, true);
         if (attacker instanceof ServerPlayer p) message(p, "Finalizacao de teste iniciada. /stopitstopnow cancela.");
         if (target instanceof ServerPlayer p) message(p, "Teste iniciado. Pressione Shift ou /stopitstopnow para cancelar.");
         return true;
     }
 
+    private static void place(LivingEntity entity, Vec3 position, float yaw) {
+        if (entity instanceof ServerPlayer player) {
+            player.connection.teleport(position.x, position.y, position.z, yaw, 0F);
+        } else {
+            entity.moveTo(position.x, position.y, position.z, yaw, 0F);
+            entity.setYHeadRot(yaw);
+            entity.setYBodyRot(yaw);
+        }
+        entity.setDeltaMovement(Vec3.ZERO);
+    }
+
+    /** Para as animacoes da cena (so se ainda forem desta finalizacao). */
+    private static void stopAnimations(Session s) {
+        stopIfOwn(s.attacker, s.finisher.attacker());
+        stopIfOwn(s.target, s.finisher.victim());
+    }
+
+    private static void stopIfOwn(LivingEntity entity, PlayerAnimationDef def) {
+        if (entity instanceof ServerPlayer player && PlayerAnimationService.current(player)
+                .filter(state -> state.animation().equals(def.id())).isPresent()) {
+            PlayerAnimationService.stop(player, PlayerAnimationEvent.EndReason.STOPPED);
+        }
+    }
+
+    /** Impactos da finalizacao: som, particulas e o "tranco" da vitima, decididos aqui e vistos por todos. */
+    public static void onAnimationTimed(PlayerAnimationEvent.Timed event) {
+        if (!(event.getPlayer() instanceof ServerPlayer player) || !event.getEvent().type().equals(Finishers.EVENT_HIT)) return;
+        Session s = SESSIONS.get(player.getUUID());
+        if (s == null || s.attacker != player) return;
+        int strength = Mth.clamp(parseInt(event.getEvent().data(), 1), 1, 3);
+        LivingEntity target = s.target;
+        var level = player.serverLevel();
+        double y = target.getY() + target.getBbHeight() * 0.6;
+        level.sendParticles(ParticleTypes.CRIT, target.getX(), y, target.getZ(), 10 * strength, 0.25, 0.25, 0.25, 0.4);
+        level.sendParticles(ParticleTypes.SWEEP_ATTACK, target.getX(), y, target.getZ(), 1, 0, 0, 0, 0);
+        if (strength >= 3) {
+            level.sendParticles(ParticleTypes.EXPLOSION, target.getX(), target.getY() + 0.3, target.getZ(), 1, 0, 0, 0, 0);
+            level.sendParticles(ParticleTypes.CLOUD, target.getX(), target.getY() + 0.1, target.getZ(), 20, 0.6, 0.05, 0.6, 0.05);
+        }
+        level.playSound(null, target.blockPosition(), strength >= 2 ? ModSounds.FINISHER_IMPACT_HEAVY.get()
+                : ModSounds.FINISHER_IMPACT.get(), SoundSource.PLAYERS, 1F, 0.9F + level.random.nextFloat() * 0.2F);
+        if (strength >= 3) level.playSound(null, target.blockPosition(), ModSounds.FINISHER_STING.get(), SoundSource.PLAYERS, 0.7F, 1F);
+        // Lampejo vermelho e inclinacao de dano nos clientes, sem dano real (a cena nao mata).
+        level.broadcastDamageEvent(target, player.damageSources().playerAttack(player));
+    }
+
+    private static int parseInt(String text, int fallback) {
+        try {
+            return Integer.parseInt(text.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
     private static void sendVisual(Session s, boolean active) {
         PacketDistributor.sendToAllPlayers(new FinisherVisualSyncPayload(
                 s.attacker.getUUID().toString(), s.target.getUUID().toString(), ANIMATION_KEY,
-                active, active ? FinisherRules.ANIMATION_TICKS : 0));
+                active, active ? s.finisher.durationTicks() : 0));
     }
 
     private static void release(Session s) {
         if (SESSIONS.get(s.attacker.getUUID()) != s) return;
         SESSIONS.remove(s.attacker.getUUID());
         SESSIONS.remove(s.target.getUUID());
-        if (s.target.getVehicle() == s.attacker) s.target.stopRiding();
         sendVisual(s, false);
     }
 
     private static void abort(Session s, String reason) {
         if (SESSIONS.get(s.attacker.getUUID()) != s) return;
         release(s);
+        stopAnimations(s);
         if (s.attacker instanceof ServerPlayer p) message(p, "Finalizacao cancelada: " + reason);
         if (s.target instanceof ServerPlayer p) message(p, "Finalizacao cancelada: " + reason);
     }
@@ -217,6 +316,8 @@ public final class FinisherTestMechanic {
             int updated = DefeatCounter.increment(player);
             INCAPACITATED.put(player.getUUID(), new Incapacitated(player.position(), now + FinisherRules.INCAPACITATED_TICKS, player.level().dimension()));
             message(player, "Derrota especial de TESTE registrada (" + updated + "). Recuperacao: 10s. /stopitstopnow libera.");
+            // Fica caida durante a recuperacao (loop parado pelo servidor quando ela se recupera).
+            PlayerAnimationService.play(player, Finishers.KNOCKED_DOWN, now, Optional.empty(), new CompoundTag(), true);
         }
         if (s.attacker instanceof ServerPlayer player) message(player, "Finalizacao de combate de teste concluida.");
     }
@@ -228,7 +329,10 @@ public final class FinisherTestMechanic {
             abort(s, "solicitacao do jogador");
             changed = true;
         }
-        if (INCAPACITATED.remove(player.getUUID()) != null) changed = true;
+        if (INCAPACITATED.remove(player.getUUID()) != null) {
+            changed = true;
+            stopIfOwn(player, Finishers.KNOCKED_DOWN);
+        }
         if (PENDING.remove(player.getUUID()) != null) changed = true;
         if (PENDING.entrySet().removeIf(e -> e.getValue().attacker().equals(player.getUUID()))) changed = true;
         if (changed) message(player, "Interacao e/ou recuperacao encerradas.");
@@ -248,6 +352,7 @@ public final class FinisherTestMechanic {
         if (incap != null) {
             if (now >= incap.until() || !player.level().dimension().equals(incap.dimension())) {
                 INCAPACITATED.remove(player.getUUID());
+                stopIfOwn(player, Finishers.KNOCKED_DOWN);
                 message(player, "Recuperado.");
             } else {
                 freezePlayer(player, incap.anchor());
@@ -259,8 +364,8 @@ public final class FinisherTestMechanic {
         if (!s.attacker.isAlive() || !s.target.isAlive()
                 || s.attacker.isRemoved() || s.target.isRemoved()
                 || s.attacker.level() != s.target.level()
-                || s.target.getVehicle() != s.attacker) {
-            abort(s, "participante indisponivel ou desmontou");
+                || s.attacker.distanceToSqr(s.target) > 16.0D) {
+            abort(s, "participante indisponivel ou afastado");
             return;
         }
         // A vitima pode cancelar por Shift ou comando; o executor tambem pode usar o comando.
@@ -272,12 +377,18 @@ public final class FinisherTestMechanic {
             complete(s);
             return;
         }
-        if (s.attacker instanceof ServerPlayer attacker) freezePlayer(attacker, s.attackerAnchor);
-        else {
-            s.attacker.setDeltaMovement(Vec3.ZERO);
-            if (s.attacker instanceof Mob mob) mob.getNavigation().stop();
+        hold(s.attacker, s.attackerAnchor);
+        hold(s.target, s.targetAnchor);
+    }
+
+    private static void hold(LivingEntity entity, Vec3 anchor) {
+        if (entity instanceof ServerPlayer player) {
+            freezePlayer(player, anchor);
+            return;
         }
-        s.target.setDeltaMovement(Vec3.ZERO);
+        entity.setDeltaMovement(Vec3.ZERO);
+        if (entity instanceof Mob mob) mob.getNavigation().stop();
+        if (entity.distanceToSqr(anchor) > 0.01D) entity.setPos(anchor.x, anchor.y, anchor.z);
     }
 
     private static void freezePlayer(ServerPlayer player, Vec3 position) {

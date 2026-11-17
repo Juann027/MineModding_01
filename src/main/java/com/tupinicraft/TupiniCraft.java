@@ -5,6 +5,13 @@ import com.tupinicraft.animation.PlayerAnimationCommands;
 import com.tupinicraft.animation.PlayerAnimationService;
 import com.tupinicraft.animation.PlayerAnimations;
 import com.tupinicraft.command.LeaoDoFimCommands;
+import com.tupinicraft.command.TupiniCommands;
+import com.tupinicraft.finisher.Finishers;
+import com.tupinicraft.needs.NeedsService;
+import com.tupinicraft.network.GameplayNetworking;
+import com.tupinicraft.profile.ProfileService;
+import com.tupinicraft.registry.ModSounds;
+import com.tupinicraft.skill.Skills;
 import com.tupinicraft.character.CharacterAppearanceService;
 import com.tupinicraft.testgame.FinisherTestMechanic;
 import com.tupinicraft.testgame.DefeatCounter;
@@ -32,7 +39,10 @@ public final class TupiniCraft {
         ModCreativeTabs.TABS.register(modBus);
         ModEntities.ENTITY_TYPES.register(modBus);
         ModAttachments.ATTACHMENT_TYPES.register(modBus);
+        ModSounds.SOUNDS.register(modBus);
         PlayerAnimations.bootstrap();
+        Finishers.bootstrap();
+        Skills.bootstrap();
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(ModItems::addToCreativeTabs);
         NeoForge.EVENT_BUS.addListener(LeaoDoFimCommands::register);
@@ -69,6 +79,18 @@ public final class TupiniCraft {
         NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onDeath);
         NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onDamage);
         NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onLogout);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onAnimationTimed);
+        // Etapa 3: ficha do personagem (roleta, atributos, habilidades) e necessidades.
+        modBus.addListener(GameplayNetworking::register);
+        NeoForge.EVENT_BUS.addListener(TupiniCommands::register);
+        NeoForge.EVENT_BUS.addListener(ProfileService::onLogin);
+        NeoForge.EVENT_BUS.addListener(ProfileService::onRespawn);
+        NeoForge.EVENT_BUS.addListener(ProfileService::onChangedDimension);
+        NeoForge.EVENT_BUS.addListener(NeedsService::onPlayerTick);
+        NeoForge.EVENT_BUS.addListener(NeedsService::onItemFinished);
+        NeoForge.EVENT_BUS.addListener(NeedsService::onWakeUp);
+        NeoForge.EVENT_BUS.addListener(NeedsService::onLogin);
+        NeoForge.EVENT_BUS.addListener(NeedsService::onRespawn);
         // Biomas e dimensões ainda não foram implementados neste projeto.
     }
 

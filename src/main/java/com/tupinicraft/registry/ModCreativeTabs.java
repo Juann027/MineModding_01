@@ -20,6 +20,7 @@ public final class ModCreativeTabs {
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.CABO_ELEITORAL_SPAWN_EGG.get());
                         output.accept(ModItems.LEAO_DO_FIM_SPAWN_EGG.get());
+                        for (var item : ModItems.consumables()) output.accept(item.get());
                     }).build());
     private ModCreativeTabs() {}
 }
