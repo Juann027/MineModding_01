@@ -13,6 +13,9 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
 - **Separação de lado:** `net.minecraft.client.*` só dentro de `com.tupinicraft.client`.
 - **Saves:** não renomeie ids persistidos (attachments, chaves de `persistentData`, ids de origens, atributos,
   necessidades, habilidades, itens e entidades). Id aposentado → alias em `profile.LegacyOriginIds` + `SelfTest`.
+- **Personagem:** atributos (`CharacterAttribute`), necessidades (`Need`; ativas = Coom, Bexiga, Intestino, Emoção;
+  Hidratação/Energia são legadas e inativas) e traços de nascimento (`BirthTrait`) são sistemas separados. Origem não
+  é traço. Traço sem efeito aprovado não ganha bônus.
 - **Tema:** eleições, política, partidos, mandatos, urna, economia e símbolos nacionais foram removidos; não
   reintroduza sem pedido explícito.
 - **Animações:** dados em `PlayerAnimations`; `.bbmodel` em `model_sources/player/`; respeite

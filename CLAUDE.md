@@ -38,7 +38,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/tupinianim`. |
 | `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/tupinitest`. |
 | `character`, `client.character` | **Character Creator** (tecla K → `CharacterHubScreen`): aparência (`CharacterAppearance`, `CharacterAppearanceService`). |
-| `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`) e **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`). |
+| `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`) e **traços de nascimento** (`BirthTrait`). |
 | `skill`, `client.skilltree` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`. |
 | `needs`, `client.hud` | **Necessidades** (`Needs`, `NeedsRules`, `NeedsService`) e **consumíveis** (`NeedEffects`/`NeedEffectDef`, `ConsumableItem`, `ChamberPotItem`). Orbe de Emoção na tela; painel Body & Traits no inventário. |
 | `network` | Payloads (`GameplayNetworking`, `TestGameNetworking`) e caches de cliente. |
@@ -61,8 +61,15 @@ sistema em que vai mexer; veja o fim deste arquivo).
 - **Modificadores de atributo** do mod são transitórios (`tupinicraft:stat/...`) e recolocados por
   `SkillService.refreshModifiers`; nunca grave no save.
 - **Roleta:** 8 origens com peso e bônus (`BirthOrigin`); sorteio no servidor; no máximo **1** novo giro
-  (`CharacterProfile.canReroll`), que zera habilidades e devolve os pontos. A tela só apresenta o resultado.
-  Todo `BirthRollRequest` (com o `rollCount` esperado) recebe um `BirthRollReply`; nunca descarte pedido em silêncio.
+  (`CharacterProfile.canReroll`), que zera habilidades, devolve os pontos e sorteia origem, atributos e traços de
+  novo. Continuar envia `BirthConfirmRequest` e descarta o novo giro restante (`birthConfirmed`). A tela só
+  apresenta o resultado. Todo `BirthRollRequest` (com o `rollCount` esperado) recebe um `BirthRollReply`; nunca
+  descarte pedido em silêncio.
+- **Três conceitos separados:** **atributos** (`CharacterAttribute`: Força, Agilidade, Vigor, Inteligência,
+  Carisma, Sorte — vêm do sorteio + bônus da origem), **necessidades** (`Need`, medidores que mudam no jogo) e
+  **traços de nascimento** (`BirthTrait`, sorteados à parte, nunca derivados da origem; gravados em
+  `birth_traits`). Traço sem efeito aprovado fica com `effects` vazio (sem bônus oculto); efeitos de traços usam
+  `SkillEffect` e são aplicados por `SkillService` como os de habilidades.
 - **Rig/render:** não cancele `RenderPlayerEvent.Pre` nem desenhe o jogador fora do renderer vanilla. Em
   `PlayerRigModel.compose` mantenha o `GeoBone::resetStateChanges` no fim. Peça de corpo nova = `BodyLayerDefinition`
   (não crie `RenderLayer` por peça). Pele/rosto do criador são Body Layers sobre a skin da conta; não troque a textura.
@@ -71,8 +78,10 @@ sistema em que vai mexer; veja o fim deste arquivo).
 - **Câmera cinematográfica** segue o estado de animação sincronizado e restaura a perspectiva em qualquer saída.
 - **Contador de derrotas:** +1 para o alvo só em `FinisherTestMechanic.complete` (`abort` nunca conta). A plaqueta
   replica a matemática do `renderNameTag` 1.21.1; ícones são a fonte bitmap `tupinicraft:defeat_icons`, não emoji.
-- **Necessidades:** Coom, Bexiga, Intestino, Emoção (id `humor`), Hidratação, Energia. Medidores detalhados só no
-  painel do inventário; na tela de jogo, só o orbe de Emoção. Consumível novo = entrada em `NeedEffects`.
+- **Necessidades:** ativas são Coom, Bexiga, Intestino e Emoção (id `humor`) — `Need.ACTIVE`. Hidratação e Energia
+  são **dados legados inativos** (`Need.active() == false`): continuam no Codec, mas não mudam, não afetam a Emoção,
+  não penalizam e não aparecem. Não as reative sem pedido. Medidores detalhados só no painel do inventário e no
+  menu K; na tela de jogo, só o orbe de Emoção. Consumível novo = entrada em `NeedEffects`.
 - **Telas** herdam `client.ui.TupiScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
 - **Textos** em português do Brasil via `Component`/lang (`pt_br.json` e `en_us.json` com as mesmas chaves).
 - **Mobs:** recursos `geo/entity/<nome>.geo.json`, `animations/entity/<nome>.animation.json`,
@@ -85,9 +94,9 @@ sistema em que vai mexer; veja o fim deste arquivo).
 
 | Dado | Onde fica |
 |---|---|
-| `tupinicraft:character_profile`, `tupinicraft:needs`, `tupinicraft:need_effects`, `tupinicraft:player_animation` | attachments (`ModAttachments`); nomes de campos dos Codecs também são estáveis |
+| `tupinicraft:character_profile`, `tupinicraft:needs`, `tupinicraft:need_effects`, `tupinicraft:player_animation` | attachments (`ModAttachments`); nomes de campos dos Codecs também são estáveis (incl. `birth_traits` e os legados `hidratacao`/`energia`) |
 | `tupinicraft_character_appearance_v1`, `tupinicraft_special_defeats`, `tupinicraft_allow_mob_finishers_test` | `persistentData` do jogador |
-| ids de `BirthOrigin`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
+| ids de `BirthOrigin`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
 | itens, `tupinicraft:leao_do_fim` | registries |
 
 - Id de origem aposentado: adicione o alias em `profile.LegacyOriginIds` (lido pelo Codec da ficha e regravado com o
@@ -150,5 +159,5 @@ python3 tools/player_anim/test_export.py # proteção do exportador
   limitações. **Abra só o handoff do sistema que a tarefa toca** (nunca todos): rig/Body Layers → Etapa 2; telas,
   criador, roleta, skills, necessidades, finalizações → Etapas 3/3.1; animações e Blockbench → Etapas 4/4.1;
   contador de derrotas → 4.2; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
-  roleta → 4.5.
+  roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

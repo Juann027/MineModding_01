@@ -69,7 +69,7 @@ public final class TupiniCommands {
                         .then(Commands.literal("necessidade").then(Commands.argument("jogador", EntityArgument.player())
                                 .then(Commands.argument("tipo", StringArgumentType.word())
                                         .suggests((c, b) -> SharedSuggestionProvider.suggest(
-                                                java.util.Arrays.stream(Need.values()).map(Need::id), b))
+                                                java.util.Arrays.stream(Need.ACTIVE).map(Need::id), b))
                                         .then(Commands.argument("valor", IntegerArgumentType.integer(0, 100))
                                                 .executes(TupiniCommands::setNeed)))))));
     }
@@ -79,11 +79,12 @@ public final class TupiniCommands {
         String attrs = java.util.Arrays.stream(CharacterAttribute.values())
                 .map(a -> a.id() + "=" + p.attribute(a)).collect(Collectors.joining(", "));
         var n = NeedsService.get(player);
-        String needs = java.util.Arrays.stream(Need.values())
+        String needs = java.util.Arrays.stream(Need.ACTIVE)
                 .map(need -> need.id() + "=" + n.percent(need) + "%").collect(Collectors.joining(", "));
         c.getSource().sendSuccess(() -> Component.literal(player.getGameProfile().getName() + ": nascido=" + p.born()
                 + " origem=" + (p.origin().isEmpty() ? "-" : p.origin()) + " rerolls=" + p.rerolls()
                 + " pontos=" + p.skillPoints() + " habilidades=" + p.skills().size()
+                + " tracos=" + (p.traits().isEmpty() ? "-" : String.join(",", p.traits()))
                 + "\n" + attrs + "\n" + needs + "\nefeitos=" + NeedsService.activeEffects(player).entries()), false);
         return 1;
     }
@@ -174,8 +175,8 @@ public final class TupiniCommands {
     private static int setNeed(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         ServerPlayer player = EntityArgument.getPlayer(c, "jogador");
         Need need = Need.byId(StringArgumentType.getString(c, "tipo"));
-        if (need == null) {
-            c.getSource().sendFailure(Component.literal("Necessidade desconhecida."));
+        if (need == null || !need.active()) {
+            c.getSource().sendFailure(Component.literal("Necessidade desconhecida ou inativa."));
             return 0;
         }
         int value = IntegerArgumentType.getInteger(c, "valor");

@@ -92,17 +92,22 @@ public final class SelfTest {
         Needs n = Needs.DEFAULT;
         NeedsRules.Context neutral = NeedsRules.Context.neutral();
         for (int i = 0; i < 60; i++) n = NeedsRules.tickSecond(n, neutral);
-        check(f, n.hydration() == Needs.MAX - 60 * NeedsRules.HYDRATION_PER_SECOND, "necessidades: hidratação em 60 s = " + n.hydration());
+        // Etapa 4.5: hidratacao e energia sao legadas e inativas (nao mudam, nao afetam a emocao).
+        check(f, n.hydration() == Needs.DEFAULT.hydration() && n.energy() == Needs.DEFAULT.energy(),
+                "necessidades: hidratação/energia legadas mudaram = " + n.hydration() + "/" + n.energy());
         check(f, n.bladder() == 60 * NeedsRules.BLADDER_PER_SECOND, "necessidades: bexiga em 60 s = " + n.bladder());
-        Needs sleeping = NeedsRules.tickSecond(new Needs(5_000, 1_000, 0, 0, 5_000),
-                new NeedsRules.Context(false, true, false, true, false, 3, 3, 1, 1, 1, 1, 0));
-        check(f, sleeping.energy() > 1_000, "necessidades: dormir não recuperou energia");
-        Needs sprint = NeedsRules.tickSecond(Needs.DEFAULT, new NeedsRules.Context(true, false, true, false, false, 3, 3, 1, 1, 1, 1, 0));
-        check(f, Needs.MAX - sprint.hydration() == 3 * NeedsRules.HYDRATION_PER_SECOND, "necessidades: correr no calor");
-        Needs skilled = NeedsRules.tickSecond(Needs.DEFAULT, new NeedsRules.Context(false, false, false, false, false, 3, 3, 0.5F, 1, 1, 1, 0));
-        check(f, Needs.MAX - skilled.hydration() == NeedsRules.HYDRATION_PER_SECOND / 2, "necessidades: multiplicador de habilidade");
-        Needs sad = new Needs(0, 0, 9_000, 9_000, 6_000);
-        check(f, NeedsRules.moodTarget(sad, neutral) == 0, "necessidades: alvo do humor com tudo ruim");
+        Needs sprint = NeedsRules.tickSecond(new Needs(0, 0, 0, 0, 6_000), new NeedsRules.Context(true, false, true, false, false, 3, 3, 1, 1, 1, 1, 0));
+        check(f, sprint.hydration() == 0 && sprint.energy() == 0, "necessidades: legadas zeradas continuam paradas");
+        check(f, NeedsRules.moodTarget(new Needs(0, 0, 0, 0, 6_000), neutral) == NeedsRules.moodTarget(Needs.DEFAULT, neutral),
+                "necessidades: hidratação/energia zeradas não podem derrubar a emoção");
+        check(f, new com.tupinicraft.needs.NeedsDelta(4_000, 3_000, 100, 200, 300, 400).activeOnly()
+                .equals(new com.tupinicraft.needs.NeedsDelta(0, 0, 100, 200, 300, 400)), "necessidades: consumíveis ignoram as legadas");
+        check(f, com.tupinicraft.needs.Need.ACTIVE.length == 4 && !com.tupinicraft.needs.Need.HYDRATION.active()
+                && !com.tupinicraft.needs.Need.ENERGY.active(), "necessidades: quatro ativas");
+        Needs sleeping = NeedsRules.tickSecond(Needs.DEFAULT, new NeedsRules.Context(false, true, false, true, false, 3, 3, 1, 1, 1, 1, 0));
+        check(f, sleeping.bladder() == Math.round(NeedsRules.BLADDER_PER_SECOND * 0.3F), "necessidades: bexiga dormindo");
+        Needs sad = new Needs(0, 0, 9_000, 9_000, 6_000, 9_000);
+        check(f, NeedsRules.moodTarget(sad, neutral) == 6_000 - 3_000 - NeedsRules.COOM_MOOD_PENALTY, "necessidades: alvo do humor com tudo ruim");
         check(f, NeedsRules.tickSecond(sad, neutral).mood() < 6_000, "necessidades: humor deveria cair");
         check(f, NeedsRules.accident(Needs.MAX) && !NeedsRules.accident(Needs.MAX - 1), "necessidades: acidente");
         check(f, new Needs(-5, 99_999, 0, 0, 0).hydration() == 0 && new Needs(0, 99_999, 0, 0, 0).energy() == Needs.MAX, "necessidades: clamp");
@@ -154,7 +159,7 @@ public final class SelfTest {
         check(f, born.canReroll() && born.rerolls() == 1, "roleta: um novo giro após nascer");
         CharacterProfile afterReroll = born.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom")), born.rerolls() - 1);
         check(f, !afterReroll.canReroll(), "roleta: segundo novo giro bloqueado");
-        check(f, new CharacterProfile(true, "sertao", List.of(), 5, 1, 0, 0, List.of()).rerolls() == 1, "roleta: ficha antiga com 5 giros");
+        check(f, new CharacterProfile(true, "sertao", List.of(), 5, 1, 0, 0, List.of(), List.of()).rerolls() == 1, "roleta: ficha antiga com 5 giros");
         check(f, !CharacterProfile.DEFAULT.canReroll(), "roleta: sem nascimento não há novo giro");
         // Etapa 4.5: todo pedido de giro tem resposta; pedidos repetidos/atrasados nao duplicam nem gastam o novo giro.
         CharacterProfile fresh = CharacterProfile.DEFAULT;
@@ -169,6 +174,48 @@ public final class SelfTest {
         check(f, BirthRoulette.validate(afterReroll, true, afterReroll.rollCount()) == BirthRoulette.Outcome.NO_REROLLS,
                 "roleta: sem novo giro restante");
         check(f, BirthRoulette.Outcome.byOrdinal(99) == BirthRoulette.Outcome.STALE, "roleta: resposta desconhecida");
+        // Continuar confirma: o novo giro restante some e a roleta nao pode trocar o resultado aceito.
+        CharacterProfile confirmed = BirthRoulette.confirm(born, born.rollCount());
+        check(f, confirmed.birthConfirmed() && !confirmed.canReroll() && confirmed.origin().equals(born.origin())
+                && confirmed.attributes().equals(born.attributes()) && confirmed.traits().equals(born.traits()),
+                "roleta: confirmar descarta o novo giro e mantém o resultado");
+        check(f, BirthRoulette.validate(confirmed, true, confirmed.rollCount()) == BirthRoulette.Outcome.NO_REROLLS,
+                "roleta: depois de confirmar não há novo giro");
+        check(f, BirthRoulette.confirm(born, born.rollCount() - 1) == born && BirthRoulette.confirm(fresh, 0) == fresh,
+                "roleta: confirmação atrasada ou sem nascimento não muda a ficha");
+        traits(f, born, afterReroll);
+    }
+
+    /** Etapa 4.5: tracos de nascimento (sistema separado da origem, dos atributos e das necessidades). */
+    private static void traits(List<String> f, CharacterProfile born, CharacterProfile afterReroll) {
+        check(f, born.birthTraits().size() == com.tupinicraft.profile.BirthTrait.PER_BIRTH,
+                "traços: nascimento sorteia " + com.tupinicraft.profile.BirthTrait.PER_BIRTH + " = " + born.traits());
+        check(f, afterReroll.traits().size() == com.tupinicraft.profile.BirthTrait.PER_BIRTH,
+                "traços: novo giro substitui (não soma) = " + afterReroll.traits());
+        Map<com.tupinicraft.profile.BirthTrait, Integer> seen = new EnumMap<>(com.tupinicraft.profile.BirthTrait.class);
+        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        for (int i = 0; i < 4_000; i++) {
+            for (com.tupinicraft.profile.BirthTrait t : com.tupinicraft.profile.BirthTrait.roll(random)) seen.merge(t, 1, Integer::sum);
+        }
+        check(f, seen.size() == com.tupinicraft.profile.BirthTrait.values().length, "traços: todos sorteáveis = " + seen.keySet());
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (com.tupinicraft.profile.BirthTrait t : com.tupinicraft.profile.BirthTrait.values()) {
+            check(f, ids.add(t.id()) && t.weight() > 0, "traços: id duplicado ou peso inválido " + t.id());
+            // Nenhum efeito aprovado ainda: nada de bonus oculto.
+            check(f, !t.hasEffect(), "traços: efeito não aprovado em " + t.id());
+        }
+        // Atributos e origem nao dependem dos tracos: mesmo resultado com e sem tracos.
+        BirthRoulette.Result r = new BirthRoulette.Result(BirthOrigin.CLASSE_MEDIA, new int[] {4, 5, 5, 6, 4, 3},
+                List.of(com.tupinicraft.profile.BirthTrait.HUNG));
+        CharacterProfile withTrait = CharacterProfile.DEFAULT.withBirth(r, 1);
+        CharacterProfile noTrait = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(r.origin(), r.attributes()), 1);
+        check(f, withTrait.attributes().equals(noTrait.attributes()) && withTrait.origin().equals(noTrait.origin())
+                && withTrait.skillPoints() == noTrait.skillPoints(), "traços: não alteram atributos, origem nem pontos");
+        check(f, new CharacterProfile(true, "sertao", List.of(), 1, 1, 0, 0, List.of(), List.of("hung", "hung", "futuro"))
+                .traits().equals(List.of("hung", "futuro"))
+                && new CharacterProfile(true, "sertao", List.of(), 1, 1, 0, 0, List.of(), List.of("hung", "futuro"))
+                .birthTraits().equals(List.of(com.tupinicraft.profile.BirthTrait.HUNG)),
+                "traços: sem duplicatas; id desconhecido guardado mas não exibido");
     }
 
     private static void skills(List<String> f) {
@@ -241,9 +288,48 @@ public final class SelfTest {
         check(f, ((CompoundTag) rewritten).getString("origin").equals("familia_artistica"), "codec: ficha migrada grava o id novo");
         check(f, BirthOrigin.byId("familia_politica") == null && BirthOrigin.values().length == 8,
                 "roleta: oito origens, sem a origem antiga no catálogo");
-        CharacterProfile broken = new CharacterProfile(true, "x", List.of(99, -4), -1, 0, -3, -2, List.of("a", "a"));
+        CharacterProfile broken = new CharacterProfile(true, "x", List.of(99, -4), -1, 0, -3, -2, List.of("a", "a"), null);
         check(f, broken.attributes().size() == 6 && broken.attribute(CharacterAttribute.FORCA) == 10
-                && broken.skills().size() == 1 && broken.skillPoints() == 0, "ficha: normalização de dados inválidos");
+                && broken.skills().size() == 1 && broken.skillPoints() == 0 && broken.traits().isEmpty(),
+                "ficha: normalização de dados inválidos");
+        profileCompat(f, p);
+    }
+
+    /** Etapa 4.5: fichas anteriores aos tracos e ida e volta pela rede. */
+    private static void profileCompat(List<String> f, CharacterProfile p) {
+        // Ficha salva pela v0.5.7 (sem birth_traits): carrega igual, sem tracos e sem perder nada.
+        CompoundTag old = new CompoundTag();
+        old.putBoolean("born", true);
+        old.putString("origin", "familia_politica");
+        net.minecraft.nbt.ListTag attrs = new net.minecraft.nbt.ListTag();
+        for (int v : new int[] {4, 5, 5, 6, 4, 3}) attrs.add(net.minecraft.nbt.IntTag.valueOf(v));
+        old.put("attributes", attrs);
+        old.putInt("rerolls", 1);
+        old.putInt("roll_count", 1);
+        old.putInt("skill_points", 3);
+        old.putInt("level_rewarded", 2);
+        net.minecraft.nbt.ListTag skillList = new net.minecraft.nbt.ListTag();
+        skillList.add(net.minecraft.nbt.StringTag.valueOf(Skills.PUNHOS.id().toString()));
+        old.put("skills", skillList);
+        CharacterProfile loaded = CharacterProfile.CODEC.parse(NbtOps.INSTANCE, old).getOrThrow();
+        check(f, loaded.born() && loaded.originOrNull() == BirthOrigin.FAMILIA_ARTISTICA && loaded.traits().isEmpty()
+                && loaded.attribute(CharacterAttribute.INTELIGENCIA) == 6 && loaded.canReroll() && !loaded.birthConfirmed()
+                && loaded.skillPoints() == 3 && loaded.levelRewarded() == 2 && loaded.skills().size() == 1,
+                "compat: ficha da v0.5.7 sem traços carrega intacta");
+        // Gravar de novo inclui o campo novo e volta igual.
+        CharacterProfile withTraits = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(BirthOrigin.PAMPA,
+                new int[] {6, 4, 4, 3, 3, 5}, List.of(com.tupinicraft.profile.BirthTrait.LIMP)), 1);
+        Tag tag = CharacterProfile.CODEC.encodeStart(NbtOps.INSTANCE, withTraits).getOrThrow();
+        check(f, ((CompoundTag) tag).getList("birth_traits", Tag.TAG_STRING).getString(0).equals("limp")
+                && CharacterProfile.CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow().equals(withTraits), "compat: traços ida e volta no save");
+        // Rede: a ficha completa, com tracos, sobrevive ao StreamCodec.
+        for (CharacterProfile sample : List.of(p, withTraits, loaded, CharacterProfile.DEFAULT)) {
+            ByteBuf buf = Unpooled.buffer();
+            CharacterProfile.STREAM_CODEC.encode(buf, sample);
+            CharacterProfile decoded = CharacterProfile.STREAM_CODEC.decode(buf);
+            check(f, decoded.equals(sample) && buf.readableBytes() == 0, "compat: ficha pela rede " + sample.origin());
+            buf.release();
+        }
     }
 
     /** Etapa 4.1: sequencias de animacao (queda -> quatro apoios -> levantar) sem buraco entre os segmentos. */

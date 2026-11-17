@@ -10,8 +10,6 @@ import com.tupinicraft.client.ui.Ui;
 import com.tupinicraft.network.CharacterAppearanceClientCache;
 import com.tupinicraft.network.CharacterAppearanceUpdatePayload;
 import com.tupinicraft.network.ProfileClientCache;
-import java.util.ArrayList;
-import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -20,16 +18,16 @@ import net.minecraft.util.RandomSource;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Criador de personagem: previa 3D do proprio jogador (rig + Body Layers) atualizada ao vivo, abas Corpo,
- * Cabelo e Rosto, botao aleatorio. A previa e so local; o servidor valida e confirma ao salvar.
+ * Criador de personagem: previa 3D do proprio jogador (rig + Body Layers) atualizada ao vivo e, ao lado, todas as
+ * opcoes numa pagina (corpo, pele, rosto, estilo e paleta de cor do cabelo), mais o botao aleatorio. A previa e so
+ * local; o servidor valida e confirma ao salvar.
  */
 public final class CharacterCreationScreen extends TupiScreen {
     private static final String KEY = "gui.tupinicraft.creator.";
-    private enum Tab { BODY, HAIR, FACE }
+    /** Distancia do topo da coluna ate a paleta de cor do cabelo (o nome da cor fica 12 px acima). */
+    private static final int PALETTE_Y = 116;
 
     private int bodyType, hairStyle, hairColor, skinTone, face;
-    private Tab tab = Tab.BODY;
-    private final List<TupiButton> tabButtons = new ArrayList<>();
     private TupiButton saveButton;
     private boolean waitingForServer;
     private boolean saveError;
@@ -57,59 +55,40 @@ public final class CharacterCreationScreen extends TupiScreen {
     @Override
     protected void init() {
         layoutPanel(380, 236);
-        tabButtons.clear();
         previewX1 = left + 10;
         previewY1 = top + 28;
-        previewX2 = left + Math.min(140, panelWidth / 2 - 10);
+        // A previa 3D e o elemento principal: ocupa quase metade do painel.
+        previewX2 = left + Math.max(120, panelWidth * 9 / 20);
         previewY2 = top + panelHeight - 52;
         int colX = previewX2 + 10;
         int colW = left + panelWidth - 10 - colX;
 
-        Tab[] tabs = Tab.values();
-        int tabW = (colW - 4 * (tabs.length - 1)) / tabs.length;
-        for (int i = 0; i < tabs.length; i++) {
-            Tab t = tabs[i];
-            TupiButton b = addRenderableWidget(new TupiButton(colX + i * (tabW + 4), top + 28, tabW, 18,
-                    Component.translatable(KEY + "tab." + t.name().toLowerCase()), button -> {
-                tab = t;
+        // Uma pagina so (sem abas): corpo, pele, rosto, estilo do cabelo e a paleta de cor do cabelo.
+        int y = top + 28;
+        addRenderableWidget(new CycleSelector(colX, y, colW, 20, Component.translatable(KEY + "body"),
+                CharacterAppearance.BODY_IDS.length, bodyType,
+                i -> Component.translatable(KEY + "body." + CharacterAppearance.BODY_IDS[i]), i -> { bodyType = i; preview(); }));
+        addRenderableWidget(new CycleSelector(colX, y + 24, colW, 20, Component.translatable(KEY + "skin"),
+                CharacterAppearance.SKIN_IDS.length, skinTone,
+                i -> Component.translatable(KEY + "skin." + CharacterAppearance.SKIN_IDS[i]), i -> { skinTone = i; preview(); })
+                .swatches(i -> CharacterAppearance.SKIN_ARGB[i]));
+        addRenderableWidget(new CycleSelector(colX, y + 48, colW, 20, Component.translatable(KEY + "face"),
+                CharacterAppearance.FACE_IDS.length, face,
+                i -> Component.translatable(KEY + "face." + CharacterAppearance.FACE_IDS[i]), i -> { face = i; preview(); }));
+        addRenderableWidget(new CycleSelector(colX, y + 78, colW, 20, Component.translatable(KEY + "hair"),
+                CharacterAppearance.HAIR_IDS.length, hairStyle,
+                i -> Component.translatable(KEY + "hair." + CharacterAppearance.HAIR_IDS[i]), i -> { hairStyle = i; preview(); }));
+        // Cor do cabelo: so a paleta clicavel (o nome da cor aparece acima dela e na dica).
+        int count = CharacterAppearance.COLOR_IDS.length;
+        int sw = Math.min(22, (colW - 4 * (count - 1)) / count);
+        for (int i = 0; i < count; i++) {
+            final int color = i;
+            addRenderableWidget(new TupiButton(colX + i * (sw + 4), y + PALETTE_Y, sw, sw, Component.empty(), b -> {
+                hairColor = color;
+                preview();
                 rebuildWidgets();
-            }).selected(t == tab));
-            tabButtons.add(b);
-        }
-        int rowY = top + 54;
-        switch (tab) {
-            case BODY -> {
-                addRenderableWidget(new CycleSelector(colX, rowY, colW, 20, Component.translatable(KEY + "body"),
-                        CharacterAppearance.BODY_IDS.length, bodyType,
-                        i -> Component.translatable(KEY + "body." + CharacterAppearance.BODY_IDS[i]), i -> { bodyType = i; preview(); }));
-                addRenderableWidget(new CycleSelector(colX, rowY + 24, colW, 20, Component.translatable(KEY + "skin"),
-                        CharacterAppearance.SKIN_IDS.length, skinTone,
-                        i -> Component.translatable(KEY + "skin." + CharacterAppearance.SKIN_IDS[i]), i -> { skinTone = i; preview(); })
-                        .swatches(i -> CharacterAppearance.SKIN_ARGB[i]));
-            }
-            case HAIR -> {
-                addRenderableWidget(new CycleSelector(colX, rowY, colW, 20, Component.translatable(KEY + "hair"),
-                        CharacterAppearance.HAIR_IDS.length, hairStyle,
-                        i -> Component.translatable(KEY + "hair." + CharacterAppearance.HAIR_IDS[i]), i -> { hairStyle = i; preview(); }));
-                addRenderableWidget(new CycleSelector(colX, rowY + 24, colW, 20, Component.translatable(KEY + "color"),
-                        CharacterAppearance.COLOR_IDS.length, hairColor,
-                        i -> Component.translatable(KEY + "color." + CharacterAppearance.COLOR_IDS[i]), i -> { hairColor = i; preview(); })
-                        .swatches(i -> CharacterAppearance.COLOR_ARGB[i]));
-                // Paleta clicavel
-                int sw = Math.min(18, (colW - 4 * (CharacterAppearance.COLOR_IDS.length - 1)) / CharacterAppearance.COLOR_IDS.length);
-                for (int i = 0; i < CharacterAppearance.COLOR_IDS.length; i++) {
-                    final int color = i;
-                    addRenderableWidget(new TupiButton(colX + i * (sw + 4), rowY + 52, sw, sw, Component.empty(), b -> {
-                        hairColor = color;
-                        preview();
-                        rebuildWidgets();
-                    }).selected(i == hairColor).accent(CharacterAppearance.COLOR_ARGB[i]).swatch(CharacterAppearance.COLOR_ARGB[i])
-                            .tooltip(Component.translatable(KEY + "color." + CharacterAppearance.COLOR_IDS[i])));
-                }
-            }
-            case FACE -> addRenderableWidget(new CycleSelector(colX, rowY, colW, 20, Component.translatable(KEY + "face"),
-                    CharacterAppearance.FACE_IDS.length, face,
-                    i -> Component.translatable(KEY + "face." + CharacterAppearance.FACE_IDS[i]), i -> { face = i; preview(); }));
+            }).selected(i == hairColor).accent(CharacterAppearance.COLOR_ARGB[i]).swatch(CharacterAppearance.COLOR_ARGB[i])
+                    .tooltip(Component.translatable(KEY + "color." + CharacterAppearance.COLOR_IDS[i])));
         }
         int footerY = top + panelHeight - 28;
         addRenderableWidget(new TupiButton(previewX1, previewY2 + 4, previewX2 - previewX1, 18,
@@ -235,42 +214,17 @@ public final class CharacterCreationScreen extends TupiScreen {
         if (mc.player != null) {
             float bob = Mth.sin((ticks + partialTick) * 0.08F) * 2F;
             EntityPreview.render(g, previewX1, previewY1, previewX2, previewY2,
-                    Math.min(48, (previewY2 - previewY1) * 0.38F), previewYaw + bob, 6F, mc.player);
+                    Math.min(60, (previewY2 - previewY1) * 0.38F), previewYaw + bob, 6F, mc.player);
         }
         g.drawCenteredString(font, Component.translatable(KEY + "drag"), cx, previewY1 + 4, Ui.MUTED);
 
         int colX = previewX2 + 10;
-        if (tab == Tab.FACE || tab == Tab.BODY) drawPortrait(g, left + panelWidth - 66, top + 108);
-        int infoY = top + panelHeight - 50;
+        Component name = Component.translatable(KEY + "color." + CharacterAppearance.COLOR_IDS[hairColor]);
+        g.drawString(font, Component.translatable(KEY + "color").getString() + ": " + name.getString(),
+                colX + 2, top + 28 + PALETTE_Y - 12, Ui.TEXT, false);
         if (waitingForServer || saveError) {
             g.drawString(font, Component.translatable(waitingForServer ? KEY + "saving" : KEY + "save_error"),
-                    colX, infoY, saveError ? Ui.RED : Ui.GREEN, false);
-        } else {
-            g.drawString(font, Component.translatable(KEY + "note"), colX, infoY, Ui.MUTED, false);
-        }
-    }
-
-    /** Retrato 2D com pele e expressao (as mesmas escolhas aparecem na previa 3D pelas Body Layers de rosto e pele). */
-    private void drawPortrait(GuiGraphics g, int x, int y) {
-        int skin = CharacterAppearance.SKIN_ARGB[skinTone];
-        int hair = CharacterAppearance.COLOR_ARGB[hairColor];
-        g.fill(x - 2, y - 2, x + 54, y + 54, 0xFF06080A);
-        g.fill(x, y, x + 52, y + 52, 0xFF2A3644);
-        g.fill(x + 10, y + 10, x + 42, y + 46, skin);
-        if (hairStyle != 0) g.fill(x + 10, y + 6, x + 42, y + 14, hair);
-        g.fill(x + 17, y + 22, x + 21, y + 26, 0xFF2B2628);
-        g.fill(x + 31, y + 22, x + 35, y + 26, 0xFF2B2628);
-        switch (face) {
-            case 1 -> {
-                g.fill(x + 18, y + 34, x + 34, y + 36, 0xFF743B43);
-                g.fill(x + 20, y + 36, x + 32, y + 38, 0xFF743B43);
-            }
-            case 2 -> {
-                g.fill(x + 18, y + 35, x + 34, y + 37, 0xFF743B43);
-                g.fill(x + 15, y + 18, x + 23, y + 20, hair);
-                g.fill(x + 29, y + 18, x + 37, y + 20, hair);
-            }
-            default -> g.fill(x + 20, y + 35, x + 32, y + 37, 0xFF743B43);
+                    colX, top + panelHeight - 44, saveError ? Ui.RED : Ui.GREEN, false);
         }
     }
 }

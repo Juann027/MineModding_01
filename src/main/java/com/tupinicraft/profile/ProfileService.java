@@ -53,6 +53,17 @@ public final class ProfileService {
     }
 
     /**
+     * Continuar na roleta: confirma o resultado atual e descarta o novo giro restante ({@link BirthRoulette#confirm}).
+     * Pedido sobre ficha desatualizada nao muda nada. Sempre responde com a ficha atual.
+     */
+    public static void confirmBirth(ServerPlayer player, int expectedRollCount) {
+        CharacterProfile profile = get(player);
+        CharacterProfile next = BirthRoulette.confirm(profile, expectedRollCount);
+        if (next != profile) set(player, next);
+        else sync(player);
+    }
+
+    /**
      * Gira a roleta (tambem usado pelo comando de admin). Unico lugar que sorteia: o resultado e gravado na ficha
      * (attachment salvo) e a tela so o apresenta. Aparencia, reinicio do servidor e reabrir a tela nao o alteram.
      */
@@ -63,8 +74,8 @@ public final class ProfileService {
         player.getPersistentData().remove(LEGACY_LAST_ROLL_KEY);
         set(player, next);
         celebrate(player);
-        TupiniCraft.LOGGER.info("Roleta de nascimento: {} nasceu em {} {}", player.getGameProfile().getName(),
-                result.origin().id(), java.util.Arrays.toString(result.attributes()));
+        TupiniCraft.LOGGER.info("Roleta de nascimento: {} nasceu em {} {} tracos={}", player.getGameProfile().getName(),
+                result.origin().id(), java.util.Arrays.toString(result.attributes()), next.traits());
         return result;
     }
 

@@ -10,14 +10,19 @@ import com.tupinicraft.needs.Need;
 import com.tupinicraft.needs.Needs;
 import com.tupinicraft.network.ProfileClientCache;
 import com.tupinicraft.profile.BirthOrigin;
+import com.tupinicraft.profile.BirthTrait;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
 import com.tupinicraft.skill.SkillDef;
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
-/** Menu da tecla K: previa do personagem, origem, atributos, necessidades e atalhos para as outras telas. */
+/**
+ * Menu da tecla K: previa do personagem, origem, os seis atributos, as quatro necessidades ativas, os tracos de
+ * nascimento e atalhos para as outras telas. Origem, atributos, necessidades e tracos sao sistemas separados.
+ */
 public final class CharacterHubScreen extends TupiScreen {
     private static final String KEY = "gui.tupinicraft.hub.";
     private float yaw = -20F;
@@ -77,19 +82,47 @@ public final class CharacterHubScreen extends TupiScreen {
             y += 17;
         }
         y += 4;
+        // Necessidades ativas (Coom, Bexiga, Intestino, Emocao); hidratacao e energia sao legadas e nao aparecem.
         Needs n = ProfileClientCache.needs();
         g.drawString(font, Component.translatable(KEY + "needs"), x, y, Ui.GOLD, false);
         y += 11;
         int half = (barW - 6) / 2;
-        int i = 0;
-        for (Need need : Need.values()) {
+        for (int i = 0; i < Need.ACTIVE.length; i++) {
+            Need need = Need.ACTIVE[i];
             int cx = x + (i % 2) * (half + 6), cy = y + (i / 2) * 15;
             g.drawString(font, Component.translatable("need.tupinicraft." + need.id()).getString() + " " + n.percent(need) + "%",
                     cx, cy, Ui.MUTED, false);
             Ui.bar(g, cx, cy + 9, half, 4, n.get(need) / (float) Needs.MAX, need.color());
-            i++;
         }
-        g.drawString(font, Component.translatable(KEY + "points", p.skillPoints()), left + panelWidth - 132,
-                top + 112, Ui.GOLD, false);
+        int rx = left + panelWidth - 132;
+        g.drawString(font, Component.translatable(KEY + "points", p.skillPoints()), rx, top + 112, Ui.GOLD, false);
+        drawTraits(g, p, rx, top + 128, 122, mouseX, mouseY);
+    }
+
+    /** Tracos de nascimento: nome, Buff/Debuff/Neutro, descricao curta e efeito (so quando existe). */
+    private void drawTraits(GuiGraphics g, CharacterProfile p, int x, int y, int w, int mouseX, int mouseY) {
+        g.drawString(font, Component.translatable(KEY + "traits"), x, y, Ui.GOLD, false);
+        y += 12;
+        List<BirthTrait> traits = p.birthTraits();
+        if (traits.isEmpty()) {
+            // Personagem antigo (nasceu antes dos tracos) ou ainda sem nascimento: estado neutro.
+            g.drawWordWrap(font, Component.translatable(p.born() ? "gui.tupinicraft.trait.none" : "gui.tupinicraft.trait.unborn"),
+                    x, y, w, Ui.MUTED);
+            return;
+        }
+        for (BirthTrait trait : traits) {
+            Component name = Component.translatable(trait.translationKey());
+            Component tag = Component.translatable("gui.tupinicraft.trait.polarity." + trait.polarity().id());
+            g.drawString(font, name, x, y, trait.polarity().color(), true);
+            int tagX = x + w - font.width(tag);
+            g.drawString(font, tag, Math.max(x + font.width(name) + 4, tagX), y, trait.polarity().color(), false);
+            y += 11;
+            Component desc = Component.translatable(trait.translationKey() + ".desc");
+            g.drawWordWrap(font, desc, x, y, w, Ui.MUTED);
+            y += font.wordWrapHeight(desc, w) + 2;
+            g.drawString(font, Component.translatable(trait.hasEffect() ? "gui.tupinicraft.trait.has_effect"
+                    : "gui.tupinicraft.trait.no_effect"), x, y, 0xFF7D8790, false);
+            y += 12;
+        }
     }
 }

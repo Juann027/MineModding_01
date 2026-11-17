@@ -1,5 +1,6 @@
 package com.tupinicraft.profile;
 
+import java.util.List;
 import java.util.random.RandomGenerator;
 
 /** Regras da roleta de nascimento (puras; quem chama e sempre o servidor). */
@@ -11,7 +12,19 @@ public final class BirthRoulette {
     /** Novas tentativas permitidas depois do primeiro giro. */
     public static final int FREE_REROLLS = 1;
 
-    public record Result(BirthOrigin origin, int[] attributes) {}
+    /**
+     * Resultado de um nascimento: origem (com seus bonus), os seis atributos e os tracos de nascimento. Os tracos
+     * sao sorteados a parte e nao dependem da origem.
+     */
+    public record Result(BirthOrigin origin, int[] attributes, List<BirthTrait> traits) {
+        public Result {
+            traits = traits == null ? List.of() : List.copyOf(traits);
+        }
+
+        public Result(BirthOrigin origin, int[] attributes) {
+            this(origin, attributes, List.of());
+        }
+    }
 
     /**
      * Resposta do servidor a um pedido de giro. Todo pedido recebe uma resposta (a tela nunca fica esperando).
@@ -40,6 +53,16 @@ public final class BirthRoulette {
         if (expectedRollCount != profile.rollCount() || reroll != profile.born()) return Outcome.STALE;
         if (profile.born() && !profile.canReroll()) return Outcome.NO_REROLLS;
         return Outcome.ROLLED;
+    }
+
+    /**
+     * Confirmacao do resultado (Continuar). Aceita so sobre a ficha que o cliente via: depois dela nao ha mais
+     * novo giro, entao reabrir a roleta nao permite trocar um resultado ja aceito. Devolve a ficha nova, ou a
+     * mesma ficha quando nao ha o que confirmar.
+     */
+    public static CharacterProfile confirm(CharacterProfile profile, int expectedRollCount) {
+        if (!profile.born() || expectedRollCount != profile.rollCount() || profile.birthConfirmed()) return profile;
+        return profile.confirmBirth();
     }
 
     /** Novos giros que restam depois de um giro aceito por {@link #validate}. */
@@ -75,7 +98,8 @@ public final class BirthRoulette {
         for (CharacterAttribute attribute : all) {
             values[attribute.ordinal()] = CharacterAttribute.clamp(values[attribute.ordinal()] + origin.bonus(attribute));
         }
-        return new Result(origin, values);
+        // Tracos depois dos atributos: sorteio independente da origem.
+        return new Result(origin, values, BirthTrait.roll(random));
     }
 
     /** Pontos de habilidade iniciais: 2, mais 1 a cada 2 pontos de Inteligencia acima da base. */

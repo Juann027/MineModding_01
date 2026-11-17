@@ -91,7 +91,6 @@ public final class TupiniCraft {
         NeoForge.EVENT_BUS.addListener(ProfileService::onChangedDimension);
         NeoForge.EVENT_BUS.addListener(NeedsService::onPlayerTick);
         NeoForge.EVENT_BUS.addListener(NeedsService::onItemFinished);
-        NeoForge.EVENT_BUS.addListener(NeedsService::onWakeUp);
         NeoForge.EVENT_BUS.addListener(NeedsService::onLogin);
         NeoForge.EVENT_BUS.addListener(NeedsService::onRespawn);
         // Biomas e dimensões ainda não foram implementados neste projeto.

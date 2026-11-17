@@ -73,7 +73,7 @@ public class ConsumableItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, java.util.List<Component> tooltip, TooltipFlag flag) {
-        for (Need need : Need.values()) line(tooltip, need, effect.immediate().get(need));
+        for (Need need : Need.ACTIVE) line(tooltip, need, effect.immediate().get(need));
         String desc = "effect.tupinicraft.need." + effect.id() + ".desc";
         if (Language.getInstance().has(desc)) tooltip.add(Component.translatable(desc).withStyle(ChatFormatting.GRAY));
         if (effect.cooldownTicks() > 0) {
@@ -86,7 +86,7 @@ public class ConsumableItem extends Item {
     private static void line(java.util.List<Component> tooltip, Need need, int value) {
         if (value == 0) return;
         int percent = Math.round(value / 100F);
-        // Positivo e bom para hidratacao/energia/humor; para bexiga/intestino/coom, subir e ruim.
+        // Positivo e bom para a emocao; para bexiga/intestino/coom, subir e ruim.
         boolean good = need.highIsGood() == (percent > 0);
         tooltip.add(Component.translatable("tooltip.tupinicraft.need_delta",
                 Component.translatable("need.tupinicraft." + need.id()), (percent > 0 ? "+" : "") + percent)

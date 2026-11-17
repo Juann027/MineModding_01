@@ -72,6 +72,17 @@ public final class GameplayNetworking {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    /**
+     * Cliente -> servidor: Continuar na roleta (confirma o resultado da ficha com esse {@code rollCount} e descarta
+     * o novo giro restante). Respondido com {@link ProfileSync}.
+     */
+    public record BirthConfirmRequest(int expectedRollCount) implements CustomPacketPayload {
+        public static final Type<BirthConfirmRequest> TYPE = new Type<>(TupiniCraft.id("birth_confirm_request"));
+        public static final StreamCodec<ByteBuf, BirthConfirmRequest> STREAM_CODEC =
+                ByteBufCodecs.VAR_INT.map(BirthConfirmRequest::new, BirthConfirmRequest::expectedRollCount);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     /** Cliente -> servidor: comprar a habilidade. */
     public record SkillPurchaseRequest(ResourceLocation skill) implements CustomPacketPayload {
         public static final Type<SkillPurchaseRequest> TYPE = new Type<>(TupiniCraft.id("skill_purchase_request"));
@@ -82,7 +93,8 @@ public final class GameplayNetworking {
 
     public static void register(RegisterPayloadHandlersEvent event) {
         // "2": a roleta passou a ter pedido com rollCount esperado e resposta explicita (Etapa 4.5).
-        var registrar = event.registrar("2");
+        // "3": ficha com tracos de nascimento e confirmacao do resultado (Etapa 4.5 revisada).
+        var registrar = event.registrar("3");
         registrar.playToClient(ProfileSync.TYPE, ProfileSync.STREAM_CODEC,
                 (payload, context) -> ProfileClientCache.receive(payload.profile()));
         registrar.playToClient(NeedsSync.TYPE, NeedsSync.STREAM_CODEC,
@@ -93,6 +105,9 @@ public final class GameplayNetworking {
                 (payload, context) -> ProfileClientCache.receive(payload));
         registrar.playToServer(BirthRollRequest.TYPE, BirthRollRequest.STREAM_CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) ProfileService.requestRoll(player, payload.reroll(), payload.expectedRollCount());
+        });
+        registrar.playToServer(BirthConfirmRequest.TYPE, BirthConfirmRequest.STREAM_CODEC, (payload, context) -> {
+            if (context.player() instanceof ServerPlayer player) ProfileService.confirmBirth(player, payload.expectedRollCount());
         });
         registrar.playToServer(SkillPurchaseRequest.TYPE, SkillPurchaseRequest.STREAM_CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) SkillService.purchase(player, payload.skill());
