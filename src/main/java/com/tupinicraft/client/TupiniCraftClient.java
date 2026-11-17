@@ -51,7 +51,8 @@ public final class TupiniCraftClient {
         NeoForge.EVENT_BUS.addListener(CinematicCamera::onComputeFov);
         modBus.addListener(TupiniCraftClient::registerGuiLayers);
         NeoForge.EVENT_BUS.addListener(BodyStatusInventoryPanel::onInventoryForeground);
-        NeoForge.EVENT_BUS.addListener(DefeatCounterNameplate::render);
+        // LOWEST: decide depois dos outros mods, respeitando quem escondeu o nick pelo RenderNameTagEvent.
+        NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST, DefeatCounterNameplate::render);
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
             DefeatCountClientCache.clear();
             CharacterAppearanceClientCache.clear();

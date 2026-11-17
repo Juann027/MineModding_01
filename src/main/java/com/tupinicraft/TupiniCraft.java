@@ -61,6 +61,7 @@ public final class TupiniCraft {
         NeoForge.EVENT_BUS.addListener(DefeatCounter::onStartTracking);
         NeoForge.EVENT_BUS.addListener(DefeatCounter::onClone);
         NeoForge.EVENT_BUS.addListener(DefeatCounter::onRespawn);
+        NeoForge.EVENT_BUS.addListener(DefeatCounter::onChangedDimension);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onEntityInteract);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onIncomingDamage);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onDeath);
