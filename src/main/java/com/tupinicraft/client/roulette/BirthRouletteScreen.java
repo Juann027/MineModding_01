@@ -8,6 +8,7 @@ import com.tupinicraft.client.ui.Ui;
 import com.tupinicraft.network.GameplayNetworking;
 import com.tupinicraft.network.ProfileClientCache;
 import com.tupinicraft.profile.BirthOrigin;
+import com.tupinicraft.profile.BirthRoulette;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
 import com.tupinicraft.registry.ModSounds;
@@ -24,9 +25,17 @@ import org.joml.Matrix4f;
 /**
  * Roleta de nascimento. O sorteio e do servidor: a tela gira enquanto espera a resposta e depois desacelera ate
  * parar na origem sorteada, revela os atributos um a um, com som e VFX. Fatias proporcionais as chances.
+ *
+ * <p>Maquina de estados (Etapa 4.5): {@code IDLE} aguardando sorteio -> {@code WAITING} pedido enviado, girando
+ * -> {@code SPINNING} resposta recebida, desacelerando ate a origem -> {@code REVEAL} atributos -> {@code DONE}
+ * resultado disponivel (Continuar ou o unico novo giro). A animacao nunca decide dados: o servidor responde a
+ * todo pedido ({@link GameplayNetworking.BirthRollReply}) e a tela so mostra a ficha recebida. Sem resposta em
+ * {@link #TIMEOUT_TICKS}, a tela volta ao estado real com um aviso; um pedido atrasado nao gera resultado
+ * duplicado nem gasta o novo giro (o servidor confere o {@code rollCount} esperado).
  */
 public final class BirthRouletteScreen extends TupiScreen {
     private static final String KEY = "gui.tupinicraft.roulette.";
+    private static final int TIMEOUT_TICKS = 200;
     private enum Phase { IDLE, WAITING, SPINNING, REVEAL, DONE }
 
     private Phase phase;
@@ -35,23 +44,31 @@ public final class BirthRouletteScreen extends TupiScreen {
     private float speed;       // graus por tick durante a espera
     private float spinFrom, spinTo;
     private int spinTick, spinLength;
+    private boolean revealAfterSpin;
     private int revealTick;
-    private int lastRollCount;
+    /** rollCount da ficha que a roda mostra (ou para a qual esta desacelerando). */
+    private int shownRollCount;
+    private long requestRevision;
     private int waitTicks;
+    private Component status;
     private int cx, cy, radius;
     private TupiButton spinButton, continueButton;
 
     public BirthRouletteScreen() {
         super(Component.translatable(KEY + "title"));
         CharacterProfile p = ProfileClientCache.profile();
-        lastRollCount = p.rollCount();
-        if (p.born() && p.originOrNull() != null) {
+        shownRollCount = p.rollCount();
+        if (hasResult(p)) {
             phase = Phase.DONE;
             angle = prevAngle = restingAngle(p.originOrNull());
             revealTick = 999;
         } else {
             phase = Phase.IDLE;
         }
+    }
+
+    private static boolean hasResult(CharacterProfile p) {
+        return p.born() && p.originOrNull() != null;
     }
 
     @Override
@@ -64,7 +81,7 @@ public final class BirthRouletteScreen extends TupiScreen {
         spinButton = addRenderableWidget(new TupiButton(bx, top + panelHeight - 54, 120, 20, spinLabel(), b -> spin())
                 .item(new ItemStack(Items.EMERALD)).accent(Ui.GREEN));
         continueButton = addRenderableWidget(new TupiButton(bx, top + panelHeight - 30, 120, 20,
-                Component.translatable(KEY + "continue"), b -> minecraft.setScreen(new CharacterHubScreen())));
+                Component.translatable(KEY + "continue"), b -> confirm()));
         updateButtons();
     }
 
@@ -73,23 +90,56 @@ public final class BirthRouletteScreen extends TupiScreen {
         return p.born() ? Component.translatable(KEY + "reroll", p.rerolls()) : Component.translatable(KEY + "spin");
     }
 
+    private boolean busy() {
+        return phase == Phase.WAITING || phase == Phase.SPINNING || phase == Phase.REVEAL;
+    }
+
+    /** Botoes sempre derivados da fase e da ficha atual (chamado a cada tick: nunca ficam presos). */
     private void updateButtons() {
+        if (spinButton == null) return;
         CharacterProfile p = ProfileClientCache.profile();
-        boolean busy = phase == Phase.WAITING || phase == Phase.SPINNING || phase == Phase.REVEAL;
-        spinButton.active = !busy && (!p.born() || p.rerolls() > 0);
+        boolean idle = !busy();
+        spinButton.active = idle && (!p.born() || p.canReroll());
         spinButton.setMessage(spinLabel());
-        continueButton.active = !busy && p.born();
+        continueButton.active = idle && phase == Phase.DONE && hasResult(p);
     }
 
     private void spin() {
         CharacterProfile p = ProfileClientCache.profile();
-        if (phase == Phase.WAITING || phase == Phase.SPINNING) return;
-        lastRollCount = p.rollCount();
+        if (busy() || (p.born() && !p.canReroll())) return;
         phase = Phase.WAITING;
         speed = 0;
         waitTicks = 0;
-        PacketDistributor.sendToServer(new GameplayNetworking.BirthRollRequest(p.born()));
+        status = null;
+        requestRevision = ProfileClientCache.rollReplyRevision();
+        PacketDistributor.sendToServer(new GameplayNetworking.BirthRollRequest(p.born(), p.rollCount()));
         updateButtons();
+    }
+
+    /** Aceita o resultado: a ficha ja esta salva no servidor; segue para o menu do personagem. */
+    private void confirm() {
+        if (phase == Phase.DONE && hasResult(ProfileClientCache.profile())) minecraft.setScreen(new CharacterHubScreen());
+    }
+
+    /** Desacelera ate a origem da ficha atual (com revelacao quando e um resultado novo). */
+    private void settleOn(CharacterProfile p, boolean reveal) {
+        shownRollCount = p.rollCount();
+        if (reveal) status = null;
+        spinFrom = angle;
+        spinTick = 0;
+        revealAfterSpin = false;
+        phase = Phase.SPINNING;
+        if (!hasResult(p)) {
+            // Sem nascimento: so desacelera ate parar e volta a aguardar o sorteio.
+            spinTo = angle + speed * 6F;
+            spinLength = 20;
+            return;
+        }
+        float target = restingAngle(p.originOrNull());
+        float base = angle + (reveal ? 720F : 360F);
+        spinTo = base + Mth.positiveModulo(target - base, 360F);
+        spinLength = reveal ? 50 : 30;
+        revealAfterSpin = reveal;
     }
 
     /** Angulo em que o centro da fatia da origem fica sob o ponteiro. */
@@ -114,20 +164,18 @@ public final class BirthRouletteScreen extends TupiScreen {
                 speed = Math.min(24F, speed + 2.5F);
                 angle += speed;
                 tickSound();
-                if (p.rollCount() != lastRollCount && p.originOrNull() != null) {
-                    // Resposta do servidor: desacelera ate a fatia sorteada (pelo menos 2 voltas a mais).
-                    lastRollCount = p.rollCount();
-                    float target = restingAngle(p.originOrNull());
-                    float base = angle + 720F;
-                    float delta = Mth.positiveModulo(target - base, 360F);
-                    spinFrom = angle;
-                    spinTo = base + delta;
-                    spinTick = 0;
-                    spinLength = 50;
-                    phase = Phase.SPINNING;
-                } else if (++waitTicks > 200) { // sem resposta (servidor recusou): volta ao estado real
-                    phase = p.born() ? Phase.DONE : Phase.IDLE;
-                    updateButtons();
+                GameplayNetworking.BirthRollReply reply = ProfileClientCache.lastRollReply();
+                if (ProfileClientCache.rollReplyRevision() != requestRevision && reply != null) {
+                    // Resposta do servidor (a ficha correspondente chegou antes dela).
+                    boolean rolled = reply.outcome() == BirthRoulette.Outcome.ROLLED
+                            && reply.rollCount() == p.rollCount() && hasResult(p);
+                    if (!rolled) status = Component.translatable(KEY + "status."
+                            + (reply.outcome() == BirthRoulette.Outcome.NO_REROLLS ? "no_rerolls" : "stale"));
+                    settleOn(p, rolled);
+                } else if (++waitTicks > TIMEOUT_TICKS) {
+                    // Sem resposta: volta ao estado real. Uma resposta atrasada e tratada abaixo (ficha nova).
+                    status = Component.translatable(KEY + "status.timeout");
+                    settleOn(p, false);
                 }
             }
             case SPINNING -> {
@@ -137,14 +185,20 @@ public final class BirthRouletteScreen extends TupiScreen {
                 angle = spinFrom + (spinTo - spinFrom) * eased;
                 tickSound();
                 if (t >= 1F) {
-                    phase = Phase.REVEAL;
-                    revealTick = 0;
-                    BirthOrigin origin = p.originOrNull();
-                    int color = origin == null ? Ui.GOLD : origin.color();
-                    vfx.flash(cx, cy - radius, 50, color, 16);
-                    vfx.ring(cx, cy, radius + 30, color, 20);
-                    vfx.burst(cx, cy - radius, 50, color, 4F);
-                    Ui.playUi(ModSounds.ROULETTE_WIN.get(), 1F, 0.8F);
+                    speed = 0;
+                    if (revealAfterSpin) {
+                        phase = Phase.REVEAL;
+                        revealTick = 0;
+                        BirthOrigin origin = p.originOrNull();
+                        int color = origin == null ? Ui.GOLD : origin.color();
+                        vfx.flash(cx, cy - radius, 50, color, 16);
+                        vfx.ring(cx, cy, radius + 30, color, 20);
+                        vfx.burst(cx, cy - radius, 50, color, 4F);
+                        Ui.playUi(ModSounds.ROULETTE_WIN.get(), 1F, 0.8F);
+                    } else {
+                        phase = hasResult(p) ? Phase.DONE : Phase.IDLE;
+                        revealTick = 999;
+                    }
                 }
             }
             case REVEAL -> {
@@ -159,16 +213,19 @@ public final class BirthRouletteScreen extends TupiScreen {
                     }
                 }
                 if (revealTick > 6 * (CharacterAttribute.values().length + 1)) {
-                    phase = Phase.DONE;
-                    updateButtons();
+                    phase = hasResult(p) ? Phase.DONE : Phase.IDLE;
                 }
             }
             default -> {
-                if (ticks % 6 == 0 && p.born()) {
+                if (p.rollCount() != shownRollCount || (phase == Phase.DONE) != hasResult(p)) {
+                    // A ficha mudou fora de um pedido desta tela (resposta atrasada, giro do admin, ficha zerada).
+                    settleOn(p, hasResult(p) && p.rollCount() != shownRollCount);
+                } else if (ticks % 6 == 0 && p.born()) {
                     vfx.ember(cx + (float) (Math.random() - 0.5) * radius * 2, cy + radius, Ui.alpha(Ui.GOLD, 0.8F));
                 }
             }
         }
+        updateButtons();
     }
 
     private int lastSegment = -1;
@@ -204,7 +261,7 @@ public final class BirthRouletteScreen extends TupiScreen {
         CharacterProfile p = ProfileClientCache.profile();
         BirthOrigin origin = p.originOrNull();
         int x = attrX();
-        boolean showResult = (phase == Phase.REVEAL || phase == Phase.DONE) && origin != null;
+        boolean showResult = (phase == Phase.REVEAL || phase == Phase.DONE) && origin != null && p.born();
         if (showResult) {
             Ui.icon(g, SkillDef.iconTexture(origin.icon()), x, top + 29, 20);
             g.drawString(font, Component.translatable("origin.tupinicraft." + origin.id()), x + 24, top + 30, origin.color(), true);
@@ -233,6 +290,9 @@ public final class BirthRouletteScreen extends TupiScreen {
         }
         if (phase == Phase.DONE && p.born()) {
             g.drawString(font, Component.translatable(KEY + "points", p.skillPoints()), left + 12, top + panelHeight - 16, Ui.GOLD, false);
+        }
+        if (status != null && phase != Phase.WAITING) {
+            g.drawString(font, status, left + 12, top + panelHeight - 28, Ui.RED, false);
         }
     }
 

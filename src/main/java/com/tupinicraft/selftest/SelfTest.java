@@ -156,6 +156,19 @@ public final class SelfTest {
         check(f, !afterReroll.canReroll(), "roleta: segundo novo giro bloqueado");
         check(f, new CharacterProfile(true, "sertao", List.of(), 5, 1, 0, 0, List.of()).rerolls() == 1, "roleta: ficha antiga com 5 giros");
         check(f, !CharacterProfile.DEFAULT.canReroll(), "roleta: sem nascimento não há novo giro");
+        // Etapa 4.5: todo pedido de giro tem resposta; pedidos repetidos/atrasados nao duplicam nem gastam o novo giro.
+        CharacterProfile fresh = CharacterProfile.DEFAULT;
+        check(f, BirthRoulette.validate(fresh, false, 0) == BirthRoulette.Outcome.ROLLED
+                && BirthRoulette.rerollsAfter(fresh) == BirthRoulette.FREE_REROLLS, "roleta: primeiro giro aceito");
+        check(f, BirthRoulette.validate(fresh, true, 0) == BirthRoulette.Outcome.STALE, "roleta: novo giro antes de nascer recusado");
+        check(f, BirthRoulette.validate(born, true, born.rollCount()) == BirthRoulette.Outcome.ROLLED
+                && BirthRoulette.rerollsAfter(born) == 0, "roleta: novo giro aceito e consumido");
+        check(f, BirthRoulette.validate(born, false, born.rollCount()) == BirthRoulette.Outcome.STALE
+                && BirthRoulette.validate(born, true, born.rollCount() - 1) == BirthRoulette.Outcome.STALE,
+                "roleta: pedido duplicado/atrasado recusado");
+        check(f, BirthRoulette.validate(afterReroll, true, afterReroll.rollCount()) == BirthRoulette.Outcome.NO_REROLLS,
+                "roleta: sem novo giro restante");
+        check(f, BirthRoulette.Outcome.byOrdinal(99) == BirthRoulette.Outcome.STALE, "roleta: resposta desconhecida");
     }
 
     private static void skills(List<String> f) {

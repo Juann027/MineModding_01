@@ -1,16 +1,21 @@
-# CLAUDE.md — TupiniCraft
+# CLAUDE.md — RespectCraft
 
 RPG de humor para **Minecraft Java 1.21.1 / NeoForge 21.1.x / Java 21**: criador de personagem, roleta de
 nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas,
 finalizações cinematográficas, contador de derrotas e o mob Leão do Fim. Versão atual: `0.5.7` (`gradle.properties`).
 
-Leia este arquivo, o `README.md` e só os arquivos do pedido. Os handoffs (fim do arquivo) têm os detalhes.
+**Nome público: RespectCraft** (`mod_name`, lang, descrição). O mod se chamava TupiniCraft e **todos os
+identificadores internos continuam `tupinicraft`**: mod id, pacote `com.tupinicraft`, classes `TupiniCraft*`,
+namespace de recursos, ids de registro/saves e comandos `/tupini*`. Não renomeie identificadores para a marca nova.
+
+Leia este arquivo, o `README.md` e só os arquivos do pedido. Handoffs ficam em `docs/handoffs/` (consulte só os do
+sistema em que vai mexer; veja o fim deste arquivo).
 
 ## Identidade e stack
 
 | Item | Valor |
 |---|---|
-| Mod id / pacote | `tupinicraft` (`TupiniCraft.MOD_ID`, `TupiniCraft.id("caminho")`) / `com.tupinicraft` |
+| Nome público / mod id / pacote | RespectCraft / `tupinicraft` (`TupiniCraft.MOD_ID`, `TupiniCraft.id("caminho")`) / `com.tupinicraft` |
 | Minecraft / NeoForge | 1.21.1 / 21.1.265 (ModDevGradle, Parchment 2024.11.17), Gradle wrapper 9.2.1 |
 | Java | 21 (toolchain no `build.gradle`) |
 | GeckoLib | **4.9.3** (`software.bernie.geckolib:geckolib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Não use a 5. |
@@ -57,6 +62,7 @@ Leia este arquivo, o `README.md` e só os arquivos do pedido. Os handoffs (fim d
   `SkillService.refreshModifiers`; nunca grave no save.
 - **Roleta:** 8 origens com peso e bônus (`BirthOrigin`); sorteio no servidor; no máximo **1** novo giro
   (`CharacterProfile.canReroll`), que zera habilidades e devolve os pontos. A tela só apresenta o resultado.
+  Todo `BirthRollRequest` (com o `rollCount` esperado) recebe um `BirthRollReply`; nunca descarte pedido em silêncio.
 - **Rig/render:** não cancele `RenderPlayerEvent.Pre` nem desenhe o jogador fora do renderer vanilla. Em
   `PlayerRigModel.compose` mantenha o `GeoBone::resetStateChanges` no fim. Peça de corpo nova = `BodyLayerDefinition`
   (não crie `RenderLayer` por peça). Pele/rosto do criador são Body Layers sobre a skin da conta; não troque a textura.
@@ -116,7 +122,7 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 ./gradlew runServer                      # servidor dedicado (aceita comandos no console)
 ```
 
-- Não há JUnit. Regra pura nova entra no `selftest.SelfTest` (sai como `Autoteste TupiniCraft: OK` no smoke test).
+- Não há JUnit. Regra pura nova entra no `selftest.SelfTest` (sai como `Autoteste RespectCraft: OK` no smoke test).
 - O CI (`.github/workflows/build.yml`) roda `bbsync.py`, `./gradlew build` e o teste de fumaça.
 - Teste com clientes reais (`tools/visual-test/helpers.sh`, Xvfb) só quando a mudança afeta render, telas ou
   sincronização multiplayer; um cenário representativo basta. Não repita a validação de etapas anteriores nem rode
@@ -140,10 +146,9 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 ## Documentação complementar
 
 - `README.md` — visão geral, instalação e uso. `AGENTS.md` — resumo para agentes.
-- `HANDOFF_GECKOLIB_STAGE1.md` (teste visual), `HANDOFF_GECKOLIB_STAGE2.md` (rig, Body Layers, Animation Manager).
-- `HANDOFF_ETAPA3.md` (UI, criador, roleta, skills, necessidades, finalizações) e `HANDOFF_ETAPA3_1.md` (necessidades
-  e consumíveis).
-- `HANDOFF_PLAYER_ANIMATIONS_STAGE4.md` e `HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md` (biblioteca de combate, Blockbench,
-  sequências), `HANDOFF_DEFEAT_COUNTER_STAGE4_2.md` (contador de derrotas).
-- `HANDOFF_LEGACY_CLEANUP.md` — remoção do legado político (Etapa 4.4) e migração da origem antiga.
+- Handoffs das etapas em [`docs/handoffs/`](docs/handoffs/README.md): o índice diz etapa, sistema, status e
+  limitações. **Abra só o handoff do sistema que a tarefa toca** (nunca todos): rig/Body Layers → Etapa 2; telas,
+  criador, roleta, skills, necessidades, finalizações → Etapas 3/3.1; animações e Blockbench → Etapas 4/4.1;
+  contador de derrotas → 4.2; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
+  roleta → 4.5.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

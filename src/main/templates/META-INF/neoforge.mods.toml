@@ -8,7 +8,7 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="Juann027"
 description='''
-TupiniCraft: RPG de humor com criador de personagem, roleta de nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas, finalizações cinematográficas e o mob Leão do Fim.
+RespectCraft: RPG de humor com criador de personagem, roleta de nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas, finalizações cinematográficas e o mob Leão do Fim.
 '''
 
 [[dependencies.${mod_id}]]
@@ -25,7 +25,7 @@ TupiniCraft: RPG de humor com criador de personagem, roleta de nascimento, habil
     ordering="NONE"
     side="BOTH"
 
-# Bibliotecas obrigatórias no cliente E no servidor dedicado (instale junto com o TupiniCraft).
+# Bibliotecas obrigatórias no cliente E no servidor dedicado (instale junto com o RespectCraft).
 [[dependencies.${mod_id}]]
     modId="geckolib"
     type="required"

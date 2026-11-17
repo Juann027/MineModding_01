@@ -15,9 +15,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Unico ponto de leitura/escrita da ficha do personagem; sincroniza com o dono a cada mudanca. */
 public final class ProfileService {
-    /** Intervalo minimo entre pedidos de giro (anti-spam). */
-    private static final int ROLL_COOLDOWN_TICKS = 40;
-    private static final String LAST_ROLL_KEY = "tupinicraft_last_roll";
+    /** Chave do antigo cooldown da roleta (ate 0.5.7); so e apagada do persistentData. */
+    private static final String LEGACY_LAST_ROLL_KEY = "tupinicraft_last_roll";
 
     private ProfileService() {}
 
@@ -35,25 +34,22 @@ public final class ProfileService {
         PacketDistributor.sendToPlayer(player, new GameplayNetworking.ProfileSync(get(player)));
     }
 
-    /** Pedido do cliente: primeiro giro, ou nova tentativa enquanto houver. O resultado vem so do servidor. */
-    public static void requestRoll(ServerPlayer player, boolean reroll) {
-        long now = player.serverLevel().getGameTime();
-        long last = player.getPersistentData().getLong(LAST_ROLL_KEY);
-        if (now >= last && now - last < ROLL_COOLDOWN_TICKS) return;
+    /**
+     * Pedido do cliente: primeiro giro, ou o novo giro enquanto houver. O resultado vem so do servidor e todo
+     * pedido recebe resposta ({@link GameplayNetworking.BirthRollReply}), aceito ou recusado: a ficha atual vai
+     * antes, entao a tela sempre volta ao estado real. Pedidos repetidos ou atrasados sao recusados pelo
+     * {@code expectedRollCount} (ver {@link BirthRoulette#validate}).
+     */
+    public static BirthRoulette.Outcome requestRoll(ServerPlayer player, boolean reroll, int expectedRollCount) {
         CharacterProfile profile = get(player);
-        int rerolls;
-        if (!profile.born()) {
-            if (reroll) return;
-            rerolls = BirthRoulette.FREE_REROLLS;
+        BirthRoulette.Outcome outcome = BirthRoulette.validate(profile, reroll, expectedRollCount);
+        if (outcome == BirthRoulette.Outcome.ROLLED) {
+            roll(player, BirthRoulette.rerollsAfter(profile));
         } else {
-            if (!reroll || !profile.canReroll()) {
-                sync(player); // a tela volta ao estado real
-                return;
-            }
-            rerolls = profile.rerolls() - 1;
+            sync(player);
         }
-        player.getPersistentData().putLong(LAST_ROLL_KEY, now);
-        roll(player, rerolls);
+        PacketDistributor.sendToPlayer(player, new GameplayNetworking.BirthRollReply(outcome, get(player).rollCount()));
+        return outcome;
     }
 
     /**
@@ -64,6 +60,7 @@ public final class ProfileService {
         RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
         BirthRoulette.Result result = BirthRoulette.roll(random);
         CharacterProfile next = get(player).withBirth(result, rerollsLeft);
+        player.getPersistentData().remove(LEGACY_LAST_ROLL_KEY);
         set(player, next);
         celebrate(player);
         TupiniCraft.LOGGER.info("Roleta de nascimento: {} nasceu em {} {}", player.getGameProfile().getName(),

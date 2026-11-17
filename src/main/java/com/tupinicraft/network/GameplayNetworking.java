@@ -3,6 +3,7 @@ package com.tupinicraft.network;
 import com.tupinicraft.TupiniCraft;
 import com.tupinicraft.needs.ActiveNeedEffects;
 import com.tupinicraft.needs.Needs;
+import com.tupinicraft.profile.BirthRoulette;
 import com.tupinicraft.profile.CharacterProfile;
 import com.tupinicraft.profile.ProfileService;
 import com.tupinicraft.skill.SkillService;
@@ -45,11 +46,29 @@ public final class GameplayNetworking {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    /** Cliente -> servidor: girar a roleta de nascimento (primeiro giro ou nova tentativa). */
-    public record BirthRollRequest(boolean reroll) implements CustomPacketPayload {
+    /**
+     * Cliente -> servidor: girar a roleta de nascimento (primeiro giro ou o novo giro). {@code expectedRollCount}
+     * e o {@code rollCount} da ficha que o cliente via: pedidos repetidos ou atrasados sao recusados.
+     */
+    public record BirthRollRequest(boolean reroll, int expectedRollCount) implements CustomPacketPayload {
         public static final Type<BirthRollRequest> TYPE = new Type<>(TupiniCraft.id("birth_roll_request"));
-        public static final StreamCodec<ByteBuf, BirthRollRequest> STREAM_CODEC =
-                ByteBufCodecs.BOOL.map(BirthRollRequest::new, BirthRollRequest::reroll);
+        public static final StreamCodec<ByteBuf, BirthRollRequest> STREAM_CODEC = StreamCodec.composite(
+                ByteBufCodecs.BOOL, BirthRollRequest::reroll,
+                ByteBufCodecs.VAR_INT, BirthRollRequest::expectedRollCount,
+                BirthRollRequest::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /**
+     * Servidor -> dono: resposta a todo {@link BirthRollRequest} (sempre depois do {@link ProfileSync}).
+     * {@code rollCount} e o da ficha ja enviada; a tela usa a resposta para sair do estado "girando".
+     */
+    public record BirthRollReply(BirthRoulette.Outcome outcome, int rollCount) implements CustomPacketPayload {
+        public static final Type<BirthRollReply> TYPE = new Type<>(TupiniCraft.id("birth_roll_reply"));
+        public static final StreamCodec<ByteBuf, BirthRollReply> STREAM_CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT.map(BirthRoulette.Outcome::byOrdinal, BirthRoulette.Outcome::ordinal), BirthRollReply::outcome,
+                ByteBufCodecs.VAR_INT, BirthRollReply::rollCount,
+                BirthRollReply::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
@@ -62,15 +81,18 @@ public final class GameplayNetworking {
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("1");
+        // "2": a roleta passou a ter pedido com rollCount esperado e resposta explicita (Etapa 4.5).
+        var registrar = event.registrar("2");
         registrar.playToClient(ProfileSync.TYPE, ProfileSync.STREAM_CODEC,
                 (payload, context) -> ProfileClientCache.receive(payload.profile()));
         registrar.playToClient(NeedsSync.TYPE, NeedsSync.STREAM_CODEC,
                 (payload, context) -> ProfileClientCache.receive(payload.needs()));
         registrar.playToClient(NeedEffectsSync.TYPE, NeedEffectsSync.STREAM_CODEC,
                 (payload, context) -> ProfileClientCache.receive(payload.effects()));
+        registrar.playToClient(BirthRollReply.TYPE, BirthRollReply.STREAM_CODEC,
+                (payload, context) -> ProfileClientCache.receive(payload));
         registrar.playToServer(BirthRollRequest.TYPE, BirthRollRequest.STREAM_CODEC, (payload, context) -> {
-            if (context.player() instanceof ServerPlayer player) ProfileService.requestRoll(player, payload.reroll());
+            if (context.player() instanceof ServerPlayer player) ProfileService.requestRoll(player, payload.reroll(), payload.expectedRollCount());
         });
         registrar.playToServer(SkillPurchaseRequest.TYPE, SkillPurchaseRequest.STREAM_CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) SkillService.purchase(player, payload.skill());

@@ -1,10 +1,13 @@
-# AGENTS.md — TupiniCraft
+# AGENTS.md — RespectCraft
 
 As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo. Em caso de dúvida, vale o `CLAUDE.md`.
 
+- **Marca:** o nome público é **RespectCraft** (antes TupiniCraft). Mod id, pacote `com.tupinicraft`, namespace,
+  ids salvos e comandos `/tupini*` continuam `tupinicraft`: não os renomeie.
 - **Stack:** Minecraft 1.21.1, NeoForge 21.1.x (só APIs 21.1), Java 21, GeckoLib 4.9.3, SmartBrainLib 1.16.11.
   Sem UI Lib/Architectury e sem dependências novas sem pedido.
-- **Comece por** `README.md`, `CLAUDE.md` e só os arquivos do pedido. Não faça auditorias gerais.
+- **Comece por** `README.md`, `CLAUDE.md` e só os arquivos do pedido. Não faça auditorias gerais. Handoffs em
+  `docs/handoffs/` (índice no `README.md` de lá): leia só o do sistema que a tarefa toca.
 - **Servidor autoritativo:** o cliente envia intenções; cada dado tem um único serviço dono (`ProfileService`,
   `NeedsService`, `PlayerAnimationService`, `CharacterAppearanceService`, `DefeatCounter`). Estenda o que existe.
 - **Separação de lado:** `net.minecraft.client.*` só dentro de `com.tupinicraft.client`.

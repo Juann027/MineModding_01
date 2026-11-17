@@ -1,7 +1,11 @@
-# TupiniCraft
+# RespectCraft
 
 RPG de humor para **Minecraft Java 1.21.1** com **NeoForge 21.1.x**. Versão atual: **0.5.7 — RPG & Animation
 Preview** (pre-release: vários recursos ainda têm arte provisória).
+
+> O mod se chamava **TupiniCraft**. Só o nome público mudou: o mod id, o jar (`tupinicraft-<versão>.jar`), o pacote
+> Java, o namespace de recursos, os comandos (`/tupini`, `/tupinianim`, `/tupinitest`, `/leaodofim`) e os dados
+> salvos continuam `tupinicraft`. Mundos e fichas existentes seguem funcionando.
 
 ## Funcionalidades
 

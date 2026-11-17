@@ -79,7 +79,7 @@ public final class FinisherTestMechanic {
     private FinisherTestMechanic() {}
 
     private static void message(ServerPlayer player, String text) {
-        player.sendSystemMessage(Component.literal("[TupiniCraft Teste] " + text));
+        player.sendSystemMessage(Component.literal("[RespectCraft Teste] " + text));
     }
 
     public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {

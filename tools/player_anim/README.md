@@ -1,7 +1,8 @@
 # Animações do jogador: autoria, Blockbench e exportação
 
 Guia curto para criar e editar clips do rig do jogador sem perder trabalho. Detalhes técnicos em
-`HANDOFF_PLAYER_ANIMATIONS_STAGE4.md` (convenções do rig) e `HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md` (esta etapa).
+`docs/handoffs/HANDOFF_PLAYER_ANIMATIONS_STAGE4.md` (convenções do rig) e
+`docs/handoffs/HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md` (esta etapa).
 
 ## Quem é fonte de verdade
 
