@@ -46,6 +46,7 @@ public final class SelfTest {
             finishers(f);
             codecs(f);
             sequences(f);
+            defeats(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
@@ -221,6 +222,14 @@ public final class SelfTest {
     }
 
     /** Etapa 4.1: sequencias de animacao (queda -> quatro apoios -> levantar) sem buraco entre os segmentos. */
+    private static void defeats(List<String> f) {
+        check(f, com.tupinicraft.testgame.DefeatCounter.next(0) == 1, "derrotas: 0 -> 1");
+        check(f, com.tupinicraft.testgame.DefeatCounter.next(12) == 13, "derrotas: 12 -> 13");
+        check(f, com.tupinicraft.testgame.DefeatCounter.next(-5) == 1, "derrotas: negativo vira 0 antes do +1");
+        check(f, com.tupinicraft.testgame.DefeatCounter.next(Integer.MAX_VALUE) == Integer.MAX_VALUE,
+                "derrotas: sem estouro no máximo");
+    }
+
     private static void sequences(List<String> f) {
         AnimationSequence fall = PlayerAnimations.FALL_AND_RECOVER;
         check(f, fall.problem().isEmpty(), "sequência: queda inválida " + fall.problem().orElse(""));

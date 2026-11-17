@@ -65,6 +65,13 @@ Base: MDK oficial `NeoForgeMDKs/MDK-1.21.1-ModDevGradle` (plugin `net.neoforged.
   estado sincronizado leva os segmentos seguintes e todos trocam pelo relógio do servidor (`PlayerAnimationState.at`);
   não mande um pacote por clip. Loops dentro de sequência exigem duração.
 
+## Etapa 4.2 — contador de derrotas (ativo; detalhes em `HANDOFF_DEFEAT_COUNTER_STAGE4_2.md`)
+
+- Valor só no servidor (`testgame.DefeatCounter`, persistentData `tupinicraft_special_defeats`, não renomear): +1 para
+  o alvo em `FinisherTestMechanic.complete`; `abort` nunca conta. Sync pelo `DefeatCountSyncPayload` existente.
+- `DefeatCounterNameplate` desenha uma linha acima do nick com as regras e a matemática do `renderNameTag` do 1.21.1
+  (escala X **positiva**); ícones são a fonte bitmap `tupinicraft:defeat_icons`, não emoji.
+
 ## Fluxo de entrega e merge automático (política do dono do repositório)
 
 O dono do repositório autorizou merge automático dos PRs ao concluir cada tarefa, sem aguardar aprovação manual.

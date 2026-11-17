@@ -7,8 +7,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import com.tupinicraft.network.DefeatCountSyncPayload;
 
 /**
- * Contador de derrotas especiais de TESTE. Nunca incrementa por dano comum ou
- * por carregar alguém. Um futuro duelo consentido poderá registrar seu resultado aqui.
+ * Contador de derrotas por finalização (exibido acima do nick por {@code DefeatCounterNameplate}). Só o servidor
+ * altera: +1 para o ALVO em {@code FinisherTestMechanic.complete} (uma vez por sessão; cancelamentos e interrupções
+ * passam por {@code abort} e não contam) e pelos comandos de admin {@code /tupini... defeats add|set}. Nunca por
+ * dano, morte comum ou por carregar alguém. Persistido no persistentData do jogador (chave estável, não renomear).
  */
 public final class DefeatCounter {
     private static final String DATA_KEY = "tupinicraft_special_defeats";
@@ -28,7 +30,12 @@ public final class DefeatCounter {
     }
 
     public static int increment(ServerPlayer player) {
-        return set(player, get(player) == Integer.MAX_VALUE ? Integer.MAX_VALUE : get(player) + 1);
+        return set(player, next(get(player)));
+    }
+
+    /** Regra pura do incremento (+1, sem passar do máximo); coberta pelo {@code SelfTest}. */
+    public static int next(int current) {
+        return current >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, current) + 1;
     }
 
     private static void broadcast(ServerPlayer player) {
@@ -59,11 +66,16 @@ public final class DefeatCounter {
         }
     }
 
+    /**
+     * Morte e volta do End recriam o ServerPlayer: copia sempre (não só na morte), porque o persistentData da
+     * NeoForge não é copiado no {@code restoreFrom}. Troca comum de dimensão mantém o mesmo objeto.
+     */
     public static void onClone(PlayerEvent.Clone event) {
-        if (event.isWasDeath()) {
-            int old = get(event.getOriginal());
-            event.getEntity().getPersistentData().putInt(DATA_KEY, old);
-        }
+        event.getEntity().getPersistentData().putInt(DATA_KEY, get(event.getOriginal()));
+    }
+
+    public static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) broadcast(player);
     }
 
     public static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
