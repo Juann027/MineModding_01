@@ -89,6 +89,57 @@ public final class Finishers {
                     new CameraTrack.Key(40, 25, 4.3, 2.1, 0.3, 1.0, 0)),
             com.tupinicraft.TupiniCraft.id("combate/rasteira"), 2));
 
+    /**
+     * Queda da vitima (evento no clip da vitima): o servidor solta poeira do chao e o baque, vistos por todos.
+     * data = "forca,recuo" (forca 1..3; recuo em blocos para tras da vitima, onde o corpo realmente bate no chao).
+     */
+    public static final ResourceLocation EVENT_FALL = TupiniCraft.id("finisher_fall");
+
+    public static final ResourceLocation COMBO_ID = TupiniCraft.id("combo");
+
+    /**
+     * "Combo de rua" (Etapa 4, 7 s): guarda, direto no estomago, alvo dobra e cambaleia para a frente, chute frontal,
+     * alvo e empurrado, cai de joelhos e termina em quatro apoios; o executor recua para a guarda e acompanha com o
+     * olhar; o alvo levanta passando por um joelho e da um passo de volta; os dois relaxam. Cada participante tem o
+     * seu clip (arquivo de combate), iniciados juntos pelo servidor.
+     * Linha do tempo (ticks): 0 preparacao, 19 e 37 golpe (whoosh), 25 e 43 impacto, 62/65 queda,
+     * 98 recuperacao, 139 encerramento.
+     */
+    public static final FinisherDef COMBO = register(new FinisherDef(COMBO_ID,
+            PlayerAnimations.register(PlayerAnimationDef
+                    .builder(TupiniCraft.id("finisher/combo_attacker"), PlayerAnimations.COMBAT_FILE,
+                            "animation.tupinicraft.player.finisher.combo_attacker", 140)
+                    .priority(50).transitionTicks(3).blend(PlayerAnimationDef.Blend.FULL_BODY)
+                    .event(0, PlayerAnimations.EVENT_SEQUENCE_START, "combo")
+                    .event(2, PlayerAnimations.EVENT_SOUND, "minecraft:item.armor.equip_leather")
+                    .event(19, PlayerAnimations.EVENT_SOUND, "tupinicraft:finisher.whoosh")
+                    .event(25, EVENT_HIT, "1").event(25, PlayerAnimations.EVENT_CAMERA_SHAKE, "0.4,6")
+                    .event(37, PlayerAnimations.EVENT_SOUND, "tupinicraft:finisher.whoosh")
+                    .event(43, EVENT_HIT, "2").event(43, PlayerAnimations.EVENT_CAMERA_SHAKE, "0.8,10")
+                    .event(43, PlayerAnimations.EVENT_CAMERA_FOV, "0.86,8")
+                    .event(124, PlayerAnimations.EVENT_SOUND, "minecraft:item.armor.equip_leather")
+                    .event(139, PlayerAnimations.EVENT_SEQUENCE_END, "combo").build()),
+            PlayerAnimations.register(PlayerAnimationDef
+                    .builder(TupiniCraft.id("finisher/combo_victim"), PlayerAnimations.COMBAT_FILE,
+                            "animation.tupinicraft.player.finisher.combo_victim", 140)
+                    .priority(50).transitionTicks(3).blend(PlayerAnimationDef.Blend.FULL_BODY)
+                    .event(25, PlayerAnimations.EVENT_CAMERA_SHAKE, "0.6,8")
+                    .event(43, PlayerAnimations.EVENT_CAMERA_SHAKE, "1.1,12")
+                    .event(43, PlayerAnimations.EVENT_CAMERA_FOV, "1.12,10")
+                    .event(62, EVENT_FALL, "2,0.4").event(62, PlayerAnimations.EVENT_CAMERA_SHAKE, "0.7,8")
+                    .event(65, EVENT_FALL, "1,0.1")
+                    .event(98, PlayerAnimations.EVENT_SOUND, "minecraft:item.armor.equip_generic").build()),
+            CameraTrack.of(
+                    new CameraTrack.Key(0, 150, 4.8, 1.8, 1.1, 1.0, 0),      // estabelecimento por tras do executor
+                    new CameraTrack.Key(20, 108, 3.6, 1.4, 1.1, 0.95, 2),    // lateral: leitura do soco
+                    new CameraTrack.Key(26, 100, 3.3, 1.3, 1.0, 0.92, 3),
+                    new CameraTrack.Key(43, 82, 3.2, 0.9, 0.8, 0.88, -3),    // baixa: chute
+                    new CameraTrack.Key(62, 58, 3.7, 2.0, 0.4, 0.95, -2),    // alta: queda
+                    new CameraTrack.Key(92, 32, 4.0, 1.6, 0.5, 1.0, 0),      // orbita lenta com o alvo no chao
+                    new CameraTrack.Key(122, 42, 4.4, 1.5, 1.0, 1.0, 0),     // alvo levantando
+                    new CameraTrack.Key(140, 62, 4.8, 1.8, 1.1, 1.0, 0)),
+            null, 3, true));
+
     private Finishers() {}
 
     public static synchronized FinisherDef register(FinisherDef def) {
