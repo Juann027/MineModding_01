@@ -168,4 +168,4 @@ de finalizações. Os medidores foram vistos em modo sobrevivência com o jogo c
 ## 11. Entrega
 
 Branch `claude/kind-faraday-75g3gf`. Commits: criador (retrato, nota e paleta), Hidratação/Energia inativas, traços de
-nascimento + confirmação + telas, criador em página única, documentação. PR e merge: PR_AQUI.
+nascimento + confirmação + telas, criador em página única, documentação. PR: [Juann027/MineModding_01#27](https://github.com/Juann027/MineModding_01/pull/27), integrado com merge commit (o hash fica no histórico da `main`).

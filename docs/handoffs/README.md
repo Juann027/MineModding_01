@@ -18,7 +18,7 @@ e o `CLAUDE.md`.
 | 4.2 | Contador de derrotas 🍆💦 acima do nick | [HANDOFF_DEFEAT_COUNTER_STAGE4_2.md](HANDOFF_DEFEAT_COUNTER_STAGE4_2.md) | Concluída | Finalização contra mob não conta |
 | 4.4 | Remoção do legado político, migração `familia_politica` → `familia_artistica` | [HANDOFF_LEGACY_CLEANUP.md](HANDOFF_LEGACY_CLEANUP.md) | Concluída (PR #25) | Cabo Eleitoral some de mundos antigos |
 | 4.5 | Rebranding RespectCraft, handoffs em `docs/handoffs/`, correção do giro infinito da roleta | [HANDOFF_STAGE4_5.md](HANDOFF_STAGE4_5.md) | Concluída | Nome novo só na marca; ids seguem `tupinicraft` |
-| 4.5 rev. | Criador sem retrato/nota, paleta única de cabelo, traços de nascimento, Hidratação/Energia inativas, confirmação da roleta | [HANDOFF_STAGE4_5_REVISED.md](HANDOFF_STAGE4_5_REVISED.md) | Concluída | Traços sem efeito de jogo; habilidades Cantil e Rede sem efeito |
+| 4.5 rev. | Criador sem retrato/nota, paleta única de cabelo, traços de nascimento, Hidratação/Energia inativas, confirmação da roleta | [HANDOFF_STAGE4_5_REVISED.md](HANDOFF_STAGE4_5_REVISED.md) | Concluída (PR #27) | Traços sem efeito de jogo; habilidades Cantil e Rede sem efeito |
 
 Não há handoff da Etapa 4.3 neste repositório.
 
