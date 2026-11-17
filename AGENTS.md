@@ -1,9 +1,19 @@
-# Escopo para agentes de programação
+# AGENTS.md — TupiniCraft
 
-**Foco:** biomas, dimensões e NPCs. Leia primeiro `README.md` e só os Java em `src/main/java` pertinentes ao pedido.
+As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo. Em caso de dúvida, vale o `CLAUDE.md`.
 
-**Não altere nem extraia os ZIPs em `backups/` por padrão**. São cópias para recuperação de sistemas arquivados. Não reintroduza eleições, Tigrinho, economia ou UI cívica sem pedido explícito.
-
-Mantenha o código comum separado do cliente (`client/`). Preserve o registro dos mobs atuais, suas animações e os assets originais. Para cada tarefa, edite apenas os arquivos relacionados, valide o mínimo relevante e peça revisão explícita antes de mexer nos dados salvos ou nomes de registro.
-
-Nunca diga que compilou ou testou com sucesso sem executar os comandos. Pré-requisitos: Java 21, Gradle wrapper, NeoForge 21.1.x e dependências do mod.
+- **Stack:** Minecraft 1.21.1, NeoForge 21.1.x (só APIs 21.1), Java 21, GeckoLib 4.9.3, SmartBrainLib 1.16.11.
+  Sem UI Lib/Architectury e sem dependências novas sem pedido.
+- **Comece por** `README.md`, `CLAUDE.md` e só os arquivos do pedido. Não faça auditorias gerais.
+- **Servidor autoritativo:** o cliente envia intenções; cada dado tem um único serviço dono (`ProfileService`,
+  `NeedsService`, `PlayerAnimationService`, `CharacterAppearanceService`, `DefeatCounter`). Estenda o que existe.
+- **Separação de lado:** `net.minecraft.client.*` só dentro de `com.tupinicraft.client`.
+- **Saves:** não renomeie ids persistidos (attachments, chaves de `persistentData`, ids de origens, atributos,
+  necessidades, habilidades, itens e entidades). Id aposentado → alias em `profile.LegacyOriginIds` + `SelfTest`.
+- **Tema:** eleições, política, partidos, mandatos, urna, economia e símbolos nacionais foram removidos; não
+  reintroduza sem pedido explícito.
+- **Animações:** dados em `PlayerAnimations`; `.bbmodel` em `model_sources/player/`; respeite
+  `tools/player_anim/master.json` e nunca use `export.py --force` sobre edições do Blockbench.
+- **Validação:** `./gradlew build` e `bash .github/scripts/server-smoke-test.sh`; regras puras novas no `SelfTest`.
+  Nunca diga que compilou ou testou sem rodar os comandos.
+- **Entrega:** branch própria, PR para a `main`, merge só com CI verde (fluxo completo no `CLAUDE.md`).
