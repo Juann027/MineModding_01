@@ -137,8 +137,9 @@ do impacto; maior encosto fora dos impactos ≈ 2 px (punho da guarda × cabeça
    `src/main/resources/assets/tupinicraft/animations/player/tupinicraft_player_combat.animation.json`.
 4. Se mudar a duração, atualize os ticks no registro Java (o servidor não lê assets); o cliente avisa no log quando a
    duração registrada difere da do clip.
-5. Atenção: `export.py` **sobrescreve** esse arquivo e os `.bbmodel`. Ou se edita no Blockbench, ou em `clips.py`;
-   para levar um ajuste do Blockbench para a ferramenta, copie os valores para as poses.
+5. Ou se edita no Blockbench, ou em `clips.py`. Desde a Etapa 4.1 o `export.py` não sobrescreve edições externas
+   (veja `tools/player_anim/README.md`); os `.bbmodel` desta etapa estavam espelhados no editor e foram corrigidos
+   na 4.1 (`HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md`).
 
 ### Registrar um clip novo
 
@@ -182,6 +183,7 @@ na Etapa 2); armadura e itens na mão durante o combo; GPU real; mais de dois cl
 
 - Não há encadeamento automático de clips: tocar `knockdown` e depois `hands_and_knees` por comandos separados mostra
   a pose vanilla por um instante entre eles. Cenas completas devem ser um clip só por participante (como o combo).
+  **Resolvido na Etapa 4.1** com `AnimationSequence`/`playSequence`.
 - `crawl` anima no lugar; quem quiser deslocamento no mundo precisa mover o jogador pelo servidor.
 - Pernas sem joelho: ajoelhar e quatro apoios são aproximações no estilo Minecraft (coxa inclinada, perna deitada).
 - Logo após o soco o punho da guarda do executor encosta ~2 px na cabeça do alvo dobrado.

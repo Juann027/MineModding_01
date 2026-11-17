@@ -41,6 +41,7 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
 
     private ClientPlayerAnimations.Clip currentClip;
     private int lastSequence = NO_SEQUENCE;
+    private int lastSegment = NO_SEQUENCE;
     // Sincronizacao temporal: transicao usada nesta execucao e avanco pendente do clip (quem entrou no meio).
     private int usedTransition;
     private boolean catchUpPending;
@@ -80,6 +81,13 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
         float elapsed = Double.isNaN(lastFrameTick) ? 0F : (float) Mth.clamp(now - lastFrameTick, 0, 20);
         lastFrameTick = now;
         ClientPlayerAnimations.Clip clip = serverClip(uuid);
+        if (clip != null && now - lastClipTick >= RECOVERY_TICKS) {
+            // O rig volta a ser desenhado depois de ficar parado: os snapshots dos bones guardam a pose de quando
+            // ele parou (ex.: quatro apoios de uma sequencia cancelada) e a transicao do clip novo partiria dela,
+            // mostrando essa pose por um quadro. Sem snapshots, o GeckoLib recomeca da pose de repouso.
+            // (Aqui, antes do processamento do GeckoLib; nunca dentro do handler, que usa o mesmo mapa.)
+            cache.getManagerForId(uuid.getLeastSignificantBits()).clearSnapshotCache();
+        }
         if (clip != null) lastClipTick = now;
         float step = elapsed / Math.max(1, clip != null ? clip.def().transitionTicks() : 3);
         for (PlayerPart part : PlayerPart.values()) {
@@ -95,9 +103,12 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
             PlayerAnimationState server = ClientPlayerAnimations.active(uuid);
             ClientPlayerAnimations.Clip clip = server == null ? null : ClientPlayerAnimations.clip(server.animation());
             if (clip != null) {
-                if (server.sequence() != lastSequence || clip != currentClip) {
-                    // Novo inicio (inclusive repetir a mesma animacao): recomeca e alinha ao relogio do servidor.
+                if (server.sequence() != lastSequence || server.segment() != lastSegment || clip != currentClip) {
+                    // Novo inicio (inclusive repetir a mesma animacao) ou proximo segmento de uma sequencia:
+                    // recomeca e alinha ao relogio do servidor, misturando a partir da pose atual (sem passar
+                    // pela pose vanilla).
                     lastSequence = server.sequence();
+                    lastSegment = server.segment();
                     currentClip = clip;
                     syncedState = server;
                     // Quem comeca a ver no meio pula a transicao e avanca o clip ate o instante certo.
@@ -106,9 +117,10 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
                     state.getController().forceAnimationReset();
                 }
                 state.getController().transitionLength(usedTransition);
-                return state.setAndContinue(clip.raw(server.loop()));
+                return state.setAndContinue(clip.raw(server));
             }
             lastSequence = NO_SEQUENCE;
+            lastSegment = NO_SEQUENCE;
             currentClip = null;
             syncedState = null;
             catchUpPending = false;

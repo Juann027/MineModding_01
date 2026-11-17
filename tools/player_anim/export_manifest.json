@@ -1,0 +1,8 @@
+{
+ "_leia": "Gerado por tools/player_anim/export.py: hash do ultimo conteudo gravado por ele. Arquivo com hash diferente foi editado fora do gerador e nao e sobrescrito sem --force. Nao edite.",
+ "arquivos": {
+  "model_sources/player/tupinicraft_combo_scene.bbmodel": "b68e121dcee706c48870127598d0504a819ee89255500d9068a08eba60d8577f",
+  "model_sources/player/tupinicraft_player_combat.bbmodel": "9d30c3d14906dc8036a16a2b1bcc39ad1517876130a714a33ec5005df0e76f17",
+  "src/main/resources/assets/tupinicraft/animations/player/tupinicraft_player_combat.animation.json": "b5cf78184f6b3f9270fa1b6fd9a3422d7aaeca8fb27ebb91cafb728f1dfff352"
+ }
+}

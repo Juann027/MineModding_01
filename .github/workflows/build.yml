@@ -21,6 +21,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Animacoes do jogador (.bbmodel x .animation.json em sincronia)
+        run: python3 tools/player_anim/bbsync.py
+
       - name: Build with Gradle
         run: ./gradlew build
 

@@ -39,9 +39,20 @@ public final class ClientPlayerAnimations {
     public static final ResourceLocation RIG_GEO = TupiniCraft.id("geo/player/tupinicraft_animated_player.geo.json");
 
     /** Animacao pronta para tocar: clip encontrado e todos os bones existem no rig. */
-    public record Clip(PlayerAnimationDef def, RawAnimation once, RawAnimation looping, Set<PlayerPart> overridden) {
+    public record Clip(PlayerAnimationDef def, RawAnimation once, RawAnimation looping, RawAnimation held,
+                       Set<PlayerPart> overridden) {
         /** O servidor decide, a cada execucao, se o clip repete. */
         public RawAnimation raw(boolean loop) { return loop ? looping : once; }
+
+        /**
+         * Clip do segmento: em loop repete; sem loop, segura o ultimo quadro se a sequencia continua depois dele
+         * (ou se o segmento dura mais que o clip), para o rig nao voltar ao repouso antes da troca.
+         */
+        public RawAnimation raw(PlayerAnimationState segment) {
+            if (segment.loop()) return looping;
+            boolean hold = segment.hasNext() || segment.segmentTicks() > segment.durationTicks();
+            return hold ? held : once;
+        }
     }
 
     private static final class Tracked {
@@ -118,7 +129,7 @@ public final class ClientPlayerAnimations {
                     id, def.durationTicks(), animation.length());
         }
         return Optional.of(new Clip(def, RawAnimation.begin().thenPlay(def.clip()),
-                RawAnimation.begin().thenLoop(def.clip()), overridden));
+                RawAnimation.begin().thenLoop(def.clip()), RawAnimation.begin().thenPlayAndHold(def.clip()), overridden));
     }
 
     private static Optional<Clip> invalid(ResourceLocation id, String reason) {
@@ -126,12 +137,16 @@ public final class ClientPlayerAnimations {
         return Optional.empty();
     }
 
-    /** Estado em andamento de um jogador (recebido do servidor), ou null. */
+    /**
+     * Segmento em andamento de um jogador (recebido do servidor), ou null. Numa sequencia o segmento muda com o
+     * relogio do mundo, no mesmo tick que no servidor, sem esperar pacote.
+     */
     public static PlayerAnimationState active(UUID player) {
         PlayerAnimationState state = PlayerAnimationClientCache.get(player);
         ClientLevel level = Minecraft.getInstance().level;
-        if (state == null || level == null || state.finished(level.getGameTime())) return null;
-        return state;
+        if (state == null || level == null) return null;
+        long now = level.getGameTime();
+        return state.finished(now) ? null : state.at(now);
     }
 
     public static void onTick(ClientTickEvent.Post event) {
@@ -148,12 +163,15 @@ public final class ClientPlayerAnimations {
         Iterator<Map.Entry<UUID, PlayerAnimationState>> states = PlayerAnimationClientCache.all().entrySet().iterator();
         while (states.hasNext()) {
             Map.Entry<UUID, PlayerAnimationState> entry = states.next();
-            PlayerAnimationState state = entry.getValue();
+            PlayerAnimationState whole = entry.getValue();
+            PlayerAnimationState state = whole.at(now); // segmento vigente
             PlayerAnimationDef def = PlayerAnimations.get(state.animation());
             Player player = level.getPlayerByUUID(entry.getKey());
             Tracked tracked = TRACKED.get(entry.getKey());
-            if (tracked == null || tracked.state.sequence() != state.sequence()) {
-                if (tracked != null) end(level, entry.getKey(), tracked.state, PlayerAnimationEvent.EndReason.STOPPED);
+            boolean newSequence = tracked == null || tracked.state.sequence() != state.sequence();
+            if (newSequence || tracked.state.segment() != state.segment()) {
+                if (tracked != null) end(level, entry.getKey(), tracked.state, newSequence
+                        ? PlayerAnimationEvent.EndReason.STOPPED : PlayerAnimationEvent.EndReason.FINISHED);
                 tracked = new Tracked();
                 tracked.state = state;
                 // Quem pega a animacao no meio nao repete os eventos que ja passaram.
@@ -165,7 +183,7 @@ public final class ClientPlayerAnimations {
                 tracked.cursor.advance(def, state.loop(), state.elapsed(now),
                         timed -> NeoForge.EVENT_BUS.post(new PlayerAnimationEvent.Timed(player, def, state, timed)));
             }
-            if (state.finished(now)) {
+            if (whole.finished(now)) {
                 states.remove();
                 TRACKED.remove(entry.getKey());
                 end(level, entry.getKey(), state, PlayerAnimationEvent.EndReason.FINISHED);
