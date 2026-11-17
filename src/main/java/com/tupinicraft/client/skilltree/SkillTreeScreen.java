@@ -239,12 +239,21 @@ public final class SkillTreeScreen extends TupiScreen {
                     Component.translatable("attribute.name." + attributePath(e.target()))).withStyle(ChatFormatting.BLUE);
             case ATTRIBUTE_MULTIPLY -> Component.translatable("skilleffect.tupinicraft.multiply", Math.round(e.amount() * 100),
                     Component.translatable("attribute.name." + attributePath(e.target()))).withStyle(ChatFormatting.BLUE);
-            case NEED_RATE -> Component.translatable("skilleffect.tupinicraft.need", Math.round((1 - e.amount()) * 100),
-                    Component.translatable("need.tupinicraft." + e.target())).withStyle(ChatFormatting.AQUA);
+            case NEED_RATE -> legacyNeed(e.target())
+                    // Hidratacao/energia sao legadas (Etapa 4.5): o efeito fica guardado, mas nao faz nada.
+                    ? Component.translatable("skilleffect.tupinicraft.need_legacy",
+                            Component.translatable("need.tupinicraft." + e.target())).withStyle(ChatFormatting.DARK_GRAY)
+                    : Component.translatable("skilleffect.tupinicraft.need", Math.round((1 - e.amount()) * 100),
+                            Component.translatable("need.tupinicraft." + e.target())).withStyle(ChatFormatting.AQUA);
             case MOOD_BONUS -> Component.translatable("skilleffect.tupinicraft.mood", Math.round(e.amount() / 100)).withStyle(ChatFormatting.AQUA);
             case FINISHER -> Component.translatable("skilleffect.tupinicraft.finisher",
                     Component.translatable("finisher." + e.target().replace(':', '.'))).withStyle(ChatFormatting.LIGHT_PURPLE);
         };
+    }
+
+    private static boolean legacyNeed(String id) {
+        com.tupinicraft.needs.Need need = com.tupinicraft.needs.Need.byId(id);
+        return need != null && !need.active();
     }
 
     private static String attributePath(String id) {

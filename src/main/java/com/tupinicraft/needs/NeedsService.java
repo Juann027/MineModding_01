@@ -23,7 +23,6 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -42,8 +41,10 @@ public final class NeedsService {
         if (!old.sameDisplay(needs)) sync(player);
     }
 
+    /** Hidratacao e Energia (legadas, inativas) sao descartadas aqui: consumiveis e comida nao as mudam. */
     public static void apply(ServerPlayer player, NeedsDelta delta) {
-        set(player, get(player).plus(delta));
+        NeedsDelta active = delta.activeOnly();
+        if (!active.isZero()) set(player, get(player).plus(active));
     }
 
     public static void sync(ServerPlayer player) {
@@ -177,7 +178,7 @@ public final class NeedsService {
 
     /** Aviso na barra de acao quando um valor cruza o limite (uma vez por travessia). */
     private static void warn(ServerPlayer player, Needs before, Needs after) {
-        for (Need need : Need.values()) {
+        for (Need need : Need.ACTIVE) {
             int b = before.get(need);
             int a = after.get(need);
             boolean crossed = need.highIsGood() ? (b >= NeedsRules.LOW && a < NeedsRules.LOW)
@@ -187,12 +188,7 @@ public final class NeedsService {
     }
 
     private static void effects(ServerPlayer player, Needs n) {
-        if (n.hydration() < NeedsRules.LOW) effect(player, MobEffects.MOVEMENT_SLOWDOWN, 0);
-        if (n.hydration() == 0 && player.tickCount % 100 == 0) player.hurt(player.damageSources().dryOut(), 1F);
-        if (n.energy() < NeedsRules.LOW) {
-            effect(player, MobEffects.DIG_SLOWDOWN, 0);
-            if (n.energy() == 0) effect(player, MobEffects.MOVEMENT_SLOWDOWN, 1);
-        }
+        // Hidratacao e Energia sao legadas e invisiveis: nao causam penalidade (Etapa 4.5).
         if (n.mood() < 2_000) effect(player, MobEffects.WEAKNESS, 0);
         if (n.mood() >= NeedsRules.HAPPY) effect(player, MobEffects.LUCK, 0);
         if (n.bladder() > 9_000 || n.bowel() > 9_000) effect(player, MobEffects.MOVEMENT_SLOWDOWN, 0);
@@ -226,13 +222,6 @@ public final class NeedsService {
                 apply(player, new NeedsDelta(soup ? 1_500 : (stack.is(Items.MELON_SLICE) ? 800 : 0), 0,
                         soup ? 400 : 0, food.nutrition() * 120, food.nutrition() * 40));
             }
-        }
-    }
-
-    /** Dormir a noite inteira enche a energia. */
-    public static void onWakeUp(PlayerWakeUpEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player && !event.wakeImmediately() && player.isSleepingLongEnough()) {
-            set(player, get(player).with(Need.ENERGY, Needs.MAX));
         }
     }
 

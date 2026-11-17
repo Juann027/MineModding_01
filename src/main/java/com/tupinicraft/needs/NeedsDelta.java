@@ -48,4 +48,9 @@ public record NeedsDelta(int hydration, int energy, int bladder, int bowel, int 
     }
 
     public boolean isZero() { return equals(NONE); }
+
+    /** Sem Hidratacao e Energia (dados legados inativos desde a Etapa 4.5; ver {@link Need#active()}). */
+    public NeedsDelta activeOnly() {
+        return new NeedsDelta(0, 0, bladder, bowel, mood, coom);
+    }
 }
