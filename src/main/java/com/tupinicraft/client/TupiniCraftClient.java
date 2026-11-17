@@ -2,9 +2,10 @@ package com.tupinicraft.client;
 
 import com.tupinicraft.TupiniCraft;
 import com.tupinicraft.client.character.CharacterCreatorKeybinds;
-import com.tupinicraft.client.character.PlayerHairLayer;
-import com.tupinicraft.client.character.PlayerBustLayer;
-import com.tupinicraft.client.playergeo.PlayerGeoTestKeys;
+import com.tupinicraft.client.animation.ClientPlayerAnimations;
+import com.tupinicraft.client.bodylayer.BodyLayers;
+import com.tupinicraft.client.bodylayer.BodyLayersRenderLayer;
+import com.tupinicraft.client.playergeo.PlayerRigController;
 import com.tupinicraft.client.hud.BodyStatusInventoryPanel;
 import com.tupinicraft.client.hud.EmotionOrbOverlay;
 import com.tupinicraft.client.render.CaboEleitoralRenderer;
@@ -16,11 +17,13 @@ import com.tupinicraft.network.FinisherVisualClientCache;
 import com.tupinicraft.registry.ModEntities;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.client.resources.PlayerSkin;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.common.NeoForge;
@@ -31,11 +34,15 @@ public final class TupiniCraftClient {
     public TupiniCraftClient(IEventBus modBus) {
         modBus.addListener(TupiniCraftClient::registerRenderers);
         modBus.addListener(CharacterCreatorKeybinds::register);
-        modBus.addListener(PlayerGeoTestKeys::register);
-        modBus.addListener(TupiniCraftClient::registerHairLayers);
+        modBus.addListener(PlayerRigController::registerKeys);
+        modBus.addListener(TupiniCraftClient::registerPlayerLayers);
+        modBus.addListener(TupiniCraftClient::registerReloadListeners);
         NeoForge.EVENT_BUS.addListener(CharacterCreatorKeybinds::onTick);
-        NeoForge.EVENT_BUS.addListener(PlayerGeoTestKeys::onTick);
-        NeoForge.EVENT_BUS.addListener(PlayerGeoTestKeys::onRenderPlayer);
+        NeoForge.EVENT_BUS.addListener(PlayerRigController::onTick);
+        NeoForge.EVENT_BUS.addListener(PlayerRigController::onRenderPre);
+        NeoForge.EVENT_BUS.addListener(PlayerRigController::onRenderPost);
+        NeoForge.EVENT_BUS.addListener(ClientPlayerAnimations::onTick);
+        NeoForge.EVENT_BUS.addListener(ClientPlayerAnimations::onTimedEvent);
         modBus.addListener(TupiniCraftClient::registerGuiLayers);
         NeoForge.EVENT_BUS.addListener(BodyStatusInventoryPanel::onInventoryForeground);
         NeoForge.EVENT_BUS.addListener(DefeatCounterNameplate::render);
@@ -43,7 +50,8 @@ public final class TupiniCraftClient {
             DefeatCountClientCache.clear();
             CharacterAppearanceClientCache.clear();
             FinisherVisualClientCache.clear();
-            PlayerGeoTestKeys.clear();
+            PlayerRigController.clear();
+            ClientPlayerAnimations.clear();
         });
     }
 
@@ -52,13 +60,22 @@ public final class TupiniCraftClient {
                 (graphics, deltaTracker) -> EmotionOrbOverlay.render(graphics));
     }
 
-    private static void registerHairLayers(EntityRenderersEvent.AddLayers event) {
+    private static void registerPlayerLayers(EntityRenderersEvent.AddLayers event) {
+        BodyLayers.registerDefaults();
         for (PlayerSkin.Model model : event.getSkins()) {
             if (event.getSkin(model) instanceof PlayerRenderer renderer) {
-                renderer.addLayer(new PlayerHairLayer(renderer));
-                renderer.addLayer(new PlayerBustLayer(renderer));
+                // O rig entra como primeira camada; as Body Layers (busto, cabelo...) por ultimo.
+                PlayerRigController.addLayer(renderer);
+                renderer.addLayer(new BodyLayersRenderLayer(renderer));
             }
         }
+    }
+
+    private static void registerReloadListeners(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((ResourceManagerReloadListener) manager -> {
+            ClientPlayerAnimations.onResourceReload();
+            BodyLayers.onResourceReload();
+        });
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {

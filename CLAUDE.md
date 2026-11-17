@@ -9,6 +9,17 @@ Base: MDK oficial `NeoForgeMDKs/MDK-1.21.1-ModDevGradle` (plugin `net.neoforged.
 > `AGENTS.md`. As seções abaixo sobre eleições, mandatos, economia, HUD e testes descrevem o sistema arquivado.
 > O CI agora roda `./gradlew build` + teste de fumaça (servidor sobe e mobs são invocados).
 
+## Rig GeckoLib do jogador, Body Layers e animações (ativo; detalhes em `HANDOFF_GECKOLIB_STAGE2.md`)
+
+- O rig é a **primeira camada** do `PlayerRenderer` (`client.playergeo.PlayerRigLayer`): lê a pose vanilla, desenha o
+  rig e devolve a pose ao `PlayerModel`, para armadura, itens e demais camadas acompanharem. Não cancele
+  `RenderPlayerEvent.Pre` nem volte a desenhar o jogador fora do renderer vanilla.
+- Em `PlayerRigModel.compose`, mantenha o `GeoBone::resetStateChanges` no fim (sem ele a pose acumula a cada quadro).
+- Peças do corpo (busto, cabelo, acessórios) são `BodyLayerDefinition` em `client.bodylayer.BodyLayers`; não crie
+  `RenderLayer` nova por peça nem desenhe a peça dentro do rig.
+- Animações são dados em `animation.PlayerAnimations` (sem classe por animação). Só `PlayerAnimationService` inicia e
+  para animações; o cliente envia apenas a intenção. Som, VFX e câmera entram por `PlayerAnimationEvent`.
+
 ## Fluxo de entrega e merge automático (política do dono do repositório)
 
 O dono do repositório autorizou merge automático dos PRs ao concluir cada tarefa, sem aguardar aprovação manual.

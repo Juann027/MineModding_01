@@ -88,5 +88,7 @@
   "gui.tupinicraft.hub.close": "Return to game",
   "gui.tupinicraft.hub.future": "Skills and attributes: coming soon.",
   "key.tupinicraft.geo_toggle": "[Test] Toggle GeckoLib player rig (F8)",
-  "key.tupinicraft.geo_wave": "[Test] GeckoLib player wave (F9)"
+  "key.tupinicraft.geo_wave": "[Test] GeckoLib player wave (F9)",
+  "message.tupinicraft.geo_debug_on": "GeckoLib test rig: ON (all players; F5 for third person)",
+  "message.tupinicraft.geo_debug_off": "GeckoLib test rig: OFF"
 }

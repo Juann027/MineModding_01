@@ -87,6 +87,8 @@
   "gui.tupinicraft.hub.edit": "Editar aparencia",
   "gui.tupinicraft.hub.close": "Voltar ao jogo",
   "gui.tupinicraft.hub.future": "Habilidades e atributos: em desenvolvimento.",
-  "key.tupinicraft.geo_toggle": "[Teste] Alternar rig GeckoLib (F8)",
-  "key.tupinicraft.geo_wave": "[Teste] Acenar com GeckoLib (F9)"
+  "key.tupinicraft.geo_toggle": "[Teste] Rig GeckoLib sempre ligado (F8)",
+  "key.tupinicraft.geo_wave": "Acenar (F9)",
+  "message.tupinicraft.geo_debug_on": "Rig GeckoLib de teste: LIGADO (todos os jogadores; F5 para terceira pessoa)",
+  "message.tupinicraft.geo_debug_off": "Rig GeckoLib de teste: DESLIGADO"
 }
