@@ -55,7 +55,19 @@ jobs:
       - name: Criar Release
         if: steps.version.outputs.exists == 'false'
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" build/libs/*.jar \
+          # .github/release-prerelease com "true" publica como Pre-release.
+          PRERELEASE=""
+          if [ "$(tr -d '[:space:]' < .github/release-prerelease 2>/dev/null)" = "true" ]; then
+            PRERELEASE="--prerelease"
+          fi
+          # Só o jar do mod (sem -sources/-javadoc, caso venham a existir).
+          JAR=$(ls build/libs/tupinicraft-*.jar | grep -v -E -- '-(sources|javadoc|dev)\.jar$')
+          if [ "$(echo "$JAR" | wc -l)" -ne 1 ] || [ ! -s "$JAR" ]; then
+            echo "::error::Esperado exatamente um jar do mod em build/libs: $JAR"
+            exit 1
+          fi
+          sha256sum "$JAR"
+          gh release create "${{ steps.version.outputs.tag }}" "$JAR" $PRERELEASE \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "$(cat .github/release-title.txt)" \
