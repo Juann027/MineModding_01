@@ -5,6 +5,9 @@ import com.tupinicraft.client.character.CharacterCreatorKeybinds;
 import com.tupinicraft.client.animation.ClientPlayerAnimations;
 import com.tupinicraft.client.bodylayer.BodyLayers;
 import com.tupinicraft.client.bodylayer.BodyLayersRenderLayer;
+import com.tupinicraft.client.cinematic.CinematicCamera;
+import com.tupinicraft.client.hud.NeedsHudOverlay;
+import com.tupinicraft.network.ProfileClientCache;
 import com.tupinicraft.client.playergeo.PlayerRigController;
 import com.tupinicraft.client.hud.BodyStatusInventoryPanel;
 import com.tupinicraft.client.hud.EmotionOrbOverlay;
@@ -43,6 +46,10 @@ public final class TupiniCraftClient {
         NeoForge.EVENT_BUS.addListener(PlayerRigController::onRenderPost);
         NeoForge.EVENT_BUS.addListener(ClientPlayerAnimations::onTick);
         NeoForge.EVENT_BUS.addListener(ClientPlayerAnimations::onTimedEvent);
+        // Finisher Engine: camera dinamica, tremor e FOV dos participantes.
+        NeoForge.EVENT_BUS.addListener(CinematicCamera::onClientTick);
+        NeoForge.EVENT_BUS.addListener(CinematicCamera::onTimedEvent);
+        NeoForge.EVENT_BUS.addListener(CinematicCamera::onComputeFov);
         modBus.addListener(TupiniCraftClient::registerGuiLayers);
         NeoForge.EVENT_BUS.addListener(BodyStatusInventoryPanel::onInventoryForeground);
         NeoForge.EVENT_BUS.addListener(DefeatCounterNameplate::render);
@@ -52,12 +59,20 @@ public final class TupiniCraftClient {
             FinisherVisualClientCache.clear();
             PlayerRigController.clear();
             ClientPlayerAnimations.clear();
+            ProfileClientCache.clear();
+            CinematicCamera.reset();
         });
+        // Respawn e troca de dimensao recriam o jogador local: a camera nunca fica presa na cena.
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.Clone event) -> CinematicCamera.reset());
     }
 
     private static void registerGuiLayers(RegisterGuiLayersEvent event) {
         event.registerAbove(VanillaGuiLayers.EXPERIENCE_BAR, TupiniCraft.id("emotion_orb"),
                 (graphics, deltaTracker) -> EmotionOrbOverlay.render(graphics));
+        event.registerAbove(VanillaGuiLayers.FOOD_LEVEL, TupiniCraft.id("needs"),
+                (graphics, deltaTracker) -> NeedsHudOverlay.render(graphics));
+        event.registerAboveAll(TupiniCraft.id("cinematic_letterbox"),
+                (graphics, deltaTracker) -> CinematicCamera.renderLetterbox(graphics, deltaTracker.getGameTimeDeltaPartialTick(false)));
     }
 
     private static void registerPlayerLayers(EntityRenderersEvent.AddLayers event) {

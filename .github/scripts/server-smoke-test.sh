@@ -31,7 +31,7 @@ if [ "$ready" != 1 ]; then
   fail "servidor não ficou pronto"
   exec 3>&-; kill "$pid" 2>/dev/null; wait "$pid"
 else
-  for cmd in "summon tupinicraft:cabo_eleitoral 0 -60 0" "summon tupinicraft:leao_do_fim 0 -60 0" "tupinianim list"; do
+  for cmd in "summon tupinicraft:cabo_eleitoral 0 -60 0" "summon tupinicraft:leao_do_fim 0 -60 0" "tupinianim list" "tupini selftest" "tupini skills list" "tupini finishers"; do
     echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
@@ -44,6 +44,10 @@ grep -v DEBUG "$log" | grep -E 'tupinicraft|TupiniCraft|Exception|Error|Summon|s
 [ "$(grep -c 'Summoned new' "$log")" -ge 2 ] || fail "mobs não foram invocados no servidor dedicado"
 # Animation Manager carregado no servidor dedicado (catalogo e comando), sem classes de cliente.
 grep -q 'Animações de jogador: tupinicraft:idle, tupinicraft:wave' "$log" || fail "catálogo de animações de jogador não respondeu no servidor"
+# Etapa 3: autoteste das regras (roleta, necessidades, habilidades, camera, Codecs) e catalogos.
+grep -q 'Autoteste TupiniCraft: OK' "$log" || { grep 'Autoteste falhou' "$log"; fail "autoteste das regras falhou"; }
+grep -q 'Habilidades (18)' "$log" || fail "catálogo de habilidades não respondeu"
+grep -q 'Finalizações: tupinicraft:takedown, tupinicraft:rasteira' "$log" || fail "catálogo de finalizações não respondeu"
 if grep -E 'NoClassDefFoundError|ClassNotFoundException|invalid dist|RuntimeDistCleaner' "$log"; then
   fail "erro de classe exclusiva do cliente no servidor dedicado"
 fi

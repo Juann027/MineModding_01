@@ -1,67 +1,95 @@
 package com.tupinicraft.client.character;
 
-import com.tupinicraft.character.CharacterAppearance;
-import com.tupinicraft.network.CharacterAppearanceClientCache;
+import com.tupinicraft.client.roulette.BirthRouletteScreen;
+import com.tupinicraft.client.skilltree.SkillTreeScreen;
+import com.tupinicraft.client.ui.EntityPreview;
+import com.tupinicraft.client.ui.TupiButton;
+import com.tupinicraft.client.ui.TupiScreen;
+import com.tupinicraft.client.ui.Ui;
+import com.tupinicraft.needs.Need;
+import com.tupinicraft.needs.Needs;
+import com.tupinicraft.network.ProfileClientCache;
+import com.tupinicraft.profile.BirthOrigin;
+import com.tupinicraft.profile.CharacterAttribute;
+import com.tupinicraft.profile.CharacterProfile;
+import com.tupinicraft.skill.SkillDef;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/** Menu inicial da tecla K depois que a criacao de personagem foi confirmada pelo servidor. */
-public final class CharacterHubScreen extends Screen {
-    private int left, top, panelWidth;
+/** Menu da tecla K: previa do personagem, origem, atributos, necessidades e atalhos para as outras telas. */
+public final class CharacterHubScreen extends TupiScreen {
+    private static final String KEY = "gui.tupinicraft.hub.";
+    private float yaw = -20F;
 
     public CharacterHubScreen() {
-        super(Component.translatable("gui.tupinicraft.hub.title"));
+        super(Component.translatable(KEY + "title"));
     }
 
     @Override
     protected void init() {
-        panelWidth = Math.min(width - 16, 290);
-        left = (width - panelWidth) / 2;
-        top = Math.max(4, (height - 178) / 2);
-        int buttonWidth = Math.min(220, panelWidth - 24);
-        int buttonX = left + (panelWidth - buttonWidth) / 2;
-        addRenderableWidget(Button.builder(Component.translatable("gui.tupinicraft.hub.edit"),
-                button -> Minecraft.getInstance().setScreen(new CharacterCreationScreen()))
-                .bounds(buttonX, top + 106, buttonWidth, 22).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.tupinicraft.hub.close"),
-                button -> onClose())
-                .bounds(buttonX, top + 136, buttonWidth, 20).build());
+        layoutPanel(400, 230);
+        CharacterProfile profile = ProfileClientCache.profile();
+        int bx = left + panelWidth - 132, bw = 122;
+        int y = top + 30;
+        addRenderableWidget(new TupiButton(bx, y, bw, 22, Component.translatable(KEY + "edit"),
+                b -> minecraft.setScreen(new CharacterCreationScreen())).icon(SkillDef.iconTexture("identidade_dinheiro")));
+        addRenderableWidget(new TupiButton(bx, y + 26, bw, 22, Component.translatable(profile.born() ? KEY + "birth_done" : KEY + "birth"),
+                b -> minecraft.setScreen(new BirthRouletteScreen())).icon(SkillDef.iconTexture("trevo"))
+                .accent(profile.born() ? Ui.GOLD : Ui.GREEN).badge(profile.born() ? "" : "!"));
+        addRenderableWidget(new TupiButton(bx, y + 52, bw, 22, Component.translatable(KEY + "skills"),
+                b -> minecraft.setScreen(new SkillTreeScreen())).icon(SkillDef.iconTexture("constituicao"))
+                .badge(profile.skillPoints() > 0 ? String.valueOf(profile.skillPoints()) : ""));
+        addRenderableWidget(new TupiButton(bx, top + panelHeight - 30, bw, 20, Component.translatable(KEY + "close"), b -> onClose()));
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // Fundo nitido, sem chamar renderBackground(), que acionaria o blur do jogo.
-        graphics.fill(0, 0, width, height, 0x66000000);
-        graphics.fill(left, top, left + panelWidth, top + 174, 0xFF88949C);
-        graphics.fill(left + 2, top + 2, left + panelWidth - 2, top + 172, 0xFF262F38);
-        graphics.fill(left + 3, top + 3, left + panelWidth - 3, top + 29, 0xFF131B24);
-        graphics.drawString(font, title, left + 11, top + 12, 0xFFE7F0F7, false);
+    public void tick() {
+        super.tick();
+        yaw += 0.6F;
+    }
 
+    @Override
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
-            CharacterAppearance a = CharacterAppearanceClientCache.get(mc.player.getUUID());
-            if (a.created()) {
-                graphics.drawString(font, Component.translatable("gui.tupinicraft.hub.created"),
-                        left + 12, top + 40, 0xFFB3E1BB, false);
-                graphics.drawString(font, Component.translatable("gui.tupinicraft.creator.body").append(": ")
-                                .append(Component.translatable("gui.tupinicraft.creator.body." + CharacterAppearance.BODY_IDS[a.bodyType()])),
-                        left + 12, top + 59, 0xFFE7F0F7, false);
-                graphics.drawString(font, Component.translatable("gui.tupinicraft.creator.hair").append(": ")
-                                .append(Component.translatable("gui.tupinicraft.creator.hair." + CharacterAppearance.HAIR_IDS[a.hairStyle()])),
-                        left + 12, top + 72, 0xFFE7F0F7, false);
-            }
+        int px1 = left + 10, py1 = top + 28, px2 = left + 92, py2 = top + panelHeight - 10;
+        g.fill(px1, py1, px2, py2, 0xC0101820);
+        Ui.glow(g, (px1 + px2) / 2F, py2 - 10, 34, 0x6043D17A);
+        if (mc.player != null) EntityPreview.render(g, px1, py1, px2, py2, 40, yaw + partialTick * 0.6F, 4F, mc.player);
+
+        CharacterProfile p = ProfileClientCache.profile();
+        int x = px2 + 10, y = top + 30;
+        BirthOrigin origin = p.originOrNull();
+        if (origin != null) {
+            Ui.icon(g, com.tupinicraft.skill.SkillDef.iconTexture(origin.icon()), x, y - 2, 14);
+            g.drawString(font, Component.translatable("origin.tupinicraft." + origin.id()), x + 18, y + 1, origin.color(), true);
+        } else {
+            g.drawString(font, Component.translatable(KEY + "unborn"), x, y + 1, Ui.MUTED, false);
         }
-        graphics.drawString(font, Component.translatable("gui.tupinicraft.hub.future"),
-                left + 12, top + 90, 0xFFBCC8D0, false);
-        super.render(graphics, mouseX, mouseY, partialTick);
+        y += 16;
+        int barW = left + panelWidth - 142 - x;
+        for (CharacterAttribute a : CharacterAttribute.values()) {
+            int v = p.attribute(a);
+            g.drawString(font, Component.translatable("attribute.tupinicraft." + a.id()), x, y, Ui.TEXT, false);
+            String num = String.valueOf(v);
+            g.drawString(font, num, x + barW - font.width(num), y, Ui.GOLD, false);
+            Ui.bar(g, x, y + 9, barW, 5, v / (float) CharacterAttribute.MAX, a.color());
+            y += 17;
+        }
+        y += 4;
+        Needs n = ProfileClientCache.needs();
+        g.drawString(font, Component.translatable(KEY + "needs"), x, y, Ui.GOLD, false);
+        y += 11;
+        int half = (barW - 6) / 2;
+        int i = 0;
+        for (Need need : Need.values()) {
+            int cx = x + (i % 2) * (half + 6), cy = y + (i / 2) * 15;
+            g.drawString(font, Component.translatable("need.tupinicraft." + need.id()).getString() + " " + n.percent(need) + "%",
+                    cx, cy, Ui.MUTED, false);
+            Ui.bar(g, cx, cy + 9, half, 4, n.get(need) / (float) Needs.MAX, need.color());
+            i++;
+        }
+        g.drawString(font, Component.translatable(KEY + "points", p.skillPoints()), left + panelWidth - 132,
+                top + 112, Ui.GOLD, false);
     }
-
-    /** Sem fundo vanilla: o Screen#render da 1.21.1 chamaria o blur por cima do painel ja desenhado. */
-    @Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
-
-    @Override public boolean isPauseScreen() { return false; }
 }

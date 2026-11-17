@@ -39,3 +39,7 @@ TupiniCraft: base experimental para NPCs, biomas e dimens√µes. Sistemas de elei√
     versionRange="[${smartbrainlib_version},)"
     ordering="AFTER"
     side="BOTH"
+
+# Access transformer (camera cinematografica das finalizacoes)
+[[accessTransformers]]
+file="META-INF/accesstransformer.cfg"

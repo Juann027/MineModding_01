@@ -1,21 +1,21 @@
 package com.tupinicraft.client.hud;
 
-/**
- * Instantâneo somente visual dos medidores do jogador (todos variam de 0 a 100).
- *
- * <p>Por enquanto não existe sistema de atributos, persistência ou pacotes de
- * sincronização no projeto. PREVIEW é propositalmente uma amostra fixa, e não
- * deve ser confundido com valores do jogo. Quando as mecânicas existirem,
- * a camada de cliente poderá receber instantâneos enviados pelo servidor.
- */
-public record HudMeters(int coom, int bladder, int bowel, int emotion) {
-    public static final HudMeters PREVIEW = new HudMeters(72, 85, 43, 65);
+import com.tupinicraft.needs.Need;
+import com.tupinicraft.needs.Needs;
 
+/** Instantaneo visual das necessidades (0 a 100), lido da copia sincronizada pelo servidor. */
+public record HudMeters(int hydration, int energy, int bladder, int bowel, int emotion) {
     public HudMeters {
-        coom = clamp(coom);
+        hydration = clamp(hydration);
+        energy = clamp(energy);
         bladder = clamp(bladder);
         bowel = clamp(bowel);
         emotion = clamp(emotion);
+    }
+
+    public static HudMeters of(Needs needs) {
+        return new HudMeters(needs.percent(Need.HYDRATION), needs.percent(Need.ENERGY), needs.percent(Need.BLADDER),
+                needs.percent(Need.BOWEL), needs.percent(Need.MOOD));
     }
 
     private static int clamp(int value) {

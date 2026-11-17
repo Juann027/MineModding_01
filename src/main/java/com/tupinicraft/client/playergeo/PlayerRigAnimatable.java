@@ -41,6 +41,10 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
 
     private ClientPlayerAnimations.Clip currentClip;
     private int lastSequence = NO_SEQUENCE;
+    // Sincronizacao temporal: transicao usada nesta execucao e avanco pendente do clip (quem entrou no meio).
+    private int usedTransition;
+    private boolean catchUpPending;
+    private PlayerAnimationState syncedState;
     private double lastFrameTick = Double.NaN;
     private double lastClipTick = Double.NEGATIVE_INFINITY;
 
@@ -87,21 +91,27 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        AnimationController<PlayerRigAnimatable> main = new AnimationController<>(this, "main", 3, state -> {
+        SyncedController main = new SyncedController(this, state -> {
             PlayerAnimationState server = ClientPlayerAnimations.active(uuid);
             ClientPlayerAnimations.Clip clip = server == null ? null : ClientPlayerAnimations.clip(server.animation());
             if (clip != null) {
                 if (server.sequence() != lastSequence || clip != currentClip) {
-                    // Novo inicio (inclusive repetir a mesma animacao): recomeca do zero.
+                    // Novo inicio (inclusive repetir a mesma animacao): recomeca e alinha ao relogio do servidor.
                     lastSequence = server.sequence();
                     currentClip = clip;
+                    syncedState = server;
+                    // Quem comeca a ver no meio pula a transicao e avanca o clip ate o instante certo.
+                    usedTransition = serverElapsed(server) > clip.def().transitionTicks() + 2 ? 0 : clip.def().transitionTicks();
+                    catchUpPending = true;
                     state.getController().forceAnimationReset();
                 }
-                state.getController().transitionLength(clip.def().transitionTicks());
+                state.getController().transitionLength(usedTransition);
                 return state.setAndContinue(clip.raw(server.loop()));
             }
             lastSequence = NO_SEQUENCE;
             currentClip = null;
+            syncedState = null;
+            catchUpPending = false;
             // Modo de teste (F8): sem animacao do servidor, o rig respira com o idle.
             ClientPlayerAnimations.Clip idle = PlayerRigController.debugRig() ? PlayerRigController.idleClipOrNull() : null;
             if (idle == null) return PlayState.STOP;
@@ -117,6 +127,51 @@ public final class PlayerRigAnimatable implements GeoAnimatable {
         main.setCustomInstructionKeyframeHandler(event -> forward(PlayerAnimations.EVENT_CLIP_INSTRUCTION,
                 event.getKeyframeData().getInstructions(), event.getAnimationTick()));
         controllers.add(main);
+    }
+
+    /** Ticks (com fracao) desde o inicio decidido pelo servidor, no relogio do mundo deste cliente. */
+    private static double serverElapsed(PlayerAnimationState state) {
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc.level == null) return 0;
+        double now = mc.level.getGameTime() + mc.getTimer().getGameTimeDeltaPartialTick(false);
+        return Math.max(0, now - state.startGameTime());
+    }
+
+    /**
+     * Quanto o clip deve estar adiantado no instante em que comeca a rodar (fim da transicao): tempo do servidor
+     * menos a transicao usada. Em loop, so a fase dentro do ciclo. Consumido uma vez por execucao.
+     */
+    double consumeCatchUp() {
+        if (!catchUpPending || syncedState == null) return 0;
+        catchUpPending = false;
+        double ahead = serverElapsed(syncedState) - usedTransition;
+        if (syncedState.loop()) ahead = ahead % Math.max(1, syncedState.durationTicks());
+        else ahead = Math.min(ahead, syncedState.durationTicks() - 1);
+        return ahead > 0.5 ? ahead : 0;
+    }
+
+    /**
+     * Controller que, ao iniciar o clip (fim da transicao), desloca o relogio interno para o instante decidido
+     * pelo servidor. Sem isso, quem comecava a ver uma animacao finita no meio a reproduzia do inicio.
+     */
+    static final class SyncedController extends AnimationController<PlayerRigAnimatable> {
+        SyncedController(PlayerRigAnimatable animatable, AnimationStateHandler<PlayerRigAnimatable> handler) {
+            super(animatable, "main", 3, handler);
+        }
+
+        @Override
+        protected double adjustTick(double tick) {
+            // O GeckoLib zera o relogio no inicio da transicao (estado TRANSITIONING), no inicio do clip (RUNNING)
+            // e a cada volta de um loop (RUNNING); o avanco e consumido so na primeira vez por execucao.
+            boolean clipStarting = shouldResetTick && getAnimationState() == State.RUNNING;
+            double result = super.adjustTick(tick);
+            if (!clipStarting) return result;
+            double ahead = animatable.consumeCatchUp();
+            if (ahead <= 0) return result;
+            double speed = getAnimationSpeed();
+            tickOffset -= ahead / Math.max(1e-3, speed);
+            return speed * Math.max(tick - tickOffset, 0);
+        }
     }
 
     private void forward(net.minecraft.resources.ResourceLocation type, String data, double tick) {

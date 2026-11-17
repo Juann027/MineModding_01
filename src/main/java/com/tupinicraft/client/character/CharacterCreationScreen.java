@@ -1,35 +1,52 @@
 package com.tupinicraft.client.character;
 
 import com.tupinicraft.character.CharacterAppearance;
+import com.tupinicraft.client.roulette.BirthRouletteScreen;
+import com.tupinicraft.client.ui.CycleSelector;
+import com.tupinicraft.client.ui.EntityPreview;
+import com.tupinicraft.client.ui.TupiButton;
+import com.tupinicraft.client.ui.TupiScreen;
+import com.tupinicraft.client.ui.Ui;
 import com.tupinicraft.network.CharacterAppearanceClientCache;
 import com.tupinicraft.network.CharacterAppearanceUpdatePayload;
+import com.tupinicraft.network.ProfileClientCache;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Criador inicial: penteados 3D simples e cor são renderizados sobre os jogadores.
- * Corpo/pele/rosto são preferências salvas, aguardando o futuro modelo personalizado.
- * NÃO modifica skin Mojang, atributos ou animações do personagem.
+ * Criador de personagem: previa 3D do proprio jogador (rig + Body Layers) atualizada ao vivo, abas Corpo,
+ * Cabelo e Rosto, botao aleatorio. A previa e so local; o servidor valida e confirma ao salvar.
  */
-public final class CharacterCreationScreen extends Screen {
+public final class CharacterCreationScreen extends TupiScreen {
+    private static final String KEY = "gui.tupinicraft.creator.";
+    private enum Tab { BODY, HAIR, FACE }
+
     private int bodyType, hairStyle, hairColor, skinTone, face;
-    private Button[] selectors;
-    private int px, py, pw;
-    private Button saveButton;
-    private boolean waitingForServer = false;
+    private Tab tab = Tab.BODY;
+    private final List<TupiButton> tabButtons = new ArrayList<>();
+    private TupiButton saveButton;
+    private boolean waitingForServer;
+    private boolean saveError;
     private int requestedAppearance;
     private long revisionBeforeSave;
     private int waitTicks;
-    private boolean saveError = false;
+    // Previa: giro por arrasto e "respiro" leve.
+    private float previewYaw = -25F;
+    private float yawVelocity;
+    private boolean dragging;
+    private int previewX1, previewY1, previewX2, previewY2;
 
     public CharacterCreationScreen() {
-        super(Component.translatable("gui.tupinicraft.creator.title"));
-        CharacterAppearance current = Minecraft.getInstance().player == null ? CharacterAppearance.defaults()
-                : CharacterAppearanceClientCache.get(Minecraft.getInstance().player.getUUID());
+        super(Component.translatable(KEY + "title"));
+        Minecraft mc = Minecraft.getInstance();
+        CharacterAppearance current = mc.player == null ? CharacterAppearance.defaults()
+                : CharacterAppearanceClientCache.confirmed(mc.player.getUUID());
         bodyType = current.bodyType();
         hairStyle = current.hairStyle();
         hairColor = current.hairColor();
@@ -39,32 +56,97 @@ public final class CharacterCreationScreen extends Screen {
 
     @Override
     protected void init() {
-        pw = Math.min(width - 12, 356);
-        px = (width - pw) / 2;
-        py = Math.max(2, (height - 220) / 2);
-        int right = px + 132;
-        int buttonWidth = Math.max(72, pw - 143);
-        selectors = new Button[5];
-        for (int i = 0; i < selectors.length; i++) {
-            final int field = i;
-            selectors[i] = addRenderableWidget(Button.builder(label(i), button -> {
-                cycle(field);
-                button.setMessage(label(field));
-            }).bounds(right, py + 40 + i * 25, buttonWidth, 22).build());
+        layoutPanel(380, 236);
+        tabButtons.clear();
+        previewX1 = left + 10;
+        previewY1 = top + 28;
+        previewX2 = left + Math.min(140, panelWidth / 2 - 10);
+        previewY2 = top + panelHeight - 52;
+        int colX = previewX2 + 10;
+        int colW = left + panelWidth - 10 - colX;
+
+        Tab[] tabs = Tab.values();
+        int tabW = (colW - 4 * (tabs.length - 1)) / tabs.length;
+        for (int i = 0; i < tabs.length; i++) {
+            Tab t = tabs[i];
+            TupiButton b = addRenderableWidget(new TupiButton(colX + i * (tabW + 4), top + 28, tabW, 18,
+                    Component.translatable(KEY + "tab." + t.name().toLowerCase()), button -> {
+                tab = t;
+                rebuildWidgets();
+            }).selected(t == tab));
+            tabButtons.add(b);
         }
-        saveButton = addRenderableWidget(Button.builder(Component.translatable("gui.tupinicraft.creator.save"), button -> saveCharacter())
-                .bounds(px + pw - 99, py + 195, 89, 20).build());
+        int rowY = top + 54;
+        switch (tab) {
+            case BODY -> {
+                addRenderableWidget(new CycleSelector(colX, rowY, colW, 20, Component.translatable(KEY + "body"),
+                        CharacterAppearance.BODY_IDS.length, bodyType,
+                        i -> Component.translatable(KEY + "body." + CharacterAppearance.BODY_IDS[i]), i -> { bodyType = i; preview(); }));
+                addRenderableWidget(new CycleSelector(colX, rowY + 24, colW, 20, Component.translatable(KEY + "skin"),
+                        CharacterAppearance.SKIN_IDS.length, skinTone,
+                        i -> Component.translatable(KEY + "skin." + CharacterAppearance.SKIN_IDS[i]), i -> { skinTone = i; preview(); })
+                        .swatches(i -> CharacterAppearance.SKIN_ARGB[i]));
+            }
+            case HAIR -> {
+                addRenderableWidget(new CycleSelector(colX, rowY, colW, 20, Component.translatable(KEY + "hair"),
+                        CharacterAppearance.HAIR_IDS.length, hairStyle,
+                        i -> Component.translatable(KEY + "hair." + CharacterAppearance.HAIR_IDS[i]), i -> { hairStyle = i; preview(); }));
+                addRenderableWidget(new CycleSelector(colX, rowY + 24, colW, 20, Component.translatable(KEY + "color"),
+                        CharacterAppearance.COLOR_IDS.length, hairColor,
+                        i -> Component.translatable(KEY + "color." + CharacterAppearance.COLOR_IDS[i]), i -> { hairColor = i; preview(); })
+                        .swatches(i -> CharacterAppearance.COLOR_ARGB[i]));
+                // Paleta clicavel
+                int sw = Math.min(18, (colW - 4 * (CharacterAppearance.COLOR_IDS.length - 1)) / CharacterAppearance.COLOR_IDS.length);
+                for (int i = 0; i < CharacterAppearance.COLOR_IDS.length; i++) {
+                    final int color = i;
+                    addRenderableWidget(new TupiButton(colX + i * (sw + 4), rowY + 52, sw, sw, Component.empty(), b -> {
+                        hairColor = color;
+                        preview();
+                        rebuildWidgets();
+                    }).selected(i == hairColor).accent(CharacterAppearance.COLOR_ARGB[i])
+                            .tooltip(Component.translatable(KEY + "color." + CharacterAppearance.COLOR_IDS[i])));
+                }
+            }
+            case FACE -> addRenderableWidget(new CycleSelector(colX, rowY, colW, 20, Component.translatable(KEY + "face"),
+                    CharacterAppearance.FACE_IDS.length, face,
+                    i -> Component.translatable(KEY + "face." + CharacterAppearance.FACE_IDS[i]), i -> { face = i; preview(); }));
+        }
+        int footerY = top + panelHeight - 28;
+        addRenderableWidget(new TupiButton(previewX1, previewY2 + 4, previewX2 - previewX1, 18,
+                Component.translatable(KEY + "random"), b -> randomize()).accent(0xFF8FB3C9));
+        addRenderableWidget(new TupiButton(left + 10, footerY, 80, 20, Component.translatable(KEY + "back"), b -> onClose()));
+        saveButton = addRenderableWidget(new TupiButton(left + panelWidth - 100, footerY, 90, 20,
+                Component.translatable(KEY + "save"), b -> saveCharacter()).accent(Ui.GREEN));
         saveButton.active = !waitingForServer;
-        addRenderableWidget(Button.builder(Component.translatable("gui.tupinicraft.creator.back"), button -> onClose())
-                .bounds(px + 10, py + 195, 84, 20).build());
+        preview();
     }
 
-    /** Só considera a criação concluída quando o servidor confirma a aparência via sync. */
+    private CharacterAppearance current(boolean created) {
+        return new CharacterAppearance(created, bodyType, hairStyle, hairColor, skinTone, face);
+    }
+
+    private void preview() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) CharacterAppearanceClientCache.setPreview(mc.player.getUUID(), current(true));
+    }
+
+    private void randomize() {
+        RandomSource r = RandomSource.create();
+        bodyType = r.nextInt(CharacterAppearance.BODY_IDS.length);
+        hairStyle = r.nextInt(CharacterAppearance.HAIR_IDS.length);
+        hairColor = r.nextInt(CharacterAppearance.COLOR_IDS.length);
+        skinTone = r.nextInt(CharacterAppearance.SKIN_IDS.length);
+        face = r.nextInt(CharacterAppearance.FACE_IDS.length);
+        yawVelocity = 25F;
+        vfx.burst((previewX1 + previewX2) / 2F, (previewY1 + previewY2) / 2F, 24, Ui.GOLD, 3F);
+        rebuildWidgets();
+    }
+
+    /** So considera a criacao concluida quando o servidor confirma a aparencia via sync. */
     private void saveCharacter() {
         Minecraft mc = Minecraft.getInstance();
         if (waitingForServer || mc.player == null) return;
-        CharacterAppearance appearance = new CharacterAppearance(true, bodyType, hairStyle, hairColor, skinTone, face);
-        requestedAppearance = appearance.pack();
+        requestedAppearance = current(true).pack();
         revisionBeforeSave = CharacterAppearanceClientCache.revision(mc.player.getUUID());
         waitTicks = 0;
         waitingForServer = true;
@@ -76,6 +158,8 @@ public final class CharacterCreationScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
+        previewYaw += yawVelocity;
+        yawVelocity *= 0.85F;
         if (!waitingForServer) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) {
@@ -84,140 +168,109 @@ public final class CharacterCreationScreen extends Screen {
         }
         var uuid = mc.player.getUUID();
         if (CharacterAppearanceClientCache.revision(uuid) > revisionBeforeSave) {
-            CharacterAppearance confirmed = CharacterAppearanceClientCache.get(uuid);
+            CharacterAppearance confirmed = CharacterAppearanceClientCache.confirmed(uuid);
             if (confirmed.created() && confirmed.pack() == requestedAppearance) {
-                mc.setScreen(new CharacterHubScreen());
+                CharacterAppearanceClientCache.clearPreview();
+                // Personagem novo ainda sem nascimento: segue para a roleta.
+                mc.setScreen(ProfileClientCache.profile().born() ? new CharacterHubScreen() : new BirthRouletteScreen());
                 return;
             }
-            // Ignorar sincronizacoes antigas/concorrentes; aguardar a confirmacao correta.
         }
-        if (++waitTicks >= 200) { // 10 segundos sem confirmacao do servidor
-            failSaving();
+        if (++waitTicks >= 200) {
+            waitingForServer = false;
+            saveError = true;
+            saveButton.active = true;
         }
     }
 
-    private void failSaving() {
-        waitingForServer = false;
-        saveError = true;
-        saveButton.active = true;
+    @Override
+    public void removed() {
+        CharacterAppearanceClientCache.clearPreview();
+        super.removed();
     }
 
     @Override
     public void onClose() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null && CharacterAppearanceClientCache.get(mc.player.getUUID()).created()) {
+        CharacterAppearanceClientCache.clearPreview();
+        if (mc.player != null && CharacterAppearanceClientCache.confirmed(mc.player.getUUID()).created()) {
             mc.setScreen(new CharacterHubScreen());
         } else {
             super.onClose();
         }
     }
 
-    private Component label(int field) {
-        String fieldKey = "gui.tupinicraft.creator.";
-        return switch (field) {
-            case 0 -> Component.translatable(fieldKey + "body").append(": ")
-                    .append(Component.translatable(fieldKey + "body." + CharacterAppearance.BODY_IDS[bodyType]));
-            case 1 -> Component.translatable(fieldKey + "hair").append(": ")
-                    .append(Component.translatable(fieldKey + "hair." + CharacterAppearance.HAIR_IDS[hairStyle]));
-            case 2 -> Component.translatable(fieldKey + "color").append(": ")
-                    .append(Component.translatable(fieldKey + "color." + CharacterAppearance.COLOR_IDS[hairColor]));
-            case 3 -> Component.translatable(fieldKey + "skin").append(": ")
-                    .append(Component.translatable(fieldKey + "skin." + CharacterAppearance.SKIN_IDS[skinTone]));
-            default -> Component.translatable(fieldKey + "face").append(": ")
-                    .append(Component.translatable(fieldKey + "face." + CharacterAppearance.FACE_IDS[face]));
-        };
-    }
-
-    private void cycle(int field) {
-        switch (field) {
-            case 0 -> bodyType = (bodyType + 1) % CharacterAppearance.BODY_IDS.length;
-            case 1 -> hairStyle = (hairStyle + 1) % CharacterAppearance.HAIR_IDS.length;
-            case 2 -> hairColor = (hairColor + 1) % CharacterAppearance.COLOR_IDS.length;
-            case 3 -> skinTone = (skinTone + 1) % CharacterAppearance.SKIN_IDS.length;
-            default -> face = (face + 1) % CharacterAppearance.FACE_IDS.length;
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (mouseX >= previewX1 && mouseX < previewX2 && mouseY >= previewY1 && mouseY < previewY2) {
+            dragging = true;
+            return true;
         }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    /**
-     * Sem fundo vanilla: na 1.21.1 o Screen#render chama renderBackground, que aplica o blur em tudo o que
-     * ja foi desenhado (painel, textos e retrato ficavam borrados). O fundo e desenhado em render().
-     */
     @Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (dragging) {
+            previewYaw -= (float) dragX * 2.2F;
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // Nao usar Screen#renderBackground: aplica blur ao mundo na 1.21.1.
-        // Escurecimento sutil sem desfoque para manter o jogo visivel ao fundo.
-        graphics.fill(0, 0, width, height, 0x66000000);
-        graphics.fill(px, py, px + pw, py + 219, 0xFF_88949C);
-        graphics.fill(px + 2, py + 2, px + pw - 2, py + 217, 0xFF_262F38);
-        graphics.fill(px + 3, py + 3, px + pw - 3, py + 30, 0xFF_131B24);
-        graphics.drawString(font, title, px + 10, py + 13, 0xFF_E7F0F7, false);
-        graphics.drawString(font, Component.translatable("gui.tupinicraft.creator.preview"), px + 13, py + 39, 0xFF_CDD9E3, false);
-        drawPortrait(graphics, px + 16, py + 55);
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        dragging = false;
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // Pedestal da previa
+        g.fill(previewX1, previewY1, previewX2, previewY2, 0xC0101820);
+        g.fillGradient(previewX1, previewY1, previewX2, previewY2, 0x00000000, 0x6030A060);
+        int cx = (previewX1 + previewX2) / 2;
+        Ui.glow(g, cx, previewY2 - 10, 40, 0x6043D17A);
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            float bob = Mth.sin((ticks + partialTick) * 0.08F) * 2F;
+            EntityPreview.render(g, previewX1, previewY1, previewX2, previewY2,
+                    Math.min(48, (previewY2 - previewY1) * 0.38F), previewYaw + bob, 6F, mc.player);
+        }
+        g.drawCenteredString(font, Component.translatable(KEY + "drag"), cx, previewY1 + 4, Ui.MUTED);
+
+        int colX = previewX2 + 10;
+        if (tab == Tab.FACE || tab == Tab.BODY) drawPortrait(g, left + panelWidth - 66, top + 108);
+        int infoY = top + panelHeight - 50;
         if (waitingForServer || saveError) {
-            graphics.drawString(font, Component.translatable(waitingForServer
-                    ? "gui.tupinicraft.creator.saving" : "gui.tupinicraft.creator.save_error"),
-                    px + 12, py + 174, saveError ? 0xFFFF9999 : 0xFFB3E1BB, false);
+            g.drawString(font, Component.translatable(waitingForServer ? KEY + "saving" : KEY + "save_error"),
+                    colX, infoY, saveError ? Ui.RED : Ui.GREEN, false);
         } else {
-            graphics.drawString(font, Component.translatable("gui.tupinicraft.creator.note"), px + 12, py + 172, 0xFF_BCC8D0, false);
-            graphics.drawString(font, Component.translatable("gui.tupinicraft.creator.note2"), px + 12, py + 183, 0xFF_BCC8D0, false);
+            g.drawString(font, Component.translatable(KEY + "note"), colX, infoY, Ui.MUTED, false);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
-    /** Retrato 2D do cabelo; as mesmas opções produzem acessórios voxel na cabeça em 3D. */
-    private void drawPortrait(GuiGraphics g, int left, int top) {
-        g.fill(left, top, left + 104, top + 110, 0xFF_151D25);
-        g.fill(left + 2, top + 2, left + 102, top + 108, 0xFF_3B4652);
+    /** Retrato 2D com pele e expressao (ainda nao aplicadas ao modelo 3D). */
+    private void drawPortrait(GuiGraphics g, int x, int y) {
         int skin = CharacterAppearance.SKIN_ARGB[skinTone];
         int hair = CharacterAppearance.COLOR_ARGB[hairColor];
-        // Corpo/busto e pescoço: apenas ilustração, ainda não altera a skin vanilla.
-        g.fill(left + 29, top + 86, left + 76, top + 108, 0xFF_4D7995);
-        g.fill(left + 46, top + 77, left + 59, top + 92, skin);
-        g.fill(left + 30, top + 27, left + 75, top + 81, skin);
-        g.fill(left + 26, top + 46, left + 30, top + 66, skin);
-        g.fill(left + 75, top + 46, left + 79, top + 66, skin);
-        // Olhos e boca de prévia.
-        g.fill(left + 42, top + 51, left + 47, top + 56, 0xFF_2B2628);
-        g.fill(left + 58, top + 51, left + 63, top + 56, 0xFF_2B2628);
-        if (face == 1) {
-            g.fill(left + 45, top + 68, left + 61, top + 70, 0xFF_743B43);
-            g.fill(left + 48, top + 70, left + 58, top + 72, 0xFF_743B43);
-        } else if (face == 2) {
-            g.fill(left + 45, top + 68, left + 61, top + 70, 0xFF_743B43);
-            g.fill(left + 38, top + 46, left + 50, top + 49, hair);
-            g.fill(left + 56, top + 46, left + 68, top + 49, hair);
-        } else {
-            g.fill(left + 47, top + 69, left + 59, top + 71, 0xFF_743B43);
-        }
-        if (hairStyle != 0) {
-            g.fill(left + 29, top + 21, left + 76, top + 32, hair);
-            g.fill(left + 29, top + 30, left + 35, top + 43, hair);
-            g.fill(left + 70, top + 30, left + 76, top + 43, hair);
-        }
-        switch (hairStyle) {
-            case 2 -> g.fill(left + 32, top + 31, left + 64, top + 41, hair);
-            case 3 -> {
-                for (int i = 0; i < 5; i++) g.fill(left + 30 + i * 9, top + 17 - (i % 2) * 4,
-                        left + 38 + i * 9, top + 26, hair);
+        g.fill(x - 2, y - 2, x + 54, y + 54, 0xFF06080A);
+        g.fill(x, y, x + 52, y + 52, 0xFF2A3644);
+        g.fill(x + 10, y + 10, x + 42, y + 46, skin);
+        if (hairStyle != 0) g.fill(x + 10, y + 6, x + 42, y + 14, hair);
+        g.fill(x + 17, y + 22, x + 21, y + 26, 0xFF2B2628);
+        g.fill(x + 31, y + 22, x + 35, y + 26, 0xFF2B2628);
+        switch (face) {
+            case 1 -> {
+                g.fill(x + 18, y + 34, x + 34, y + 36, 0xFF743B43);
+                g.fill(x + 20, y + 36, x + 32, y + 38, 0xFF743B43);
             }
-            case 4 -> {
-                g.fill(left + 21, top + 30, left + 30, top + 91, hair);
-                g.fill(left + 75, top + 30, left + 84, top + 91, hair);
+            case 2 -> {
+                g.fill(x + 18, y + 35, x + 34, y + 37, 0xFF743B43);
+                g.fill(x + 15, y + 18, x + 23, y + 20, hair);
+                g.fill(x + 29, y + 18, x + 37, y + 20, hair);
             }
-            case 5 -> {
-                g.fill(left + 75, top + 30, left + 87, top + 43, hair);
-                g.fill(left + 84, top + 39, left + 94, top + 75, hair);
-            }
-            case 6 -> {
-                g.fill(left + 45, top + 6, left + 60, top + 21, hair);
-                g.fill(left + 33, top + 15, left + 43, top + 24, hair);
-            }
-            default -> { /* careca e curto */ }
+            default -> g.fill(x + 20, y + 35, x + 32, y + 37, 0xFF743B43);
         }
     }
-
-    @Override public boolean isPauseScreen() { return false; }
 }
