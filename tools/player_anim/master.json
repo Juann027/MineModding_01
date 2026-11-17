@@ -1,0 +1,4 @@
+{
+ "_leia": "Fonte de verdade dos arquivos gravados por export.py (o .animation.json da biblioteca de combate e os dois .bbmodel de model_sources/player). 'gerador' = poses.py/clips.py mandam e export.py pode regravar. 'blockbench' = os .bbmodel sao editados a mao no Blockbench e o .animation.json sai do Export Animations; export.py nunca grava esses arquivos no repositorio (nem com --force). Veja HANDOFF_PLAYER_ANIMATIONS_STAGE4_1.md.",
+ "mestre": "gerador"
+}
