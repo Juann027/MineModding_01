@@ -30,13 +30,34 @@ public final class CharacterAppearanceClientCache {
         }
     }
 
+    // Previa local do criador de personagem (so neste cliente, nunca enviada): o modelo 3D mostra a escolha.
+    private static UUID previewOwner;
+    private static CharacterAppearance preview;
+
     public static CharacterAppearance get(UUID uuid) {
+        if (preview != null && uuid.equals(previewOwner)) return preview;
         return APPEARANCES.getOrDefault(uuid, CharacterAppearance.defaults());
+    }
+
+    /** Aparencia confirmada pelo servidor, ignorando a previa. */
+    public static CharacterAppearance confirmed(UUID uuid) {
+        return APPEARANCES.getOrDefault(uuid, CharacterAppearance.defaults());
+    }
+
+    public static void setPreview(UUID owner, CharacterAppearance appearance) {
+        previewOwner = owner;
+        preview = appearance;
+    }
+
+    public static void clearPreview() {
+        previewOwner = null;
+        preview = null;
     }
 
     public static long revision(UUID uuid) { return REVISIONS.getOrDefault(uuid, 0L); }
 
     public static void clear() {
+        clearPreview();
         APPEARANCES.clear();
         REVISIONS.clear();
     }

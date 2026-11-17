@@ -1,0 +1,141 @@
+{
+  "finisher.whoosh": {
+    "sounds": [
+      {
+        "name": "minecraft:entity.player.attack.sweep",
+        "type": "event",
+        "volume": 1.0,
+        "pitch": 1.2
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.finisher.whoosh"
+  },
+  "finisher.impact": {
+    "sounds": [
+      {
+        "name": "minecraft:entity.player.attack.strong",
+        "type": "event",
+        "volume": 1.0,
+        "pitch": 1.0
+      },
+      {
+        "name": "minecraft:entity.player.attack.knockback",
+        "type": "event",
+        "volume": 1.0,
+        "pitch": 1.0
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.finisher.impact"
+  },
+  "finisher.impact_heavy": {
+    "sounds": [
+      {
+        "name": "minecraft:entity.player.attack.crit",
+        "type": "event",
+        "volume": 1.0,
+        "pitch": 1.0
+      },
+      {
+        "name": "minecraft:entity.iron_golem.attack",
+        "type": "event",
+        "volume": 1.0,
+        "pitch": 1.0
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.finisher.impact_heavy"
+  },
+  "finisher.sting": {
+    "sounds": [
+      {
+        "name": "minecraft:block.anvil.land",
+        "type": "event",
+        "volume": 0.5,
+        "pitch": 0.8
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.finisher.sting"
+  },
+  "skill.unlock": {
+    "sounds": [
+      {
+        "name": "minecraft:ui.toast.challenge_complete",
+        "type": "event",
+        "volume": 0.6,
+        "pitch": 1.0
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.skill.unlock"
+  },
+  "roulette.tick": {
+    "sounds": [
+      {
+        "name": "minecraft:block.note_block.hat",
+        "type": "event",
+        "volume": 1.0,
+        "pitch": 1.4
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.roulette.tick"
+  },
+  "roulette.win": {
+    "sounds": [
+      {
+        "name": "minecraft:entity.player.levelup",
+        "type": "event",
+        "volume": 1.0,
+        "pitch": 1.0
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.roulette.win"
+  },
+  "needs.accident": {
+    "sounds": [
+      {
+        "name": "minecraft:entity.generic.splash",
+        "type": "event",
+        "volume": 1.0,
+        "pitch": 1.0
+      },
+      {
+        "name": "minecraft:block.honey_block.slide",
+        "type": "event",
+        "volume": 1.0,
+        "pitch": 1.0
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.needs.accident"
+  },
+  "needs.relief": {
+    "sounds": [
+      {
+        "name": "minecraft:block.bubble_column.upwards_ambient",
+        "type": "event",
+        "volume": 0.7,
+        "pitch": 1.0
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.needs.relief"
+  },
+  "ui.click": {
+    "sounds": [
+      {
+        "name": "minecraft:ui.button.click",
+        "type": "event",
+        "volume": 0.5,
+        "pitch": 1.0
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.ui.click"
+  },
+  "ui.hover": {
+    "sounds": [
+      {
+        "name": "minecraft:block.note_block.hat",
+        "type": "event",
+        "volume": 0.15,
+        "pitch": 2.0
+      }
+    ],
+    "subtitle": "subtitles.tupinicraft.ui.hover"
+  }
+}

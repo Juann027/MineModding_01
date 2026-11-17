@@ -10,7 +10,7 @@ import net.neoforged.neoforge.client.event.ContainerScreenEvent;
 /**
  * Painel de Body & Traits ao lado do inventário normal (somente leitura).
  *
- * <p>Desenha formas nativas, sem PNG e sem substituir o inventário/slots.
+ * <p>Mostra as necessidades reais (sincronizadas pelo servidor), sem substituir o inventário/slots.
  * Usa o lado livre do inventário; em GUIs pequenas, reduz sua largura e
  * abrevia os nomes, sem cobrir os slots do jogador.
  */
@@ -67,19 +67,25 @@ public final class BodyStatusInventoryPanel {
         String title = compact ? (width < 70 ? "ST" : "STATUS") : "BODY & TRAITS";
         graphics.drawString(font, title, x + padding, y + 7, TEXT, false);
 
-        meter(graphics, font, x + padding, y + 26, width - 2 * padding,
-                Component.translatable("gui.tupinicraft.coom").getString(), "C", status.coom(), 0xFF_C788DF, compact);
-        meter(graphics, font, x + padding, y + 51, width - 2 * padding,
-                Component.translatable("gui.tupinicraft.bladder").getString(), "U", status.bladder(), 0xFF_E8C440, compact);
-        meter(graphics, font, x + padding, y + 76, width - 2 * padding,
-                Component.translatable("gui.tupinicraft.bowel").getString(), "B", status.bowel(), 0xFF_A37D51, compact);
-        meter(graphics, font, x + padding, y + 101, width - 2 * padding,
-                Component.translatable("gui.tupinicraft.emotion").getString(), "E", status.emotion(), 0xFF_79C8D9, compact);
+        int step = 20;
+        meter(graphics, font, x + padding, y + 24, width - 2 * padding,
+                Component.translatable("need.tupinicraft.hidratacao").getString(), "H", status.hydration(), 0xFF_4FB3E8, compact);
+        meter(graphics, font, x + padding, y + 24 + step, width - 2 * padding,
+                Component.translatable("need.tupinicraft.energia").getString(), "E", status.energy(), 0xFF_F2CF4A, compact);
+        meter(graphics, font, x + padding, y + 24 + step * 2, width - 2 * padding,
+                Component.translatable("need.tupinicraft.bexiga").getString(), "B", status.bladder(), 0xFF_E8C440, compact);
+        meter(graphics, font, x + padding, y + 24 + step * 3, width - 2 * padding,
+                Component.translatable("need.tupinicraft.intestino").getString(), "I", status.bowel(), 0xFF_A37D51, compact);
+        meter(graphics, font, x + padding, y + 24 + step * 4, width - 2 * padding,
+                Component.translatable("need.tupinicraft.humor").getString(), "M", status.emotion(), 0xFF_79C8D9, compact);
 
         rect(graphics, x + padding, y + 125, width - padding * 2, 1, BORDER);
-        String traits = compact ? "T: --" : Component.translatable("gui.tupinicraft.traits").getString() + ": --";
+        var origin = com.tupinicraft.network.ProfileClientCache.profile().originOrNull();
+        String originName = origin == null ? "--" : Component.translatable("origin.tupinicraft." + origin.id()).getString();
+        String traits = compact ? "O: " + (origin == null ? "--" : originName.substring(0, Math.min(3, originName.length())))
+                : Component.translatable("gui.tupinicraft.traits").getString() + ": " + originName;
         graphics.drawString(font, traits, x + padding, y + 131, TEXT, false);
-        String footer = compact ? "DEMO" : Component.translatable("gui.tupinicraft.hud_preview").getString();
+        String footer = compact ? "K" : Component.translatable("gui.tupinicraft.hud_hint").getString();
         graphics.drawString(font, footer, x + padding, y + 146, MUTED, false);
     }
 
@@ -95,11 +101,11 @@ public final class BodyStatusInventoryPanel {
         if (numberX >= x + font.width(name) + 2) {
             graphics.drawString(font, number, numberX, y, MUTED, false);
         }
-        rect(graphics, x, y + 12, width, 9, 0xFF_0E1319);
-        rect(graphics, x + 1, y + 13, width - 2, 7, 0xFF_4B535D);
+        rect(graphics, x, y + 10, width, 7, 0xFF_0E1319);
+        rect(graphics, x + 1, y + 11, width - 2, 5, 0xFF_4B535D);
         int contentWidth = Math.max(0, width - 4);
         int filledWidth = (contentWidth * value) / 100;
-        if (filledWidth > 0) rect(graphics, x + 2, y + 14, filledWidth, 5, fillColor);
+        if (filledWidth > 0) rect(graphics, x + 2, y + 12, filledWidth, 3, fillColor);
     }
 
     private static void rect(GuiGraphics graphics, int x, int y, int width, int height, int color) {
