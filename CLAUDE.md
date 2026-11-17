@@ -33,6 +33,16 @@ Base: MDK oficial `NeoForgeMDKs/MDK-1.21.1-ModDevGradle` (plugin `net.neoforged.
   o estado de animação sincronizado e precisa restaurar a perspectiva em qualquer saída. Regras puras novas entram no
   `selftest.SelfTest` (rodado por `/tupini selftest` no teste de fumaça).
 
+## Etapa 3.1 (ativo; detalhes em `HANDOFF_ETAPA3_1.md`)
+
+- Necessidades: Coom, Bexiga, Intestino, Emoção (id `humor`) + Hidratação e Energia. Medidores detalhados só no painel
+  Body & Traits do inventário; na tela de jogo fica só o orbe de Emoção (não recrie grade permanente).
+- Consumíveis são dados (`needs.NeedEffects` + `NeedEffectDef`); efeitos ativos no attachment `tupinicraft:need_effects`,
+  aplicados só pelo `NeedsService`. Taxa do Coom em `config/tupinicraft-needs-server.toml`.
+- Roleta: no máximo 1 novo giro (`CharacterProfile.canReroll`); a tela só apresenta o resultado do servidor.
+- Pele e rosto do criador são Body Layers (`BodyLayers.registerFaceAndSkin`) por cima da skin da conta; opção
+  "Da skin" (índice 3) desliga. Não substitua a textura da skin.
+
 ## Fluxo de entrega e merge automático (política do dono do repositório)
 
 O dono do repositório autorizou merge automático dos PRs ao concluir cada tarefa, sem aguardar aprovação manual.
