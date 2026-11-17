@@ -28,12 +28,34 @@ def _groups_by_name(model):
     return {g["name"]: g["uuid"] for g in model["groups"]}
 
 
+def to_blockbench(channel, vector):
+    """Valor do .animation.json (convencao Bedrock/GeckoLib) -> valor guardado no .bbmodel.
+
+    O Blockbench guarda os keyframes no proprio referencial e, ao exportar (Keyframe.compileBedrockKeyframe),
+    inverte X e Y da rotacao e X da posicao. A conversao e a mesma nos dois sentidos.
+    """
+    x, y, z = vector
+    if channel == "rotation":
+        return [-x, -y, z]
+    if channel == "position":
+        return [-x, y, z]
+    return [x, y, z]
+
+
+from_blockbench = to_blockbench
+
+
+def _num(v):
+    v = float(v) + 0.0  # sem "-0.0"
+    return str(int(v)) if v.is_integer() else repr(round(v, 6))
+
+
 def _keyframes(name, bone_json, time_offset=0.0):
     out = []
     for channel in ("rotation", "position"):
         for t, entry in bone_json.get(channel, {}).items():
-            x, y, z = entry["vector"]
-            kf = {"channel": channel, "data_points": [{"x": str(x), "y": str(y), "z": str(z)}],
+            x, y, z = (_num(v) for v in to_blockbench(channel, entry["vector"]))
+            kf = {"channel": channel, "data_points": [{"x": x, "y": y, "z": z}],
                   "uuid": _uuid(name, channel, t), "time": round(float(t) + time_offset, 4), "color": -1,
                   "interpolation": "linear"}
             if "easing" in entry:
