@@ -276,7 +276,12 @@ public final class FinisherTestMechanic {
 
     /** Impactos da finalizacao: som, particulas e o "tranco" da vitima, decididos aqui e vistos por todos. */
     public static void onAnimationTimed(PlayerAnimationEvent.Timed event) {
-        if (!(event.getPlayer() instanceof ServerPlayer player) || !event.getEvent().type().equals(Finishers.EVENT_HIT)) return;
+        if (!(event.getPlayer() instanceof ServerPlayer player)) return;
+        if (event.getEvent().type().equals(Finishers.EVENT_FALL)) {
+            onFall(player, event.getEvent().data());
+            return;
+        }
+        if (!event.getEvent().type().equals(Finishers.EVENT_HIT)) return;
         Session s = SESSIONS.get(player.getUUID());
         if (s == null || s.attacker != player) return;
         int strength = Mth.clamp(parseInt(event.getEvent().data(), 1), 1, 3);
@@ -294,6 +299,34 @@ public final class FinisherTestMechanic {
         if (strength >= 3) level.playSound(null, target.blockPosition(), ModSounds.FINISHER_STING.get(), SoundSource.PLAYERS, 0.7F, 1F);
         // Lampejo vermelho e inclinacao de dano nos clientes, sem dano real (a cena nao mata).
         level.broadcastDamageEvent(target, player.damageSources().playerAttack(player));
+    }
+
+    /** Queda da vitima: poeira do bloco do chao e baque onde o corpo bate (recuo para tras da vitima). */
+    private static void onFall(ServerPlayer player, String data) {
+        Session s = SESSIONS.get(player.getUUID());
+        if (s == null || s.target != player) return;
+        String[] parts = data.split(",");
+        int strength = Mth.clamp(parseInt(parts[0], 1), 1, 3);
+        double back = parts.length > 1 ? Mth.clamp(parseDouble(parts[1], 0), 0, 1.5) : 0;
+        Vec3 behind = Vec3.directionFromRotation(0, player.getYRot()).scale(-back);
+        double x = player.getX() + behind.x, y = player.getY(), z = player.getZ() + behind.z;
+        var level = player.serverLevel();
+        var ground = level.getBlockState(net.minecraft.core.BlockPos.containing(x, y - 0.2, z));
+        if (!ground.isAir()) {
+            level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, ground),
+                    x, y + 0.05, z, 14 * strength, 0.35, 0.02, 0.35, 0.15);
+        }
+        level.sendParticles(ParticleTypes.POOF, x, y + 0.1, z, 4 * strength, 0.3, 0.02, 0.3, 0.02);
+        level.playSound(null, x, y, z, strength >= 2 ? net.minecraft.sounds.SoundEvents.PLAYER_BIG_FALL
+                : net.minecraft.sounds.SoundEvents.PLAYER_SMALL_FALL, SoundSource.PLAYERS, 0.9F, 0.9F);
+    }
+
+    private static double parseDouble(String text, double fallback) {
+        try {
+            return Double.parseDouble(text.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     private static int parseInt(String text, int fallback) {
@@ -332,7 +365,11 @@ public final class FinisherTestMechanic {
         PAIR_COOLDOWNS.put(new Pair(s.attacker.getUUID(), s.target.getUUID()),
                 now + FinisherRules.SAME_PAIR_COOLDOWN_TICKS);
         VICTIM_COOLDOWNS.put(s.target.getUUID(), now + FinisherRules.VICTIM_COOLDOWN_TICKS);
-        if (s.target instanceof ServerPlayer player) {
+        if (s.target instanceof ServerPlayer player && s.finisher.recoveryInScene()) {
+            // A vitima ja se levantou dentro do clip: os dois voltam ao controle normal agora.
+            int updated = DefeatCounter.increment(player);
+            message(player, "Derrota especial de TESTE registrada (" + updated + ").");
+        } else if (s.target instanceof ServerPlayer player) {
             int updated = DefeatCounter.increment(player);
             INCAPACITATED.put(player.getUUID(), new Incapacitated(player.position(), now + FinisherRules.INCAPACITATED_TICKS, player.level().dimension()));
             message(player, "Derrota especial de TESTE registrada (" + updated + "). Recuperacao: 10s. /stopitstopnow libera.");

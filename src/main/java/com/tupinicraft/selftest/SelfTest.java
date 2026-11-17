@@ -180,7 +180,22 @@ public final class SelfTest {
         check(f, Math.abs(o[0]) < 1e-6 && Math.abs(o[2] - 2) < 1e-6, "câmera: offset frontal");
         double[] side = CameraTrack.offset(track.sample(10), 0);
         check(f, Math.abs(side[0] + 4) < 1e-6, "câmera: offset lateral");
-        check(f, Finishers.pick(s -> false, RandomGenerator.of("L64X128MixRandom")) == Finishers.TAKEDOWN, "finalizações: sem habilidade só takedown");
+        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        for (int i = 0; i < 32; i++) {
+            check(f, Finishers.pick(s -> false, random).requiresSkill() == null, "finalizações: sem habilidade só as livres");
+        }
+        // Coreografia da Etapa 4: dois clips do mesmo tamanho, impactos no executor, queda e recuperação na vítima.
+        FinisherDef combo = Finishers.COMBO;
+        check(f, combo.attacker().durationTicks() == combo.victim().durationTicks(), "combo: clips com a mesma duração");
+        check(f, combo.recoveryInScene() && combo.victim().blend() == PlayerAnimationDef.Blend.FULL_BODY, "combo: vítima levanta no clip");
+        check(f, combo.attacker().events().stream().filter(e -> e.type().equals(Finishers.EVENT_HIT)).count() == 2, "combo: dois impactos");
+        check(f, combo.victim().events().stream().anyMatch(e -> e.type().equals(Finishers.EVENT_FALL)), "combo: evento de queda");
+        for (PlayerAnimationDef def : List.of(PlayerAnimations.COMBAT_IDLE, PlayerAnimations.PUNCH, PlayerAnimations.KICK,
+                PlayerAnimations.HIT_REACTION, PlayerAnimations.STAGGER, PlayerAnimations.KNOCKDOWN, PlayerAnimations.KNEEL,
+                PlayerAnimations.HANDS_AND_KNEES, PlayerAnimations.CRAWL, PlayerAnimations.GET_UP)) {
+            check(f, PlayerAnimations.get(def.id()) == def && def.animationFile().equals(PlayerAnimations.COMBAT_FILE),
+                    "biblioteca: animação não registrada " + def.id());
+        }
     }
 
     private static void codecs(List<String> f) {

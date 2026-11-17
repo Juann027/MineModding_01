@@ -45,7 +45,46 @@ public final class PlayerAnimations {
             .builder(TupiniCraft.id("wave"), PLAYER_FILE, "animation.tupinicraft.player.wave", 40)
             .priority(10).overrideBones("RightArm").playerTriggerable().build());
 
+    // ------------------------------------------------------------------ biblioteca de combate e chao (Etapa 4)
+    // Clips em COMBAT_FILE, gerados por tools/player_anim (fonte editavel: model_sources/player/*.bbmodel).
+    // Todos comecam e terminam numa pose conhecida: em pe (neutra), guarda ou quatro apoios.
+
+    /** Arquivo da biblioteca de combate/chao e das coreografias da Etapa 4. */
+    public static final ResourceLocation COMBAT_FILE =
+            TupiniCraft.id("animations/player/tupinicraft_player_combat.animation.json");
+
+    /** Guarda de combate em loop (pernas em base, punhos no queixo). */
+    public static final PlayerAnimationDef COMBAT_IDLE = register(library("combat_idle", 40, 6, 5).loop().build());
+    /** Direto de direita com avanco: antecipacao, golpe (tick 13), retorno a guarda e a pose neutra. */
+    public static final PlayerAnimationDef PUNCH = register(library("punch", 26, 3, 20)
+            .event(10, EVENT_SOUND, "tupinicraft:finisher.whoosh").build());
+    /** Chute frontal com a perna de tras: recolhe, estende (tick 14), recolhe e pousa. */
+    public static final PlayerAnimationDef KICK = register(library("kick", 34, 3, 20)
+            .event(11, EVENT_SOUND, "tupinicraft:finisher.whoosh").build());
+    /** Reacao a um golpe no tronco: dobra para a frente e se recompoe. */
+    public static final PlayerAnimationDef HIT_REACTION = register(library("hit_reaction", 20, 1, 30).build());
+    /** Desequilibrio: cambaleia para os lados e se firma. */
+    public static final PlayerAnimationDef STAGGER = register(library("stagger", 34, 2, 30).build());
+    /** Queda controlada: de pe ate quatro apoios (termina exatamente na pose de HANDS_AND_KNEES). */
+    public static final PlayerAnimationDef KNOCKDOWN = register(library("knockdown", 34, 1, 40)
+            .event(20, EVENT_SOUND, "minecraft:entity.player.small_fall")
+            .event(23, EVENT_SOUND, "minecraft:entity.player.small_fall").build());
+    /** Ajoelha nos dois joelhos, fica e levanta. */
+    public static final PlayerAnimationDef KNEEL = register(library("kneel", 60, 3, 10).build());
+    /** Quatro apoios (pose neutra reutilizavel), respirando em loop. */
+    public static final PlayerAnimationDef HANDS_AND_KNEES = register(library("hands_and_knees", 40, 6, 40).loop().build());
+    /** Engatinhar no lugar (ciclo de diagonais); o deslocamento no mundo e de quem chama. */
+    public static final PlayerAnimationDef CRAWL = register(library("crawl", 24, 6, 40).loop().build());
+    /** Recuperacao: de quatro apoios ate em pe, passando por um joelho. */
+    public static final PlayerAnimationDef GET_UP = register(library("get_up", 40, 2, 40).build());
+
     private PlayerAnimations() {}
+
+    /** Clip da biblioteca: id tupinicraft:<nome>, clip animation.tupinicraft.player.<nome> em COMBAT_FILE. */
+    private static PlayerAnimationDef.Builder library(String name, int ticks, int transition, int priority) {
+        return PlayerAnimationDef.builder(TupiniCraft.id(name), COMBAT_FILE, "animation.tupinicraft.player." + name, ticks)
+                .transitionTicks(transition).priority(priority).blend(PlayerAnimationDef.Blend.FULL_BODY);
+    }
 
     public static synchronized PlayerAnimationDef register(PlayerAnimationDef def) {
         if (REGISTRY.putIfAbsent(def.id(), def) != null) {
