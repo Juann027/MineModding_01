@@ -28,7 +28,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
-/** Nova base de desenvolvimento: mobs/NPCs, biomas e dimensões. */
+/** Entrada comum do mod: registries, config do servidor e eventos (o cliente fica em client.TupiniCraftClient). */
 @Mod(TupiniCraft.MOD_ID)
 public final class TupiniCraft {
     public static final String MOD_ID = "tupinicraft";

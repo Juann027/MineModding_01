@@ -39,16 +39,6 @@ repositories {
         url = 'https://dl.cloudsmith.io/public/tslat/sbl/maven/'
         content { includeGroup 'net.tslat.smartbrainlib' }
     }
-    // UI Lib e Architectury API pelo Maven oficial do Modrinth.
-    exclusiveContent {
-        forRepository {
-            maven {
-                name = 'Modrinth'
-                url = 'https://api.modrinth.com/maven'
-            }
-        }
-        filter { includeGroup 'maven.modrinth' }
-    }
 }
 
 base {
@@ -184,7 +174,6 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_license            : mod_license,
             geckolib_version       : geckolib_version,
             smartbrainlib_version  : smartbrainlib_version,
-            uilib_version          : uilib_version,
             mod_version            : mod_version,
     ]
     inputs.properties replaceProperties
