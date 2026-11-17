@@ -29,7 +29,8 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
 
     public static final Codec<CharacterProfile> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.BOOL.optionalFieldOf("born", false).forGetter(CharacterProfile::born),
-            Codec.STRING.optionalFieldOf("origin", "").forGetter(CharacterProfile::origin),
+            // Ids de origem aposentados sao convertidos na leitura (LegacyOriginIds).
+            Codec.STRING.xmap(LegacyOriginIds::migrate, id -> id).optionalFieldOf("origin", "").forGetter(CharacterProfile::origin),
             Codec.INT.listOf().optionalFieldOf("attributes", defaultAttributes()).forGetter(CharacterProfile::attributes),
             Codec.INT.optionalFieldOf("rerolls", 0).forGetter(CharacterProfile::rerolls),
             Codec.INT.optionalFieldOf("roll_count", 0).forGetter(CharacterProfile::rollCount),

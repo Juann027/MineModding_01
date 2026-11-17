@@ -224,7 +224,7 @@ idea {
     }
 }
 
-// Não há testes antigos ativos: os self-tests eleitorais/Tigrinho foram arquivados.
+// Não há testes JUnit: as regras puras são conferidas por /tupini selftest no teste de fumaça.
 tasks.named('test', Test) { failOnNoDiscoveredTests = false }
 
 // Permite digitar comandos no console do servidor de desenvolvimento (usado pelo teste de fumaça do CI).

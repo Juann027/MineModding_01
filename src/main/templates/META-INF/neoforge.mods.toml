@@ -8,7 +8,7 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="Juann027"
 description='''
-TupiniCraft: base experimental para NPCs, biomas e dimensões. Sistemas de eleições, economia e Tigrinho desativados.
+TupiniCraft: RPG de humor com criador de personagem, roleta de nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas, finalizações cinematográficas e o mob Leão do Fim.
 '''
 
 [[dependencies.${mod_id}]]

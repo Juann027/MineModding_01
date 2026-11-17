@@ -8,7 +8,7 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/** Aba enxuta com os mobs disponíveis; os assets inativos ficam preservados. */
+/** Aba do mod: ovo do Leão do Fim e consumíveis. */
 public final class ModCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, TupiniCraft.MOD_ID);
@@ -18,7 +18,6 @@ public final class ModCreativeTabs {
                     .icon(() -> ModItems.LEAO_DO_FIM_SPAWN_EGG.get().getDefaultInstance())
                     .withTabsBefore(CreativeModeTabs.TOOLS_AND_UTILITIES)
                     .displayItems((parameters, output) -> {
-                        output.accept(ModItems.CABO_ELEITORAL_SPAWN_EGG.get());
                         output.accept(ModItems.LEAO_DO_FIM_SPAWN_EGG.get());
                         for (var item : ModItems.consumables()) output.accept(item.get());
                     }).build());

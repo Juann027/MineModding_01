@@ -2,7 +2,8 @@ package com.tupinicraft.profile;
 
 /**
  * Origens da roleta de nascimento. Peso define a chance; bonus somam aos atributos sorteados.
- * Os ids sao persistidos (nao renomear). Puro: sem classes do Minecraft.
+ * Os ids sao persistidos (nao renomear; ids aposentados ficam em {@link LegacyOriginIds}).
+ * Puro: sem classes do Minecraft.
  */
 public enum BirthOrigin {
     //                id                  peso  cor          icone (textures/item/skilltree)  F  A  V  I  C  S
@@ -11,8 +12,8 @@ public enum BirthOrigin {
     PAMPA("pampa", 14, 0xFF6FA35A, "chimarrao", 2, 0, 1, 0, 0, 0),
     AMAZONIA("amazonia", 13, 0xFF2E9E5B, "amazonia", 0, 1, 1, 0, 0, 1),
     CLASSE_MEDIA("classe_media", 17, 0xFF5C88C9, "carteira_trabalho", 0, 0, 0, 2, 1, 0),
-    INTELECTUAL("intelectual", 9, 0xFF8B6FD6, "intelectual", -1, 0, 0, 3, 0, 1),
-    FAMILIA_POLITICA("familia_politica", 6, 0xFFB43C3C, "constituicao", 0, 0, -1, 0, 3, 1),
+    INTELECTUAL("intelectual", 9, 0xFF8B6FD6, "cafe_extraforte", -1, 0, 0, 3, 0, 1),
+    FAMILIA_ARTISTICA("familia_artistica", 6, 0xFFB43C3C, "trevo", 0, 0, -1, 0, 3, 1),
     BERCO_DE_OURO("berco_de_ouro", 4, 0xFFF2CF4A, "moeda_real", 0, 0, -1, 1, 2, 2);
 
     private final String id;
