@@ -35,6 +35,7 @@ public final class SelfTest {
         try {
             roulette(f);
             needs(f);
+            coomAndEffects(f);
             skills(f);
             finishers(f);
             codecs(f);
@@ -97,6 +98,56 @@ public final class SelfTest {
         check(f, NeedsRules.tickSecond(sad, neutral).mood() < 6_000, "necessidades: humor deveria cair");
         check(f, NeedsRules.accident(Needs.MAX) && !NeedsRules.accident(Needs.MAX - 1), "necessidades: acidente");
         check(f, new Needs(-5, 99_999, 0, 0, 0).hydration() == 0 && new Needs(0, 99_999, 0, 0, 0).energy() == Needs.MAX, "necessidades: clamp");
+    }
+
+    /** Etapa 3.1: medidor Coom, efeitos de consumiveis e regra do unico novo giro. */
+    private static void coomAndEffects(List<String> f) {
+        NeedsRules.Context neutral = NeedsRules.Context.neutral();
+        Needs n = Needs.DEFAULT;
+        for (int i = 0; i < 60; i++) n = NeedsRules.tickSecond(n, neutral);
+        check(f, n.coom() == 60 * NeedsRules.COOM_PER_SECOND, "coom: acúmulo em 60 s = " + n.coom());
+        Needs off = NeedsRules.tickSecond(Needs.DEFAULT, new NeedsRules.Context(false, false, false, false, false, 3, 3, 1, 1, 1, 1, 0, 0F));
+        check(f, off.coom() == 0, "coom: taxa 0 desliga");
+        check(f, NeedsRules.coomAttributeMultiplier(8, 3) > 1F && NeedsRules.coomAttributeMultiplier(3, 8) < 1F, "coom: atributos");
+        check(f, NeedsRules.moodTarget(Needs.DEFAULT.with(com.tupinicraft.needs.Need.COOM, 9_000), neutral)
+                == NeedsRules.moodTarget(Needs.DEFAULT, neutral) - NeedsRules.COOM_MOOD_PENALTY, "coom: humor");
+        // Save da Etapa 3 (sem o campo coom) carrega com coom 0.
+        CompoundTag old = new CompoundTag();
+        old.putInt("hidratacao", 5_000);
+        Needs loaded = Needs.CODEC.parse(NbtOps.INSTANCE, old).getOrThrow();
+        check(f, loaded.coom() == 0 && loaded.hydration() == 5_000 && loaded.mood() == 6_000, "coom: save antigo");
+
+        for (com.tupinicraft.needs.NeedEffectDef def : com.tupinicraft.needs.NeedEffects.all()) {
+            if (def.durationSeconds() > 0 && !def.gradual().isZero()) {
+                com.tupinicraft.needs.NeedsDelta sum = com.tupinicraft.needs.NeedsDelta.NONE;
+                for (int s = -2; s < def.durationSeconds() + 5; s++) sum = sum.plus(com.tupinicraft.needs.NeedEffectTimeline.gradualStep(def, s));
+                check(f, sum.equals(def.gradual()), "efeitos: gradual não fecha o total " + def.id());
+            }
+            int fired = 0;
+            for (int s = 0; s < def.lifetimeSeconds() + 5; s++) if (com.tupinicraft.needs.NeedEffectTimeline.delayedFires(def, s)) fired++;
+            check(f, fired == (def.delaySeconds() > 0 ? 1 : 0), "efeitos: estágio atrasado " + def.id());
+            check(f, com.tupinicraft.needs.NeedEffectTimeline.expired(def, def.lifetimeSeconds()), "efeitos: não expira " + def.id());
+        }
+        var lax = com.tupinicraft.needs.NeedEffects.LAXANTE_INDUSTRIAL;
+        check(f, lax.immediate().isZero() && lax.delayed().bowel() > 0 && lax.delaySeconds() > 0, "efeitos: laxante atrasado");
+        var calm = com.tupinicraft.needs.NeedEffects.CHA_CALMANTE;
+        check(f, calm.immediate().coom() < 0 && calm.rate(com.tupinicraft.needs.Need.COOM) < 1F, "efeitos: chá calmante");
+        check(f, com.tupinicraft.needs.NeedEffectTimeline.combinedRate(List.of(com.tupinicraft.needs.NeedEffects.AFRODISIACO_MISTERIOSO),
+                List.of(0), com.tupinicraft.needs.Need.COOM) == 3F, "efeitos: ritmo do afrodisíaco");
+        check(f, com.tupinicraft.needs.NeedEffectTimeline.combinedRate(List.of(com.tupinicraft.needs.NeedEffects.AFRODISIACO_MISTERIOSO),
+                List.of(500), com.tupinicraft.needs.Need.COOM) == 1F, "efeitos: ritmo expira");
+        var active = com.tupinicraft.needs.ActiveNeedEffects.EMPTY.start("cha_calmante").start("cha_calmante");
+        check(f, active.entries().size() == 1, "efeitos: repetir reinicia em vez de acumular");
+        Tag at = com.tupinicraft.needs.ActiveNeedEffects.CODEC.encodeStart(NbtOps.INSTANCE, active).getOrThrow();
+        check(f, com.tupinicraft.needs.ActiveNeedEffects.CODEC.parse(NbtOps.INSTANCE, at).getOrThrow().equals(active), "efeitos: codec");
+
+        // Roleta: um unico novo giro, so depois do nascimento; fichas antigas com mais giros sao corrigidas.
+        CharacterProfile born = CharacterProfile.DEFAULT.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom")), BirthRoulette.FREE_REROLLS);
+        check(f, born.canReroll() && born.rerolls() == 1, "roleta: um novo giro após nascer");
+        CharacterProfile afterReroll = born.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom")), born.rerolls() - 1);
+        check(f, !afterReroll.canReroll(), "roleta: segundo novo giro bloqueado");
+        check(f, new CharacterProfile(true, "sertao", List.of(), 5, 1, 0, 0, List.of()).rerolls() == 1, "roleta: ficha antiga com 5 giros");
+        check(f, !CharacterProfile.DEFAULT.canReroll(), "roleta: sem nascimento não há novo giro");
     }
 
     private static void skills(List<String> f) {

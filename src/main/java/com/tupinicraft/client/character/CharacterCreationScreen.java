@@ -250,7 +250,7 @@ public final class CharacterCreationScreen extends TupiScreen {
         }
     }
 
-    /** Retrato 2D com pele e expressao (ainda nao aplicadas ao modelo 3D). */
+    /** Retrato 2D com pele e expressao (as mesmas escolhas aparecem na previa 3D pelas Body Layers de rosto e pele). */
     private void drawPortrait(GuiGraphics g, int x, int y) {
         int skin = CharacterAppearance.SKIN_ARGB[skinTone];
         int hair = CharacterAppearance.COLOR_ARGB[hairColor];

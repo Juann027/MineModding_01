@@ -1,6 +1,7 @@
 package com.tupinicraft.network;
 
 import com.tupinicraft.TupiniCraft;
+import com.tupinicraft.needs.ActiveNeedEffects;
 import com.tupinicraft.needs.Needs;
 import com.tupinicraft.profile.CharacterProfile;
 import com.tupinicraft.profile.ProfileService;
@@ -36,6 +37,14 @@ public final class GameplayNetworking {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    /** Servidor -> dono: efeitos de consumiveis em andamento (ao comecar/terminar um, login e respawn). */
+    public record NeedEffectsSync(ActiveNeedEffects effects) implements CustomPacketPayload {
+        public static final Type<NeedEffectsSync> TYPE = new Type<>(TupiniCraft.id("need_effects_sync"));
+        public static final StreamCodec<ByteBuf, NeedEffectsSync> STREAM_CODEC =
+                ActiveNeedEffects.STREAM_CODEC.map(NeedEffectsSync::new, NeedEffectsSync::effects);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     /** Cliente -> servidor: girar a roleta de nascimento (primeiro giro ou nova tentativa). */
     public record BirthRollRequest(boolean reroll) implements CustomPacketPayload {
         public static final Type<BirthRollRequest> TYPE = new Type<>(TupiniCraft.id("birth_roll_request"));
@@ -58,6 +67,8 @@ public final class GameplayNetworking {
                 (payload, context) -> ProfileClientCache.receive(payload.profile()));
         registrar.playToClient(NeedsSync.TYPE, NeedsSync.STREAM_CODEC,
                 (payload, context) -> ProfileClientCache.receive(payload.needs()));
+        registrar.playToClient(NeedEffectsSync.TYPE, NeedEffectsSync.STREAM_CODEC,
+                (payload, context) -> ProfileClientCache.receive(payload.effects()));
         registrar.playToServer(BirthRollRequest.TYPE, BirthRollRequest.STREAM_CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) ProfileService.requestRoll(player, payload.reroll());
         });

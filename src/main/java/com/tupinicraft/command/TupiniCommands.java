@@ -61,6 +61,11 @@ public final class TupiniCommands {
                                                 .suggests((c, b) -> SharedSuggestionProvider.suggestResource(
                                                         Finishers.all().stream().map(FinisherDef::id), b))
                                                 .executes(c -> forceFinisher(c, Finishers.get(ResourceLocationArgument.getId(c, "id"))))))))
+                        .then(Commands.literal("efeito").then(Commands.argument("jogador", EntityArgument.player())
+                                .then(Commands.argument("id", StringArgumentType.word())
+                                        .suggests((c, b) -> SharedSuggestionProvider.suggest(
+                                                com.tupinicraft.needs.NeedEffects.all().stream().map(com.tupinicraft.needs.NeedEffectDef::id), b))
+                                        .executes(TupiniCommands::applyNeedEffect))))
                         .then(Commands.literal("necessidade").then(Commands.argument("jogador", EntityArgument.player())
                                 .then(Commands.argument("tipo", StringArgumentType.word())
                                         .suggests((c, b) -> SharedSuggestionProvider.suggest(
@@ -79,7 +84,7 @@ public final class TupiniCommands {
         c.getSource().sendSuccess(() -> Component.literal(player.getGameProfile().getName() + ": nascido=" + p.born()
                 + " origem=" + (p.origin().isEmpty() ? "-" : p.origin()) + " rerolls=" + p.rerolls()
                 + " pontos=" + p.skillPoints() + " habilidades=" + p.skills().size()
-                + "\n" + attrs + "\n" + needs), false);
+                + "\n" + attrs + "\n" + needs + "\nefeitos=" + NeedsService.activeEffects(player).entries()), false);
         return 1;
     }
 
@@ -116,7 +121,9 @@ public final class TupiniCommands {
 
     private static int forceRoll(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         ServerPlayer player = EntityArgument.getPlayer(c, "jogador");
-        BirthRoulette.Result result = ProfileService.roll(player, BirthRoulette.FREE_REROLLS);
+        // Giro forcado pelo admin: nao concede novo giro ao jogador (mantem o que ele tinha; antes do nascimento, 1).
+        CharacterProfile before = ProfileService.get(player);
+        BirthRoulette.Result result = ProfileService.roll(player, before.born() ? before.rerolls() : BirthRoulette.FREE_REROLLS);
         c.getSource().sendSuccess(() -> Component.literal("Roleta: " + result.origin().id() + " "
                 + java.util.Arrays.toString(result.attributes())), true);
         return 1;
@@ -126,6 +133,7 @@ public final class TupiniCommands {
         ServerPlayer player = EntityArgument.getPlayer(c, "jogador");
         ProfileService.set(player, CharacterProfile.DEFAULT);
         NeedsService.set(player, com.tupinicraft.needs.Needs.DEFAULT);
+        NeedsService.clearEffects(player);
         NeedsService.sync(player);
         c.getSource().sendSuccess(() -> Component.literal("Ficha de " + player.getGameProfile().getName() + " zerada."), true);
         return 1;
@@ -174,6 +182,21 @@ public final class TupiniCommands {
         NeedsService.set(player, NeedsService.get(player).with(need, value * 100));
         NeedsService.sync(player);
         c.getSource().sendSuccess(() -> Component.literal(need.id() + " = " + value + "%"), true);
+        return 1;
+    }
+
+    /** Aplica o efeito de um consumivel como se o jogador o tivesse consumido (teste). */
+    private static int applyNeedEffect(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+        ServerPlayer player = EntityArgument.getPlayer(c, "jogador");
+        String id = StringArgumentType.getString(c, "id");
+        var def = com.tupinicraft.needs.NeedEffects.get(id);
+        if (def == null) {
+            c.getSource().sendFailure(Component.literal("Efeito desconhecido: " + id));
+            return 0;
+        }
+        NeedsService.consume(player, def);
+        c.getSource().sendSuccess(() -> Component.literal("Efeito aplicado: " + id + " (ativos: "
+                + NeedsService.activeEffects(player).entries().size() + ")"), true);
         return 1;
     }
 }

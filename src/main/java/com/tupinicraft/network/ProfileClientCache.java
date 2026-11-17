@@ -1,5 +1,8 @@
 package com.tupinicraft.network;
 
+import com.tupinicraft.needs.ActiveNeedEffects;
+import com.tupinicraft.needs.NeedEffectDef;
+import com.tupinicraft.needs.NeedEffects;
 import com.tupinicraft.needs.Needs;
 import com.tupinicraft.profile.CharacterProfile;
 
@@ -7,6 +10,8 @@ import com.tupinicraft.profile.CharacterProfile;
 public final class ProfileClientCache {
     private static CharacterProfile profile = CharacterProfile.DEFAULT;
     private static Needs needs = Needs.DEFAULT;
+    private static ActiveNeedEffects effects = ActiveNeedEffects.EMPTY;
+    private static long effectsReceivedAt;
     private static long profileRevision;
     private static boolean received;
 
@@ -20,6 +25,24 @@ public final class ProfileClientCache {
 
     static void receive(Needs value) { needs = value; }
 
+    static void receive(ActiveNeedEffects value) {
+        effects = value;
+        effectsReceivedAt = System.currentTimeMillis();
+    }
+
+    /** Efeitos de consumiveis em andamento e segundos restantes estimados desde o ultimo pacote. */
+    public static java.util.List<java.util.Map.Entry<NeedEffectDef, Integer>> activeEffects() {
+        int passed = (int) ((System.currentTimeMillis() - effectsReceivedAt) / 1000L);
+        java.util.List<java.util.Map.Entry<NeedEffectDef, Integer>> list = new java.util.ArrayList<>();
+        for (ActiveNeedEffects.Entry e : effects.entries()) {
+            NeedEffectDef def = NeedEffects.get(e.id());
+            if (def == null) continue;
+            int left = def.lifetimeSeconds() - e.elapsed() - passed;
+            if (left > 0) list.add(java.util.Map.entry(def, left));
+        }
+        return list;
+    }
+
     public static CharacterProfile profile() { return profile; }
     public static Needs needs() { return needs; }
     /** Muda a cada ficha recebida (telas detectam a resposta do servidor). */
@@ -30,6 +53,7 @@ public final class ProfileClientCache {
     public static void clear() {
         profile = CharacterProfile.DEFAULT;
         needs = Needs.DEFAULT;
+        effects = ActiveNeedEffects.EMPTY;
         profileRevision = 0;
         received = false;
     }

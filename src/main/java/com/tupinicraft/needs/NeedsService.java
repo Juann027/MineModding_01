@@ -50,18 +50,91 @@ public final class NeedsService {
         PacketDistributor.sendToPlayer(player, new GameplayNetworking.NeedsSync(get(player)));
     }
 
+    public static ActiveNeedEffects activeEffects(ServerPlayer player) { return player.getData(ModAttachments.NEED_EFFECTS); }
+
+    private static void setEffects(ServerPlayer player, ActiveNeedEffects effects) {
+        player.setData(ModAttachments.NEED_EFFECTS, effects);
+        syncEffects(player);
+    }
+
+    public static void clearEffects(ServerPlayer player) { setEffects(player, ActiveNeedEffects.EMPTY); }
+
+    public static void syncEffects(ServerPlayer player) {
+        PacketDistributor.sendToPlayer(player, new GameplayNetworking.NeedEffectsSync(activeEffects(player)));
+    }
+
+    /**
+     * Consumivel terminado (servidor): efeito imediato, buffs, particulas e som agora; gradual, ritmos e o estagio
+     * atrasado ficam registrados e andam um passo por segundo em {@link #tickEffects}.
+     */
+    public static void consume(ServerPlayer player, NeedEffectDef def) {
+        if (!def.immediate().isZero()) apply(player, def.immediate());
+        for (NeedEffectDef.Spec spec : def.effects()) player.addEffect(new MobEffectInstance(spec.effect(), spec.ticks(), spec.amplifier()));
+        burst(player, def.particle(), 12);
+        if (def.sound() != null) {
+            player.serverLevel().playSound(null, player.blockPosition(), def.sound().value(), SoundSource.PLAYERS, 0.7F, 1F);
+        }
+        if (def.persistent()) setEffects(player, activeEffects(player).start(def.id()));
+    }
+
+    private static void burst(ServerPlayer player, net.minecraft.core.particles.ParticleOptions particle, int count) {
+        if (particle == null) return;
+        player.serverLevel().sendParticles(particle, player.getX(), player.getY() + 1.2, player.getZ(), count, 0.35, 0.4, 0.35, 0.02);
+    }
+
+    /** Um segundo dos efeitos ativos: aplica o gradual/atrasado e devolve os ritmos combinados por necessidade. */
+    private static java.util.EnumMap<Need, Float> tickEffects(ServerPlayer player) {
+        java.util.EnumMap<Need, Float> rates = new java.util.EnumMap<>(Need.class);
+        ActiveNeedEffects active = activeEffects(player);
+        if (active.isEmpty()) return rates;
+        java.util.List<NeedEffectDef> defs = new java.util.ArrayList<>();
+        java.util.List<Integer> elapsed = new java.util.ArrayList<>();
+        java.util.List<ActiveNeedEffects.Entry> next = new java.util.ArrayList<>();
+        NeedsDelta delta = NeedsDelta.NONE;
+        boolean changed = false;
+        for (ActiveNeedEffects.Entry e : active.entries()) {
+            NeedEffectDef def = NeedEffects.get(e.id());
+            if (def == null) { changed = true; continue; } // efeito removido do catalogo: descarta
+            defs.add(def);
+            elapsed.add(e.elapsed());
+            delta = delta.plus(NeedEffectTimeline.gradualStep(def, e.elapsed()));
+            if (NeedEffectTimeline.delayedFires(def, e.elapsed())) {
+                delta = delta.plus(def.delayed());
+                for (NeedEffectDef.Spec spec : def.delayedEffects()) {
+                    player.addEffect(new MobEffectInstance(spec.effect(), spec.ticks(), spec.amplifier()));
+                }
+                burst(player, def.particle(), 20);
+                if (def.delayedSound() != null) {
+                    player.serverLevel().playSound(null, player.blockPosition(), def.delayedSound().value(), SoundSource.PLAYERS, 0.9F, 1F);
+                }
+                player.displayClientMessage(Component.translatable("msg.tupinicraft.needs.effect_late." + def.id()), true);
+            }
+            if (NeedEffectTimeline.expired(def, e.elapsed() + 1)) changed = true;
+            else next.add(new ActiveNeedEffects.Entry(e.id(), e.elapsed() + 1));
+        }
+        for (Need need : Need.values()) rates.put(need, NeedEffectTimeline.combinedRate(defs, elapsed, need));
+        if (!delta.isZero()) apply(player, delta);
+        // Sem mudanca de membros, so atualiza o contador salvo (o cliente conta o tempo sozinho).
+        if (changed) setEffects(player, new ActiveNeedEffects(next));
+        else player.setData(ModAttachments.NEED_EFFECTS, new ActiveNeedEffects(next));
+        return rates;
+    }
+
     /** Alivio (penico, banheiro): zera bexiga e intestino e melhora o humor. */
     public static void relieve(ServerPlayer player) {
         Needs n = get(player);
         int moodGain = (n.bladder() + n.bowel()) / 8;
-        set(player, new Needs(n.hydration(), n.energy(), 0, 0, n.mood() + moodGain));
+        set(player, new Needs(n.hydration(), n.energy(), 0, 0, n.mood() + moodGain, n.coom()));
         player.serverLevel().playSound(null, player.blockPosition(), ModSounds.NEEDS_RELIEF.get(), SoundSource.PLAYERS, 0.8F, 1F);
         player.displayClientMessage(Component.translatable("msg.tupinicraft.needs.relief"), true);
     }
 
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.tickCount % 20 != 0) return;
-        if (player.isCreative() || player.isSpectator() || !player.isAlive()) return;
+        if (!player.isAlive()) return;
+        // Efeitos de consumiveis andam sempre (inclusive no criativo, para testes); o resto so em sobrevivencia.
+        java.util.EnumMap<Need, Float> rates = tickEffects(player);
+        if (player.isCreative() || player.isSpectator()) return;
         ProfileService.rewardLevels(player);
         CharacterProfile profile = ProfileService.get(player);
         var level = player.serverLevel();
@@ -70,9 +143,9 @@ public final class NeedsService {
         NeedsRules.Context context = new NeedsRules.Context(player.isSprinting(), player.isSleeping(), hot,
                 level.isNight(), player.isSwimming() || player.isInWater(),
                 profile.attribute(CharacterAttribute.VIGOR), profile.attribute(CharacterAttribute.CARISMA),
-                SkillService.needRate(profile, Need.HYDRATION.id()), SkillService.needRate(profile, Need.ENERGY.id()),
-                SkillService.needRate(profile, Need.BLADDER.id()), SkillService.needRate(profile, Need.BOWEL.id()),
-                SkillService.moodBonus(profile));
+                rate(profile, rates, Need.HYDRATION), rate(profile, rates, Need.ENERGY),
+                rate(profile, rates, Need.BLADDER), rate(profile, rates, Need.BOWEL),
+                SkillService.moodBonus(profile), NeedsConfig.coomRate() * rate(profile, rates, Need.COOM));
         Needs before = get(player);
         Needs after = NeedsRules.tickSecond(before, context);
         if (NeedsRules.accident(after.bladder())) after = accident(player, after, Need.BLADDER);
@@ -80,6 +153,11 @@ public final class NeedsService {
         set(player, after);
         warn(player, before, after);
         effects(player, after);
+    }
+
+    /** Ritmo final: habilidades x efeitos de consumiveis. */
+    private static float rate(CharacterProfile profile, java.util.Map<Need, Float> effects, Need need) {
+        return SkillService.needRate(profile, need.id()) * effects.getOrDefault(need, 1F);
     }
 
     private static Needs accident(ServerPlayer player, Needs n, Need need) {
@@ -118,6 +196,8 @@ public final class NeedsService {
         if (n.mood() < 2_000) effect(player, MobEffects.WEAKNESS, 0);
         if (n.mood() >= NeedsRules.HAPPY) effect(player, MobEffects.LUCK, 0);
         if (n.bladder() > 9_000 || n.bowel() > 9_000) effect(player, MobEffects.MOVEMENT_SLOWDOWN, 0);
+        // Coom quase cheio: distraido (mineracao mais lenta). Recurso abstrato, sem acoes associadas nesta etapa.
+        if (n.coom() > 9_000) effect(player, MobEffects.DIG_SLOWDOWN, 0);
     }
 
     private static void effect(ServerPlayer player, net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> type, int amp) {
@@ -157,10 +237,16 @@ public final class NeedsService {
     }
 
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) sync(player);
+        if (event.getEntity() instanceof ServerPlayer player) {
+            sync(player);
+            syncEffects(player);
+        }
     }
 
     public static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) sync(player);
+        if (event.getEntity() instanceof ServerPlayer player) {
+            sync(player);
+            syncEffects(player);
+        }
     }
 }

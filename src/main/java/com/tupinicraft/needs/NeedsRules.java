@@ -11,6 +11,10 @@ public final class NeedsRules {
     public static final int BLADDER_PER_SECOND = 10;     // ~17 min
     public static final int BOWEL_PER_SECOND = 5;        // ~33 min
     public static final int MOOD_STEP_PER_SECOND = 10;
+    /** Acumulo base do Coom (~21 min de 0 a 100%), multiplicado pela configuracao do servidor. */
+    public static final int COOM_PER_SECOND = 8;
+    /** Humor perdido no alvo quando o Coom passa de {@link #URGENT}. */
+    public static final int COOM_MOOD_PENALTY = 1_000;
 
     public static final int LOW = 1_500;        // abaixo: efeitos negativos (sede, cansaco, tristeza)
     public static final int URGENT = 8_000;     // acima: bexiga/intestino apertados
@@ -21,10 +25,24 @@ public final class NeedsRules {
      */
     public record Context(boolean sprinting, boolean sleeping, boolean hot, boolean night, boolean swimming,
                           int vigor, int carisma, float hydrationMul, float energyMul, float bladderMul,
-                          float bowelMul, int moodBonus) {
-        public static Context neutral() {
-            return new Context(false, false, false, false, false, 3, 3, 1F, 1F, 1F, 1F, 0);
+                          float bowelMul, int moodBonus, float coomMul) {
+        /** Formato da Etapa 3 (Coom no ritmo normal). */
+        public Context(boolean sprinting, boolean sleeping, boolean hot, boolean night, boolean swimming,
+                       int vigor, int carisma, float hydrationMul, float energyMul, float bladderMul,
+                       float bowelMul, int moodBonus) {
+            this(sprinting, sleeping, hot, night, swimming, vigor, carisma, hydrationMul, energyMul, bladderMul,
+                    bowelMul, moodBonus, 1F);
         }
+
+        public static Context neutral() {
+            return new Context(false, false, false, false, false, 3, 3, 1F, 1F, 1F, 1F, 0, 1F);
+        }
+    }
+
+    /** Atributos no Coom: Vigor acelera (+5%/ponto acima da base), Carisma segura (-3%/ponto). Faixa 0,6-1,6. */
+    public static float coomAttributeMultiplier(int vigor, int carisma) {
+        float mul = 1F + (vigor - 3) * 0.05F - (carisma - 3) * 0.03F;
+        return Math.max(0.6F, Math.min(1.6F, mul));
     }
 
     private NeedsRules() {}
@@ -45,11 +63,13 @@ public final class NeedsRules {
         int bladder = n.bladder() + Math.round(BLADDER_PER_SECOND * c.bladderMul() * sleepMul);
         int bowel = n.bowel() + Math.round(BOWEL_PER_SECOND * c.bowelMul() * sleepMul);
         int hydration = n.hydration() - Math.round(hydrationLoss * sleepMul);
-        Needs partial = new Needs(hydration, energy, bladder, bowel, n.mood());
+        int coom = n.coom() + Math.round(COOM_PER_SECOND * c.coomMul()
+                * coomAttributeMultiplier(c.vigor(), c.carisma()) * sleepMul);
+        Needs partial = new Needs(hydration, energy, bladder, bowel, n.mood(), coom);
         int target = moodTarget(partial, c);
         int step = MOOD_STEP_PER_SECOND + Math.max(0, c.carisma() - 3) * 2;
         int mood = n.mood() < target ? Math.min(target, n.mood() + step) : Math.max(target, n.mood() - step);
-        return new Needs(hydration, energy, bladder, bowel, mood);
+        return new Needs(hydration, energy, bladder, bowel, mood, coom);
     }
 
     /** Para onde o humor caminha: base 60% + carisma + habilidades, menos as necessidades mal cuidadas. */
@@ -59,6 +79,7 @@ public final class NeedsRules {
         if (n.energy() < LOW) target -= 1_500;
         if (n.bladder() > URGENT) target -= 1_500;
         if (n.bowel() > URGENT) target -= 1_500;
+        if (n.coom() > URGENT) target -= COOM_MOOD_PENALTY;
         return Needs.clamp(target);
     }
 
