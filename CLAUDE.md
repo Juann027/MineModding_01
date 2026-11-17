@@ -43,6 +43,16 @@ Base: MDK oficial `NeoForgeMDKs/MDK-1.21.1-ModDevGradle` (plugin `net.neoforged.
 - Pele e rosto do criador são Body Layers (`BodyLayers.registerFaceAndSkin`) por cima da skin da conta; opção
   "Da skin" (índice 3) desliga. Não substitua a textura da skin.
 
+## Etapa 4 — animações do jogador (ativo; detalhes em `HANDOFF_PLAYER_ANIMATIONS_STAGE4.md`)
+
+- Biblioteca de combate/chão e coreografias em `animations/player/tupinicraft_player_combat.animation.json`
+  (`PlayerAnimations.COMBAT_FILE`), geradas por `tools/player_anim/export.py` (que **sobrescreve** esse arquivo e os
+  `.bbmodel` de `model_sources/player/`). Edite `poses.py`/`clips.py` ou o Blockbench, não os dois.
+- Convenções do GeckoLib 4.9.3: rotação do keyframe com X e Y invertidos; posição com X invertido; ordem Z·Y·X.
+- Cenas de dois participantes: um clip `FULL_BODY` por participante, mesmo comprimento, iniciados por
+  `playTogether`; a posição no mundo é da sessão (`FinisherTestMechanic`), keyframes só com deslocamentos que voltam
+  a zero. `FinisherDef.recoveryInScene` quando o alvo se levanta no próprio clip.
+
 ## Fluxo de entrega e merge automático (política do dono do repositório)
 
 O dono do repositório autorizou merge automático dos PRs ao concluir cada tarefa, sem aguardar aprovação manual.
