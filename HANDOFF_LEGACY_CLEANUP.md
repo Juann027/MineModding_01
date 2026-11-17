@@ -1,7 +1,7 @@
 # HANDOFF — Etapa 4.4: limpeza do legado político e reset da documentação
 
 Base: `main` em `e857d81` (merge do PR #24, v0.5.7). `mod_id` e `mod_version=0.5.7` não mudaram; nenhuma Release
-foi publicada. PR: PR_PLACEHOLDER (o commit de merge aparece no PR).
+foi publicada. PR: [Juann027/MineModding_01#25](https://github.com/Juann027/MineModding_01/pull/25) (o commit de merge aparece no PR).
 
 ## Removido
 
