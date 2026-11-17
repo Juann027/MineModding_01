@@ -46,7 +46,7 @@ public final class ProfileService {
             if (reroll) return;
             rerolls = BirthRoulette.FREE_REROLLS;
         } else {
-            if (!reroll || profile.rerolls() <= 0) {
+            if (!reroll || !profile.canReroll()) {
                 sync(player); // a tela volta ao estado real
                 return;
             }
@@ -56,7 +56,10 @@ public final class ProfileService {
         roll(player, rerolls);
     }
 
-    /** Gira a roleta (tambem usado pelo comando de admin). */
+    /**
+     * Gira a roleta (tambem usado pelo comando de admin). Unico lugar que sorteia: o resultado e gravado na ficha
+     * (attachment salvo) e a tela so o apresenta. Aparencia, reinicio do servidor e reabrir a tela nao o alteram.
+     */
     public static BirthRoulette.Result roll(ServerPlayer player, int rerollsLeft) {
         RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
         BirthRoulette.Result result = BirthRoulette.roll(random);

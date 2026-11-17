@@ -6,7 +6,9 @@ public enum Need {
     ENERGY("energia", 0xFFF2CF4A, true),
     BLADDER("bexiga", 0xFFE8C440, false),
     BOWEL("intestino", 0xFFA37D51, false),
-    MOOD("humor", 0xFF79C8D9, true);
+    MOOD("humor", 0xFF79C8D9, true),
+    /** Medidor Coom: recurso abstrato que acumula com o tempo (cheio = critico). Etapa 3.1. */
+    COOM("coom", 0xFFE06AA8, false);
 
     private final String id;
     private final int color;
@@ -20,7 +22,7 @@ public enum Need {
 
     public String id() { return id; }
     public int color() { return color; }
-    /** Hidratacao, energia e humor: cheio e bom. Bexiga e intestino: cheio e urgente. */
+    /** Hidratacao, energia e humor: cheio e bom. Bexiga, intestino e coom: cheio e urgente. */
     public boolean highIsGood() { return highIsGood; }
 
     public static Need byId(String id) {

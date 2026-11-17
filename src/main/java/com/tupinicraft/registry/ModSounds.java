@@ -22,6 +22,8 @@ public final class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> ROULETTE_WIN = register("roulette.win");
     public static final DeferredHolder<SoundEvent, SoundEvent> NEEDS_ACCIDENT = register("needs.accident");
     public static final DeferredHolder<SoundEvent, SoundEvent> NEEDS_RELIEF = register("needs.relief");
+    public static final DeferredHolder<SoundEvent, SoundEvent> NEEDS_EFFECT = register("needs.effect");
+    public static final DeferredHolder<SoundEvent, SoundEvent> NEEDS_EFFECT_LATE = register("needs.effect_late");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_CLICK = register("ui.click");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_HOVER = register("ui.hover");
 

@@ -222,6 +222,51 @@ def penico(d, img):
     d.arc([11, 7, 15, 12], 270, 90, fill=rgba("8a8a8a"))
 
 
+def pill_box(color, label):
+    def draw(d, img):
+        d.rectangle([3, 3, 12, 13], fill=rgba("f4f4f4"), outline=rgba("6a6a6a"))
+        d.rectangle([3, 6, 12, 9], fill=rgba(color))
+        d.ellipse([9, 10, 14, 14], fill=rgba(label), outline=rgba("3a3a3a"))
+    return draw
+
+
+def bottle(liquid, cap):
+    def draw(d, img):
+        d.rectangle([6, 1, 9, 3], fill=rgba(cap))
+        d.rectangle([5, 4, 10, 5], fill=rgba("cfe6ef"))
+        d.ellipse([3, 5, 12, 14], fill=rgba("cfe6ef"), outline=rgba("5a6d78"))
+        d.ellipse([4, 8, 11, 13], fill=rgba(liquid))
+    return draw
+
+
+def cup(liquid):
+    def draw(d, img):
+        d.rectangle([3, 6, 11, 13], fill=rgba("ece2cf"), outline=rgba("7a6a55"))
+        d.rectangle([4, 7, 10, 8], fill=rgba(liquid))
+        d.arc([10, 7, 14, 11], 270, 90, fill=rgba("7a6a55"))
+        d.point([(6, 3), (7, 2), (8, 4)], fill=rgba("d0d0d0"))
+    return draw
+
+
+def pilula_azul(d, img):
+    d.ellipse([3, 5, 9, 11], fill=rgba("2f62d6"), outline=rgba("17337a"))
+    d.ellipse([7, 5, 13, 11], fill=rgba("3f7cf0"), outline=rgba("17337a"))
+    d.point([(5, 7), (9, 6)], fill=rgba("cfe0ff"))
+
+
+def lata(d, img):
+    d.rectangle([4, 2, 11, 14], fill=rgba("f2a516"), outline=rgba("7a4a06"))
+    d.rectangle([4, 6, 11, 9], fill=rgba("1a1a1a"))
+    d.point([(6, 7), (7, 8), (8, 7), (9, 8)], fill=rgba("f2a516"))
+    d.rectangle([5, 1, 10, 2], fill=rgba("b0b0b0"))
+
+
+for name, fn in [("laxante_industrial", pill_box("8a5a2c", "c2a070")), ("antidiarreico", pill_box("3aa65a", "e0e0e0")),
+                 ("cafe_extraforte", cup("2a1408")), ("cha_diuretico", cup("b8c84a")), ("cha_calmante", cup("8fc9a0")),
+                 ("afrodisiaco_misterioso", bottle("e0569a", "7a1f4a")), ("pilula_azul", pilula_azul),
+                 ("energetico_do_tigrinho", lata)]:
+    item(name, fn)
+
 for name, fn in [("agua_de_coco", coco), ("cafezinho", cafe), ("guarana", guarana), ("pao_de_queijo", pao),
                  ("coxinha", coxinha), ("brigadeiro", brigadeiro), ("penico", penico)]:
     item(name, fn)

@@ -35,6 +35,8 @@ public final class TupiniCraft {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public TupiniCraft(IEventBus modBus, ModContainer container) {
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, com.tupinicraft.needs.NeedsConfig.SPEC,
+                "tupinicraft-needs-server.toml");
         ModItems.ITEMS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
         ModEntities.ENTITY_TYPES.register(modBus);

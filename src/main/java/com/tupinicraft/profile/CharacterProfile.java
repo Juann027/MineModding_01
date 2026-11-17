@@ -68,7 +68,8 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
     public CharacterProfile {
         attributes = normalize(attributes);
         skills = List.copyOf(new LinkedHashSet<>(skills));
-        rerolls = Math.max(0, rerolls);
+        // Regra da Etapa 3.1: no maximo um novo giro, e so depois do nascimento (fichas antigas sao corrigidas).
+        rerolls = born ? Math.max(0, Math.min(BirthRoulette.FREE_REROLLS, rerolls)) : 0;
         skillPoints = Math.max(0, skillPoints);
         levelRewarded = Math.max(0, levelRewarded);
     }
@@ -92,6 +93,9 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
     public int attribute(CharacterAttribute attribute) { return attributes.get(attribute.ordinal()); }
 
     public BirthOrigin originOrNull() { return BirthOrigin.byId(origin); }
+
+    /** Pode pedir o (unico) novo giro? */
+    public boolean canReroll() { return born && rerolls > 0; }
 
     public boolean hasSkill(String id) { return skills.contains(id); }
 

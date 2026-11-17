@@ -2,6 +2,7 @@ package com.tupinicraft.registry;
 
 import com.tupinicraft.TupiniCraft;
 import com.tupinicraft.animation.PlayerAnimationTracker;
+import com.tupinicraft.needs.ActiveNeedEffects;
 import com.tupinicraft.needs.Needs;
 import com.tupinicraft.profile.CharacterProfile;
 import java.util.function.Supplier;
@@ -28,6 +29,11 @@ public final class ModAttachments {
     public static final Supplier<AttachmentType<Needs>> NEEDS =
             ATTACHMENT_TYPES.register("needs",
                     () -> AttachmentType.builder(() -> Needs.DEFAULT).serialize(Needs.CODEC).build());
+
+    /** Efeitos de consumiveis em andamento (Etapa 3.1). Salvos, nao copiados na morte. Id estavel. */
+    public static final Supplier<AttachmentType<ActiveNeedEffects>> NEED_EFFECTS =
+            ATTACHMENT_TYPES.register("need_effects",
+                    () -> AttachmentType.builder(() -> ActiveNeedEffects.EMPTY).serialize(ActiveNeedEffects.CODEC).build());
 
     private ModAttachments() {}
 }
