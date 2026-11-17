@@ -11,11 +11,15 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 
 - **Character Creator** (tecla **K**): menu do personagem com prévia 3D, corpo, pele, rosto, cabelos e cores.
 - **Roleta de nascimento:** sorteio no servidor de uma entre 8 origens (Favela, Sertão, Pampa, Amazônia, Classe Média,
-  Família Intelectual, Família Artística, Berço de Ouro) e de 6 atributos, com **um** novo giro opcional.
+  Família Intelectual, Família Artística, Berço de Ouro), dos 6 atributos (Força, Agilidade, Vigor, Inteligência,
+  Carisma, Sorte) e de um **traço de nascimento** (buff, debuff ou neutro), com **um** novo giro opcional. Continuar
+  confirma o resultado.
+- **Traços de nascimento:** características individuais separadas da origem e dos atributos (ex.: Resistência Alta,
+  Molenga, Carregadão, Bem-Dotado). Por enquanto são só descrição: nenhum tem efeito de jogo.
 - **Skill Trees:** abas Combate, Sobrevivência e Malandragem, 18 habilidades compradas com pontos ganhos por nível
   de XP.
-- **Necessidades:** Coom, Bexiga, Intestino, Emoção, Hidratação e Energia, com orbe de Emoção na tela e painel
-  Body & Traits no inventário.
+- **Necessidades:** Coom, Bexiga, Intestino e Emoção, com orbe de Emoção na tela e painel Body & Traits no
+  inventário. (Hidratação e Energia foram desativadas na Etapa 4.5; os valores antigos ficam guardados no save.)
 - **Consumíveis:** Água de Coco, Cafezinho, Guaraná, Pão de Queijo, Coxinha, Brigadeiro, Penico e itens fictícios
   (laxante, antidiarreico, chás, café extraforte, energético, pílula azul, afrodisíaco) com efeitos temporários.
 - **Animações do jogador com GeckoLib:** o jogador é desenhado por um rig integrado ao `PlayerRenderer` vanilla
