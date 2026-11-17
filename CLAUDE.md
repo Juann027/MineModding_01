@@ -1,8 +1,12 @@
-# CLAUDE.md — TupiniCraft
+# CLAUDE.md — RespectCraft
 
 RPG de humor para **Minecraft Java 1.21.1 / NeoForge 21.1.x / Java 21**: criador de personagem, roleta de
 nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas,
 finalizações cinematográficas, contador de derrotas e o mob Leão do Fim. Versão atual: `0.5.7` (`gradle.properties`).
+
+**Nome público: RespectCraft** (`mod_name`, lang, descrição). O mod se chamava TupiniCraft e **todos os
+identificadores internos continuam `tupinicraft`**: mod id, pacote `com.tupinicraft`, classes `TupiniCraft*`,
+namespace de recursos, ids de registro/saves e comandos `/tupini*`. Não renomeie identificadores para a marca nova.
 
 Leia este arquivo, o `README.md` e só os arquivos do pedido. Os handoffs (fim do arquivo) têm os detalhes.
 
@@ -10,7 +14,7 @@ Leia este arquivo, o `README.md` e só os arquivos do pedido. Os handoffs (fim d
 
 | Item | Valor |
 |---|---|
-| Mod id / pacote | `tupinicraft` (`TupiniCraft.MOD_ID`, `TupiniCraft.id("caminho")`) / `com.tupinicraft` |
+| Nome público / mod id / pacote | RespectCraft / `tupinicraft` (`TupiniCraft.MOD_ID`, `TupiniCraft.id("caminho")`) / `com.tupinicraft` |
 | Minecraft / NeoForge | 1.21.1 / 21.1.265 (ModDevGradle, Parchment 2024.11.17), Gradle wrapper 9.2.1 |
 | Java | 21 (toolchain no `build.gradle`) |
 | GeckoLib | **4.9.3** (`software.bernie.geckolib:geckolib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Não use a 5. |
@@ -116,7 +120,7 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 ./gradlew runServer                      # servidor dedicado (aceita comandos no console)
 ```
 
-- Não há JUnit. Regra pura nova entra no `selftest.SelfTest` (sai como `Autoteste TupiniCraft: OK` no smoke test).
+- Não há JUnit. Regra pura nova entra no `selftest.SelfTest` (sai como `Autoteste RespectCraft: OK` no smoke test).
 - O CI (`.github/workflows/build.yml`) roda `bbsync.py`, `./gradlew build` e o teste de fumaça.
 - Teste com clientes reais (`tools/visual-test/helpers.sh`, Xvfb) só quando a mudança afeta render, telas ou
   sincronização multiplayer; um cenário representativo basta. Não repita a validação de etapas anteriores nem rode

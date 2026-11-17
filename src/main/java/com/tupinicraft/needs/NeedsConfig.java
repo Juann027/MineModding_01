@@ -12,7 +12,7 @@ public final class NeedsConfig {
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
-        b.comment("Necessidades do TupiniCraft").push("necessidades");
+        b.comment("Necessidades do RespectCraft").push("necessidades");
         COOM_RATE = b.comment("Multiplicador do acumulo do medidor Coom (1.0 = ~21 min de 0 a 100%; 0 desliga o acumulo).")
                 .defineInRange("coom_taxa", 1.0, 0.0, 10.0);
         b.pop();

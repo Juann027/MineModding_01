@@ -103,7 +103,7 @@ public final class TupiniCommands {
     private static int selfTest(CommandContext<CommandSourceStack> c) {
         List<String> failures = SelfTest.run();
         if (failures.isEmpty()) {
-            c.getSource().sendSuccess(() -> Component.literal("Autoteste TupiniCraft: OK"), true);
+            c.getSource().sendSuccess(() -> Component.literal("Autoteste RespectCraft: OK"), true);
             return 1;
         }
         for (String failure : failures) c.getSource().sendFailure(Component.literal("Autoteste falhou: " + failure));

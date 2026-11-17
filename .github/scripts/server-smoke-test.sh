@@ -40,12 +40,12 @@ else
   kill "$pid" 2>/dev/null; wait "$pid"
 fi
 
-grep -v DEBUG "$log" | grep -E 'tupinicraft|TupiniCraft|Exception|Error|Summon|summon|Unknown|entity' | head -60
+grep -v DEBUG "$log" | grep -E 'tupinicraft|TupiniCraft|RespectCraft|Exception|Error|Summon|summon|Unknown|entity' | head -60
 [ "$(grep -c 'Summoned new' "$log")" -ge 1 ] || fail "Leão do Fim não foi invocado no servidor dedicado"
 # Animation Manager carregado no servidor dedicado (catalogo e comando), sem classes de cliente.
 grep -q 'Animações de jogador: tupinicraft:idle, tupinicraft:wave' "$log" || fail "catálogo de animações de jogador não respondeu no servidor"
 # Etapa 3: autoteste das regras (roleta, necessidades, habilidades, camera, Codecs) e catalogos.
-grep -q 'Autoteste TupiniCraft: OK' "$log" || { grep 'Autoteste falhou' "$log"; fail "autoteste das regras falhou"; }
+grep -q 'Autoteste RespectCraft: OK' "$log" || { grep 'Autoteste falhou' "$log"; fail "autoteste das regras falhou"; }
 grep -q 'Habilidades (18)' "$log" || fail "catálogo de habilidades não respondeu"
 grep -q 'Finalizações: tupinicraft:takedown, tupinicraft:rasteira' "$log" || fail "catálogo de finalizações não respondeu"
 if grep -E 'NoClassDefFoundError|ClassNotFoundException|invalid dist|RuntimeDistCleaner' "$log"; then
