@@ -13,6 +13,8 @@ import com.tupinicraft.profile.BirthOrigin;
 import com.tupinicraft.profile.BirthTrait;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
+import com.tupinicraft.profile.Speciality;
+import com.tupinicraft.profile.SpecialityRarity;
 import com.tupinicraft.skill.SkillDef;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -64,15 +66,28 @@ public final class CharacterHubScreen extends TupiScreen {
 
         CharacterProfile p = ProfileClientCache.profile();
         int x = px2 + 10, y = top + 30;
+        int barW = left + panelWidth - 142 - x;
+        // Speciality ativa (hoje igual a de nascimento): nome, raridade e descricao curta. Ficha antiga sem
+        // Speciality mostra a origem social legada; ninguem recebe Speciality ao carregar.
+        Speciality speciality = p.specialityOrNull();
         BirthOrigin origin = p.originOrNull();
-        if (origin != null) {
+        if (speciality != null) {
+            SpecialityRarity rarity = speciality.rarity();
+            Component rarityName = Component.translatable(rarity.translationKey());
+            g.drawString(font, Component.translatable(speciality.translationKey()), x, y + 1, rarity.color(), true);
+            g.drawString(font, rarityName, x + barW - font.width(rarityName), y + 1, rarity.color(), false);
+            var lines = font.split(Component.translatable(speciality.translationKey() + ".desc"), barW);
+            for (int i = 0; i < Math.min(2, lines.size()); i++) g.drawString(font, lines.get(i), x, y + 12 + i * 9, Ui.MUTED, false);
+            y += 32;
+        } else if (p.born() && origin != null) {
             Ui.icon(g, com.tupinicraft.skill.SkillDef.iconTexture(origin.icon()), x, y - 2, 14);
             g.drawString(font, Component.translatable("origin.tupinicraft." + origin.id()), x + 18, y + 1, origin.color(), true);
+            g.drawString(font, Component.translatable("gui.tupinicraft.speciality.legacy_origin"), x, y + 14, Ui.MUTED, false);
+            y += 32;
         } else {
             g.drawString(font, Component.translatable(KEY + "unborn"), x, y + 1, Ui.MUTED, false);
+            y += 16;
         }
-        y += 16;
-        int barW = left + panelWidth - 142 - x;
         for (CharacterAttribute a : CharacterAttribute.values()) {
             int v = p.attribute(a);
             g.drawString(font, Component.translatable("attribute.tupinicraft." + a.id()), x, y, Ui.TEXT, false);

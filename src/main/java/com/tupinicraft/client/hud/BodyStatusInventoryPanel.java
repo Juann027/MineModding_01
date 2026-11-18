@@ -106,11 +106,22 @@ public final class BodyStatusInventoryPanel {
         }
         rect(graphics, x + padding, rowY + 1, width - padding * 2, 1, BORDER);
         var profile = ProfileClientCache.profile();
+        // Speciality ativa; ficha antiga sem Speciality mostra a origem social legada.
+        var speciality = profile.specialityOrNull();
         var origin = profile.originOrNull();
-        String originName = origin == null ? "--" : Component.translatable("origin.tupinicraft." + origin.id()).getString();
-        String originLine = compact ? "O: " + (origin == null ? "--" : originName.substring(0, Math.min(3, originName.length())))
-                : Component.translatable("gui.tupinicraft.origin").getString() + ": " + originName;
-        graphics.drawString(font, originLine, x + padding, rowY + 5, TEXT, false);
+        String originName = speciality != null ? Component.translatable(speciality.translationKey()).getString()
+                : origin == null ? "--" : Component.translatable("origin.tupinicraft." + origin.id()).getString();
+        String originLabel = Component.translatable(speciality == null && origin != null
+                ? "gui.tupinicraft.origin" : "gui.tupinicraft.speciality").getString();
+        String originLine = compact ? originLabel.charAt(0) + ": " + originName.substring(0, Math.min(3, originName.length()))
+                : originLabel + ": " + originName;
+        graphics.drawString(font, font.plainSubstrByWidth(originLine, width - 2 * padding), x + padding, rowY + 5,
+                speciality != null ? speciality.rarity().color() : TEXT, false);
+        if (speciality != null && inside(mouseX, mouseY, x + padding, rowY + 3, width - 2 * padding, 11)) {
+            tooltip = List.of(Component.translatable(speciality.translationKey()).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD),
+                    Component.translatable(speciality.rarity().translationKey()).withStyle(ChatFormatting.GRAY),
+                    Component.translatable(speciality.translationKey() + ".desc").withStyle(ChatFormatting.GRAY));
+        }
         // Traco de nascimento (nao confundir com a origem).
         var traits = profile.birthTraits();
         var trait = traits.isEmpty() ? null : traits.get(0);
