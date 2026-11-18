@@ -38,7 +38,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/tupinianim`. |
 | `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/tupinitest`. |
 | `character`, `client.character` | **Character Creator** (tecla K → `CharacterHubScreen`): aparência (`CharacterAppearance`, `CharacterAppearanceService`). |
-| `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`) e **traços de nascimento** (`BirthTrait`). |
+| `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`), **traços de nascimento** (`BirthTrait`) e **Family Legacy** (`FamilyLegacyRarity`, `FamilyLegacyOdds`, `FamilyLegacyRoll`, `FamilyLegacies`; ainda desligado). |
 | `skill`, `client.skilltree` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`. |
 | `needs`, `client.hud` | **Necessidades** (`Needs`, `NeedsRules`, `NeedsService`) e **consumíveis** (`NeedEffects`/`NeedEffectDef`, `ConsumableItem`, `ChamberPotItem`). Orbe de Emoção na tela; painel Body & Traits no inventário. |
 | `network` | Payloads (`GameplayNetworking`, `TestGameNetworking`) e caches de cliente. |
@@ -76,6 +76,11 @@ sistema em que vai mexer; veja o fim deste arquivo).
   Trocar o corpo com resultado **não confirmado** troca o traço inelegível por um de mesma polaridade,
   determinístico (`CharacterProfile.withTraitsCoherentWith`), sem sortear, sem mexer no novo giro. Fertile/Infertile
   não têm efeito; **não há gravidez** (não implemente sem pedido).
+- **Family Legacy (Etapa 4.7):** raridades `FamilyLegacyRarity` (Common 51,5 · Uncommon 30 · Rare 10 · Epic 5 ·
+  Legendary 3 · BONER 0,5%; BONER é a mais alta), chances exatas em milésimos (`FamilyLegacyOdds`, config SERVER
+  `tupinicraft-family-legacy-server.toml`). Sorteio no servidor: raridade primeiro, depois família elegível
+  (`FamilyLegacyRoll`); raridade sem família dá `NO_FAMILY_IN_RARITY`, **nunca redistribui**. Catálogo
+  (`FamilyLegacies`) vazio e `CATALOG_FINALIZED = false`: fora da roleta ao vivo. Não invente famílias nem efeitos.
 - **Rig/render:** não cancele `RenderPlayerEvent.Pre` nem desenhe o jogador fora do renderer vanilla. Em
   `PlayerRigModel.compose` mantenha o `GeoBone::resetStateChanges` no fim. Peça de corpo nova = `BodyLayerDefinition`
   (não crie `RenderLayer` por peça). Pele/rosto do criador são Body Layers sobre a skin da conta; não troque a textura.
@@ -166,7 +171,7 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 - Handoffs das etapas em [`docs/handoffs/`](docs/handoffs/README.md): o índice diz etapa, sistema, status e
   limitações. **Abra só o handoff do sistema que a tarefa toca** (nunca todos): rig/Body Layers → Etapa 2; telas,
   criador, roleta, skills, necessidades, finalizações → Etapas 3/3.1; animações e Blockbench → Etapas 4/4.1;
-  contador de derrotas → 4.2; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
+  contador de derrotas → 4.2; Family Legacy → 4.7; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
   roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada; traços por corpo
   (universais × só masculinos) e textos em inglês → 4.6.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

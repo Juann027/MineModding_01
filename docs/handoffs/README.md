@@ -20,6 +20,7 @@ e o `CLAUDE.md`.
 | 4.5 | Rebranding RespectCraft, handoffs em `docs/handoffs/`, correção do giro infinito da roleta | [HANDOFF_STAGE4_5.md](HANDOFF_STAGE4_5.md) | Concluída | Nome novo só na marca; ids seguem `tupinicraft` |
 | 4.5 rev. | Criador sem retrato/nota, paleta única de cabelo, traços de nascimento, Hidratação/Energia inativas, confirmação da roleta | [HANDOFF_STAGE4_5_REVISED.md](HANDOFF_STAGE4_5_REVISED.md) | Concluída (PR #27) | Traços sem efeito de jogo; habilidades Cantil e Rede sem efeito |
 | 4.6 | Traços por corpo (universais × só masculinos), Fertile/Infertile, texto visível em inglês | [HANDOFF_BIRTH_TRAITS_STAGE4_6.md](HANDOFF_BIRTH_TRAITS_STAGE4_6.md) | Concluída | Fertile/Infertile sem efeito; sem gravidez |
+| 4.7 | Raridades do Family Legacy (51,5/30/10/5/3/0,5%, BONER no topo), config e simulação | [HANDOFF_FAMILY_LEGACY_STAGE4_7.md](HANDOFF_FAMILY_LEGACY_STAGE4_7.md) | Implementada, fora da roleta ao vivo | Catálogo de famílias vazio até ser aprovado |
 
 Não há handoff da Etapa 4.3 neste repositório.
 
@@ -30,5 +31,6 @@ Não há handoff da Etapa 4.3 neste repositório.
 - Telas, criador, roleta, skills, necessidades, finalizações → Etapas 3 e 3.1; protocolo da roleta → 4.5.
 - Atributos × necessidades × traços de nascimento, criador atual, Hidratação/Energia → 4.5 revisada.
 - Elegibilidade de traços por corpo, Fertile/Infertile, idioma inglês → 4.6.
+- Family Legacy (raridades, chances, catálogo) → 4.7.
 - Contador de derrotas → Etapa 4.2.
 - Ids aposentados, compatibilidade de saves, nome do mod → Etapas 4.4 e 4.5.
