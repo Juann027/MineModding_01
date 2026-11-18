@@ -5,25 +5,25 @@ import java.util.random.RandomGenerator;
 
 /** Regras da roleta de nascimento (puras; quem chama e sempre o servidor). */
 public final class BirthRoulette {
-    /** Pontos extras distribuidos ao acaso sobre a base, antes do bonus da origem. */
+    /** Pontos extras distribuidos ao acaso sobre a base. */
     public static final int EXTRA_POINTS = 12;
-    /** Teto de um atributo antes do bonus da origem. */
+    /** Teto de um atributo no sorteio. */
     public static final int ROLL_CAP = 8;
     /** Novas tentativas permitidas depois do primeiro giro. */
     public static final int FREE_REROLLS = 1;
 
     /**
-     * Resultado de um nascimento: origem (com seus bonus), os seis atributos e os tracos de nascimento. Os tracos
-     * sao sorteados a parte e nao dependem da origem.
+     * Resultado de um nascimento (Etapa 4.7): a Speciality sorteada (raridade primeiro), os seis atributos e os
+     * tracos de nascimento. Specialities nao dao bonus de atributo nem efeito; os tracos sao sorteados a parte.
+     * As origens sociais ({@link BirthOrigin}) nao sao mais sorteadas: so existem em fichas antigas.
      */
-    public record Result(BirthOrigin origin, int[] attributes, List<BirthTrait> traits) {
+    public record Result(Speciality speciality, int[] attributes, List<BirthTrait> traits) {
         public Result {
+            if (speciality == null) throw new IllegalArgumentException("birth without speciality");
             traits = traits == null ? List.of() : List.copyOf(traits);
         }
 
-        public Result(BirthOrigin origin, int[] attributes) {
-            this(origin, attributes, List.of());
-        }
+        public SpecialityRarity rarity() { return speciality.rarity(); }
     }
 
     /**
@@ -72,18 +72,24 @@ public final class BirthRoulette {
 
     private BirthRoulette() {}
 
-    public static BirthOrigin pickOrigin(RandomGenerator random) {
-        int roll = random.nextInt(BirthOrigin.totalWeight());
-        for (BirthOrigin origin : BirthOrigin.values()) {
-            roll -= origin.weight();
-            if (roll < 0) return origin;
-        }
-        return BirthOrigin.values()[0];
+    /** Sorteio com a distribuicao aprovada (testes e ferramentas puras). */
+    public static Result roll(RandomGenerator random, BirthTrait.Body body) {
+        return roll(random, body, SpecialityOdds.DEFAULT, null);
     }
 
-    /** Sorteio com o conjunto de tracos do corpo informado (o servidor le o corpo da aparencia salva). */
-    public static Result roll(RandomGenerator random, BirthTrait.Body body) {
-        BirthOrigin origin = pickOrigin(random);
+    /**
+     * Sorteio do nascimento (o servidor passa a distribuicao da config). Ordem: raridade, Speciality dentro da
+     * raridade, atributos, tracos. {@code forcedRarity} so vem do teste administrativo; null = sorteio normal.
+     * O corpo filtra quais tracos (e Specialities) podem sair.
+     */
+    public static Result roll(RandomGenerator random, BirthTrait.Body body, SpecialityOdds odds, SpecialityRarity forcedRarity) {
+        SpecialityRoll.Result picked = forcedRarity == null
+                ? SpecialityRoll.roll(random, odds, Specialities.CATALOG, body)
+                : SpecialityRoll.pickWithin(random, forcedRarity, Specialities.CATALOG, body);
+        if (!picked.hasSpeciality()) {
+            // Nunca redistribui: no catalogo oficial toda raridade tem Speciality (o autoteste garante).
+            throw new IllegalStateException("no speciality registered for rarity " + picked.rarity().id());
+        }
         CharacterAttribute[] all = CharacterAttribute.values();
         int[] values = new int[all.length];
         java.util.Arrays.fill(values, CharacterAttribute.BASE);
@@ -96,11 +102,9 @@ public final class BirthRoulette {
                 remaining--;
             }
         }
-        for (CharacterAttribute attribute : all) {
-            values[attribute.ordinal()] = CharacterAttribute.clamp(values[attribute.ordinal()] + origin.bonus(attribute));
-        }
-        // Tracos depois dos atributos: independentes da origem; o corpo so filtra quais podem sair.
-        return new Result(origin, values, BirthTrait.roll(random, body));
+        for (int i = 0; i < values.length; i++) values[i] = CharacterAttribute.clamp(values[i]);
+        // Tracos depois dos atributos: independentes da Speciality; o corpo so filtra quais podem sair.
+        return new Result(picked.speciality(), values, BirthTrait.roll(random, body));
     }
 
     /** Pontos de habilidade iniciais: 2, mais 1 a cada 2 pontos de Inteligencia acima da base. */

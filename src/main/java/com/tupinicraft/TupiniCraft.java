@@ -38,7 +38,7 @@ public final class TupiniCraft {
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, com.tupinicraft.needs.NeedsConfig.SPEC,
                 "tupinicraft-needs-server.toml");
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER,
-                com.tupinicraft.profile.FamilyLegacyConfig.SPEC, "tupinicraft-family-legacy-server.toml");
+                com.tupinicraft.profile.SpecialityConfig.SPEC, "tupinicraft-speciality-server.toml");
         ModItems.ITEMS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
         ModEntities.ENTITY_TYPES.register(modBus);

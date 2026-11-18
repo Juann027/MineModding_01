@@ -13,11 +13,12 @@ import com.tupinicraft.profile.BirthRoulette;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
 import com.tupinicraft.profile.ProfileService;
-import com.tupinicraft.profile.FamilyLegacies;
-import com.tupinicraft.profile.FamilyLegacyConfig;
-import com.tupinicraft.profile.FamilyLegacyOdds;
-import com.tupinicraft.profile.FamilyLegacyRarity;
-import com.tupinicraft.profile.FamilyLegacyRoll;
+import com.tupinicraft.profile.Specialities;
+import com.tupinicraft.profile.Speciality;
+import com.tupinicraft.profile.SpecialityConfig;
+import com.tupinicraft.profile.SpecialityOdds;
+import com.tupinicraft.profile.SpecialityRarity;
+import com.tupinicraft.profile.SpecialityRoll;
 import com.tupinicraft.selftest.SelfTest;
 import com.tupinicraft.skill.SkillDef;
 import com.tupinicraft.skill.SkillService;
@@ -44,10 +45,11 @@ public final class TupiniCommands {
                 .then(Commands.literal("skills").then(Commands.literal("list").executes(TupiniCommands::listSkills)))
                 .then(Commands.literal("finishers").executes(TupiniCommands::listFinishers))
                 .then(Commands.literal("selftest").requires(s -> s.hasPermission(2)).executes(TupiniCommands::selfTest))
-                .then(Commands.literal("familylegacy").requires(s -> s.hasPermission(2))
-                        .then(Commands.literal("odds").executes(TupiniCommands::familyLegacyOdds))
+                .then(Commands.literal("speciality").requires(s -> s.hasPermission(2))
+                        .then(Commands.literal("list").executes(TupiniCommands::listSpecialities))
+                        .then(Commands.literal("odds").executes(TupiniCommands::specialityOdds))
                         .then(Commands.literal("simulate").then(Commands.argument("rolls", IntegerArgumentType.integer(1, 1_000_000))
-                                .executes(TupiniCommands::familyLegacySimulate))))
+                                .executes(TupiniCommands::specialitySimulate))))
                 .then(Commands.literal("admin").requires(s -> s.hasPermission(2))
                         .then(Commands.literal("perfil").then(Commands.argument("jogador", EntityArgument.player())
                                 .executes(c -> profile(c, EntityArgument.getPlayer(c, "jogador")))))
@@ -55,7 +57,20 @@ public final class TupiniCommands {
                                 .then(Commands.argument("quantidade", IntegerArgumentType.integer(0, 999))
                                         .executes(TupiniCommands::setPoints))))
                         .then(Commands.literal("roleta").then(Commands.argument("jogador", EntityArgument.player())
-                                .executes(TupiniCommands::forceRoll)))
+                                .executes(c -> forceRoll(c, null))
+                                // Teste administrativo: forca so a raridade (a Speciality sai dentro dela).
+                                .then(Commands.argument("raridade", StringArgumentType.word())
+                                        .suggests((c, b) -> SharedSuggestionProvider.suggest(java.util.Arrays.stream(
+                                                SpecialityRarity.values()).map(SpecialityRarity::id), b))
+                                        .executes(c -> {
+                                            String id = StringArgumentType.getString(c, "raridade");
+                                            SpecialityRarity rarity = SpecialityRarity.byId(id);
+                                            if (rarity == null) {
+                                                c.getSource().sendFailure(Component.literal("Unknown rarity: " + id));
+                                                return 0;
+                                            }
+                                            return forceRoll(c, rarity);
+                                        }))))
                         .then(Commands.literal("resetar").then(Commands.argument("jogador", EntityArgument.player())
                                 .executes(TupiniCommands::reset)))
                         .then(Commands.literal("skill").then(Commands.argument("jogador", EntityArgument.player())
@@ -91,7 +106,9 @@ public final class TupiniCommands {
         String needs = java.util.Arrays.stream(Need.ACTIVE)
                 .map(need -> need.id() + "=" + n.percent(need) + "%").collect(Collectors.joining(", "));
         c.getSource().sendSuccess(() -> Component.literal(player.getGameProfile().getName() + ": born=" + p.born()
-                + " origin=" + (p.origin().isEmpty() ? "-" : p.origin()) + " rerolls=" + p.rerolls()
+                + " speciality=" + (p.birthSpeciality().isEmpty() ? "-" : p.birthSpeciality())
+                + " current=" + (p.currentSpeciality().isEmpty() ? "-" : p.currentSpeciality())
+                + " legacy_origin=" + (p.origin().isEmpty() ? "-" : p.origin()) + " rerolls=" + p.rerolls()
                 + " points=" + p.skillPoints() + " skills=" + p.skills().size()
                 + " traits=" + (p.traits().isEmpty() ? "-" : String.join(",", p.traits()))
                 + "\n" + attrs + "\n" + needs + "\neffects=" + NeedsService.activeEffects(player).entries()), false);
@@ -110,42 +127,51 @@ public final class TupiniCommands {
         return Finishers.all().size();
     }
 
-    /** Chances ativas do Family Legacy e estado do catalogo (o sorteio ainda nao esta na roleta). */
-    private static int familyLegacyOdds(CommandContext<CommandSourceStack> c) {
-        FamilyLegacyOdds odds = FamilyLegacyConfig.odds();
-        String error = FamilyLegacyConfig.error();
-        StringBuilder sb = new StringBuilder("Family Legacy rarity odds"
-                + (error == null ? "" : " (config invalid: " + error + "; using defaults)") + ":");
-        for (FamilyLegacyRarity rarity : FamilyLegacyRarity.values()) {
-            sb.append("\n ").append(rarity.id()).append(" = ").append(FamilyLegacyOdds.formatPercent(odds.permille(rarity)))
-                    .append(" (families: ").append(FamilyLegacies.CATALOG.inRarity(rarity).size()).append(")");
+    /** Catalogo de Specialities por raridade (ids). */
+    private static int listSpecialities(CommandContext<CommandSourceStack> c) {
+        StringBuilder sb = new StringBuilder("Specialities (" + Speciality.values().length + "):");
+        for (SpecialityRarity rarity : SpecialityRarity.values()) {
+            sb.append("\n ").append(rarity.id()).append(": ").append(Specialities.CATALOG.inRarity(rarity).stream()
+                    .map(Speciality::id).collect(Collectors.joining(", ")));
         }
-        sb.append("\nCatalog finalized: ").append(FamilyLegacies.CATALOG_FINALIZED)
-                .append(". Live in Birth Roulette: ").append(FamilyLegacies.isLive());
+        c.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
+        return Speciality.values().length;
+    }
+
+    /** Chances de raridade ativas (config do servidor) e quantas Specialities ha em cada raridade. */
+    private static int specialityOdds(CommandContext<CommandSourceStack> c) {
+        SpecialityOdds odds = SpecialityConfig.odds();
+        String error = SpecialityConfig.error();
+        StringBuilder sb = new StringBuilder("Speciality rarity odds"
+                + (error == null ? "" : " (config invalid: " + error + "; using defaults)") + ":");
+        for (SpecialityRarity rarity : SpecialityRarity.values()) {
+            sb.append("\n ").append(rarity.id()).append(" = ").append(SpecialityOdds.formatPercent(odds.permille(rarity)))
+                    .append(" (specialities: ").append(Specialities.CATALOG.inRarity(rarity).size()).append(")");
+        }
         c.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
         return 1;
     }
 
-    /** Simula sorteios de raridade no servidor (nao grava nada na ficha). */
-    private static int familyLegacySimulate(CommandContext<CommandSourceStack> c) {
+    /** Simula sorteios de Speciality no servidor (nao grava nada na ficha). */
+    private static int specialitySimulate(CommandContext<CommandSourceStack> c) {
         int rolls = IntegerArgumentType.getInteger(c, "rolls");
-        FamilyLegacyOdds odds = FamilyLegacyConfig.odds();
+        SpecialityOdds odds = SpecialityConfig.odds();
         java.util.random.RandomGenerator random = java.util.random.RandomGenerator.of("L64X128MixRandom");
-        int[] counts = new int[FamilyLegacyRarity.values().length];
-        int withoutFamily = 0;
+        int[] counts = new int[SpecialityRarity.values().length];
+        int empty = 0;
         for (int i = 0; i < rolls; i++) {
-            FamilyLegacyRoll.Result result = FamilyLegacyRoll.roll(random, odds, FamilyLegacies.CATALOG,
+            SpecialityRoll.Result result = SpecialityRoll.roll(random, odds, Specialities.CATALOG,
                     com.tupinicraft.profile.BirthTrait.Body.MALE);
             counts[result.rarity().ordinal()]++;
-            if (!result.hasFamily()) withoutFamily++;
+            if (!result.hasSpeciality()) empty++;
         }
-        StringBuilder sb = new StringBuilder("Family Legacy simulation (" + rolls + " rolls):");
-        for (FamilyLegacyRarity rarity : FamilyLegacyRarity.values()) {
+        StringBuilder sb = new StringBuilder("Speciality simulation (" + rolls + " rolls):");
+        for (SpecialityRarity rarity : SpecialityRarity.values()) {
             sb.append("\n ").append(rarity.id()).append(" = ").append(counts[rarity.ordinal()])
                     .append(String.format(java.util.Locale.ROOT, " (%.2f%%, expected %s)",
-                            100.0 * counts[rarity.ordinal()] / rolls, FamilyLegacyOdds.formatPercent(odds.permille(rarity))));
+                            100.0 * counts[rarity.ordinal()] / rolls, SpecialityOdds.formatPercent(odds.permille(rarity))));
         }
-        sb.append("\nRolls with no registered family in the rolled rarity: ").append(withoutFamily);
+        sb.append("\nRolls with no Speciality in the rolled rarity: ").append(empty);
         c.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
         return rolls;
     }
@@ -169,12 +195,14 @@ public final class TupiniCommands {
         return 1;
     }
 
-    private static int forceRoll(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+    private static int forceRoll(CommandContext<CommandSourceStack> c, SpecialityRarity forcedRarity) throws CommandSyntaxException {
         ServerPlayer player = EntityArgument.getPlayer(c, "jogador");
         // Giro forcado pelo admin: nao concede novo giro ao jogador (mantem o que ele tinha; antes do nascimento, 1).
         CharacterProfile before = ProfileService.get(player);
-        BirthRoulette.Result result = ProfileService.roll(player, before.born() ? before.rerolls() : BirthRoulette.FREE_REROLLS);
-        c.getSource().sendSuccess(() -> Component.literal("Roulette: " + result.origin().id() + " "
+        BirthRoulette.Result result = ProfileService.roll(player,
+                before.born() ? before.rerolls() : BirthRoulette.FREE_REROLLS, forcedRarity);
+        c.getSource().sendSuccess(() -> Component.literal("Roulette: " + result.speciality().id() + " ("
+                + result.rarity().id() + (forcedRarity == null ? "" : ", forced by admin") + ") "
                 + java.util.Arrays.toString(result.attributes())), true);
         return 1;
     }

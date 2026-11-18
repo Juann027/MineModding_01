@@ -15,11 +15,11 @@ import com.tupinicraft.profile.BirthRoulette;
 import com.tupinicraft.profile.BirthTrait;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
-import com.tupinicraft.profile.FamilyLegacies;
-import com.tupinicraft.profile.FamilyLegacy;
-import com.tupinicraft.profile.FamilyLegacyOdds;
-import com.tupinicraft.profile.FamilyLegacyRarity;
-import com.tupinicraft.profile.FamilyLegacyRoll;
+import com.tupinicraft.profile.Specialities;
+import com.tupinicraft.profile.Speciality;
+import com.tupinicraft.profile.SpecialityOdds;
+import com.tupinicraft.profile.SpecialityRarity;
+import com.tupinicraft.profile.SpecialityRoll;
 import com.tupinicraft.skill.SkillDef;
 import com.tupinicraft.skill.Skills;
 import java.util.ArrayList;
@@ -53,7 +53,7 @@ public final class SelfTest {
             codecs(f);
             sequences(f);
             defeats(f);
-            familyLegacy(f);
+            specialities(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
@@ -65,34 +65,44 @@ public final class SelfTest {
     }
 
     private static void roulette(List<String> f) {
+        // Etapa 4.7: o nascimento sorteia uma Speciality (raridade primeiro); atributos sem bonus de origem.
         RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
-        Map<BirthOrigin, Integer> counts = new EnumMap<>(BirthOrigin.class);
-        for (int i = 0; i < 20_000; i++) {
+        int rolls = 40_000;
+        Map<SpecialityRarity, Integer> counts = new EnumMap<>(SpecialityRarity.class);
+        Map<Speciality, Integer> seen = new EnumMap<>(Speciality.class);
+        for (int i = 0; i < rolls; i++) {
             BirthRoulette.Result r = BirthRoulette.roll(random, i % 2 == 0 ? BirthTrait.Body.MALE : BirthTrait.Body.FEMALE);
-            counts.merge(r.origin(), 1, Integer::sum);
+            counts.merge(r.rarity(), 1, Integer::sum);
+            seen.merge(r.speciality(), 1, Integer::sum);
             int sum = 0;
             for (int v : r.attributes()) {
-                if (v < CharacterAttribute.MIN || v > CharacterAttribute.MAX) {
+                if (v < CharacterAttribute.MIN || v > BirthRoulette.ROLL_CAP) {
                     f.add("roleta: atributo fora da faixa " + v);
                     return;
                 }
                 sum += v;
             }
-            int bonus = 0;
-            for (CharacterAttribute a : CharacterAttribute.values()) bonus += r.origin().bonus(a);
-            int expected = CharacterAttribute.BASE * 6 + BirthRoulette.EXTRA_POINTS + bonus;
-            if (Math.abs(sum - expected) > 3) { // so o clamp pode tirar pontos
-                f.add("roleta: soma inesperada " + sum + " (esperado ~" + expected + ")");
+            if (sum != CharacterAttribute.BASE * 6 + BirthRoulette.EXTRA_POINTS) {
+                f.add("roleta: soma inesperada " + sum + " (Speciality não dá bônus de atributo)");
                 return;
             }
         }
-        int total = BirthOrigin.totalWeight();
-        for (BirthOrigin origin : BirthOrigin.values()) {
-            double expected = 20_000.0 * origin.weight() / total;
-            int got = counts.getOrDefault(origin, 0);
-            check(f, Math.abs(got - expected) < expected * 0.25 + 30, "roleta: frequência de " + origin.id() + " = " + got + " (esperado ~" + (int) expected + ")");
+        for (SpecialityRarity rarity : SpecialityRarity.values()) {
+            double expected = rolls * SpecialityOdds.DEFAULT.permille(rarity) / 1000.0;
+            int got = counts.getOrDefault(rarity, 0);
+            check(f, Math.abs(got - expected) <= 5 * Math.sqrt(expected) + 1,
+                    "roleta: frequência de " + rarity.id() + " = " + got + " (esperado ~" + (int) expected + ")");
         }
+        check(f, seen.size() == Speciality.values().length, "roleta: todas as Specialities sorteáveis = " + seen.keySet());
         check(f, BirthRoulette.startingSkillPoints(3) == 2 && BirthRoulette.startingSkillPoints(9) == 5, "roleta: pontos iniciais");
+        // Raridade forcada (so o teste administrativo usa): a Speciality sai dentro dela, o resto e sorteado igual.
+        for (SpecialityRarity rarity : SpecialityRarity.values()) {
+            BirthRoulette.Result forced = BirthRoulette.roll(random, BirthTrait.Body.FEMALE, SpecialityOdds.DEFAULT, rarity);
+            check(f, forced.rarity() == rarity && forced.traits().size() == BirthTrait.PER_BIRTH,
+                    "roleta: raridade forçada " + rarity.id());
+        }
+        check(f, BirthRoulette.roll(random, BirthTrait.Body.MALE, SpecialityOdds.DEFAULT, SpecialityRarity.BONER).speciality()
+                == Speciality.ISLAND_GUY, "roleta: BONER forçado = Island Guy");
     }
 
     private static void needs(List<String> f) {
@@ -183,7 +193,8 @@ public final class SelfTest {
         check(f, BirthRoulette.Outcome.byOrdinal(99) == BirthRoulette.Outcome.STALE, "roleta: resposta desconhecida");
         // Continuar confirma: o novo giro restante some e a roleta nao pode trocar o resultado aceito.
         CharacterProfile confirmed = BirthRoulette.confirm(born, born.rollCount());
-        check(f, confirmed.birthConfirmed() && !confirmed.canReroll() && confirmed.origin().equals(born.origin())
+        check(f, confirmed.birthConfirmed() && !confirmed.canReroll() && confirmed.birthSpeciality().equals(born.birthSpeciality())
+                && confirmed.currentSpeciality().equals(born.currentSpeciality())
                 && confirmed.attributes().equals(born.attributes()) && confirmed.traits().equals(born.traits()),
                 "roleta: confirmar descarta o novo giro e mantém o resultado");
         check(f, BirthRoulette.validate(confirmed, true, confirmed.rollCount()) == BirthRoulette.Outcome.NO_REROLLS,
@@ -211,13 +222,13 @@ public final class SelfTest {
             // Nenhum efeito aprovado ainda: nada de bonus oculto.
             check(f, !t.hasEffect(), "traços: efeito não aprovado em " + t.id());
         }
-        // Atributos e origem nao dependem dos tracos: mesmo resultado com e sem tracos.
-        BirthRoulette.Result r = new BirthRoulette.Result(BirthOrigin.CLASSE_MEDIA, new int[] {4, 5, 5, 6, 4, 3},
+        // Atributos e Speciality nao dependem dos tracos: mesmo resultado com e sem tracos.
+        BirthRoulette.Result r = new BirthRoulette.Result(Speciality.DOMINANTS, new int[] {4, 5, 5, 6, 4, 3},
                 List.of(BirthTrait.HUNG));
         CharacterProfile withTrait = CharacterProfile.DEFAULT.withBirth(r, 1);
-        CharacterProfile noTrait = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(r.origin(), r.attributes()), 1);
-        check(f, withTrait.attributes().equals(noTrait.attributes()) && withTrait.origin().equals(noTrait.origin())
-                && withTrait.skillPoints() == noTrait.skillPoints(), "traços: não alteram atributos, origem nem pontos");
+        CharacterProfile noTrait = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(r.speciality(), r.attributes(), List.of()), 1);
+        check(f, withTrait.attributes().equals(noTrait.attributes()) && withTrait.birthSpeciality().equals(noTrait.birthSpeciality())
+                && withTrait.skillPoints() == noTrait.skillPoints(), "traços: não alteram atributos, Speciality nem pontos");
         check(f, new CharacterProfile(true, "sertao", List.of(), 1, 1, 0, 0, List.of(), List.of("hung", "hung", "futuro"))
                 .traits().equals(List.of("hung", "futuro"))
                 && new CharacterProfile(true, "sertao", List.of(), 1, 1, 0, 0, List.of(), List.of("hung", "futuro"))
@@ -276,7 +287,7 @@ public final class SelfTest {
                 && BirthTrait.byId("fertile") == BirthTrait.FERTILE && BirthTrait.byId("infertile") == BirthTrait.INFERTILE,
                 "traços 4.6: ids fertile/infertile");
         for (BirthTrait t : List.of(BirthTrait.FERTILE, BirthTrait.INFERTILE)) {
-            CharacterProfile p = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(BirthOrigin.SERTAO,
+            CharacterProfile p = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(Speciality.VOYEURS,
                     new int[] {4, 5, 5, 6, 4, 3}, List.of(t)), 1);
             Tag tag = CharacterProfile.CODEC.encodeStart(NbtOps.INSTANCE, p).getOrThrow();
             ByteBuf buf = Unpooled.buffer();
@@ -296,12 +307,12 @@ public final class SelfTest {
         check(f, future.withTraitsCoherentWith(female).traits().equals(List.of("futuro")), "traços 4.6: id desconhecido preservado");
         // Troca de corpo num resultado nao confirmado: coerente, mesma polaridade, sem traço extra, sem sortear de novo.
         for (BirthTrait t : exclusive) {
-            CharacterProfile pending = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(BirthOrigin.PAMPA,
+            CharacterProfile pending = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(Speciality.ROPEBOUND,
                     new int[] {6, 4, 4, 3, 3, 5}, List.of(t)), BirthRoulette.FREE_REROLLS);
             CharacterProfile asFemale = pending.withTraitsCoherentWith(female);
             List<BirthTrait> now = asFemale.birthTraits();
             check(f, now.size() == 1 && now.get(0).eligibleFor(female) && now.get(0).polarity() == t.polarity()
-                    && asFemale.origin().equals(pending.origin()) && asFemale.attributes().equals(pending.attributes())
+                    && asFemale.currentSpeciality().equals(pending.currentSpeciality()) && asFemale.attributes().equals(pending.attributes())
                     && asFemale.rerolls() == pending.rerolls() && asFemale.rollCount() == pending.rollCount()
                     && asFemale.skillPoints() == pending.skillPoints(), "traços 4.6: troca de corpo coerente " + t.id() + " -> " + now);
             // Alternar de novo nao muda mais nada (sem pescar tracos) e e deterministico.
@@ -373,8 +384,8 @@ public final class SelfTest {
     }
 
     private static void codecs(List<String> f) {
-        CharacterProfile p = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(BirthOrigin.SERTAO,
-                new int[] {5, 4, 9, 3, 6, 2}), 1).withSkills(List.of(Skills.PUNHOS.id().toString()), 3);
+        CharacterProfile p = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(Speciality.LATEX_ROYALS,
+                new int[] {5, 4, 9, 3, 6, 2}, List.of()), 1).withSkills(List.of(Skills.PUNHOS.id().toString()), 3);
         Tag tag = CharacterProfile.CODEC.encodeStart(NbtOps.INSTANCE, p).getOrThrow();
         CharacterProfile back = CharacterProfile.CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow();
         check(f, back.equals(p), "codec: ficha ida e volta");
@@ -423,7 +434,7 @@ public final class SelfTest {
                 && loaded.skillPoints() == 3 && loaded.levelRewarded() == 2 && loaded.skills().size() == 1,
                 "compat: ficha da v0.5.7 sem traços carrega intacta");
         // Gravar de novo inclui o campo novo e volta igual.
-        CharacterProfile withTraits = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(BirthOrigin.PAMPA,
+        CharacterProfile withTraits = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(Speciality.ISLAND_GUY,
                 new int[] {6, 4, 4, 3, 3, 5}, List.of(BirthTrait.LIMP)), 1);
         Tag tag = CharacterProfile.CODEC.encodeStart(NbtOps.INSTANCE, withTraits).getOrThrow();
         check(f, ((CompoundTag) tag).getList("birth_traits", Tag.TAG_STRING).getString(0).equals("limp")
@@ -433,98 +444,158 @@ public final class SelfTest {
             ByteBuf buf = Unpooled.buffer();
             CharacterProfile.STREAM_CODEC.encode(buf, sample);
             CharacterProfile decoded = CharacterProfile.STREAM_CODEC.decode(buf);
-            check(f, decoded.equals(sample) && buf.readableBytes() == 0, "compat: ficha pela rede " + sample.origin());
+            check(f, decoded.equals(sample) && buf.readableBytes() == 0, "compat: ficha pela rede " + sample.origin()
+                    + "/" + sample.birthSpeciality());
             buf.release();
         }
+        specialityCompat(f, loaded, withTraits);
     }
 
-    /** Etapa 4.7: raridades do Family Legacy (distribuicao exata, sem redistribuicao, fora da roleta ao vivo). */
-    private static void familyLegacy(List<String> f) {
-        FamilyLegacyOdds odds = FamilyLegacyOdds.DEFAULT;
-        int[] approved = {515, 300, 100, 50, 30, 5};
-        FamilyLegacyRarity[] all = FamilyLegacyRarity.values();
-        check(f, all.length == approved.length, "legacy: seis raridades");
+    /**
+     * Etapa 4.7: persistencia das Specialities. Ficha antiga com origem social continua com ela (nenhuma
+     * Speciality aleatoria ao carregar); nascimento novo grava a Speciality de nascimento e a ativa (iguais).
+     */
+    private static void specialityCompat(List<String> f, CharacterProfile legacy, CharacterProfile fresh) {
+        check(f, legacy.birthSpeciality().isEmpty() && legacy.currentSpeciality().isEmpty() && legacy.specialityOrNull() == null
+                && legacy.hasBirthResult(), "speciality: ficha antiga mantém a origem legada e fica sem Speciality");
+        CharacterProfile legacyConfirmed = BirthRoulette.confirm(legacy, legacy.rollCount());
+        check(f, legacyConfirmed.originOrNull() == BirthOrigin.FAMILIA_ARTISTICA && legacyConfirmed.specialityOrNull() == null
+                && legacyConfirmed.attributes().equals(legacy.attributes()) && legacyConfirmed.skills().equals(legacy.skills()),
+                "speciality: confirmar ficha antiga não troca a origem nem atribui Speciality");
+        CharacterProfile legacyAfterBody = legacy.withTraitsCoherentWith(BirthTrait.Body.FEMALE);
+        check(f, legacyAfterBody.origin().equals(legacy.origin()) && legacyAfterBody.specialityOrNull() == null,
+                "speciality: troca de corpo não mexe na origem legada");
+        // O unico novo giro de uma ficha antiga e um nascimento novo: Speciality no lugar da origem social.
+        CharacterProfile rerolled = legacy.withBirth(new BirthRoulette.Result(Speciality.SPITTERS, new int[] {4, 4, 4, 4, 5, 5},
+                List.of(BirthTrait.AVERAGE)), 0);
+        check(f, rerolled.origin().isEmpty() && rerolled.specialityOrNull() == Speciality.SPITTERS
+                && rerolled.birthSpecialityOrNull() == Speciality.SPITTERS && !rerolled.canReroll()
+                && rerolled.levelRewarded() == legacy.levelRewarded(), "speciality: novo giro de ficha antiga");
+        check(f, fresh.birthSpecialityOrNull() == Speciality.ISLAND_GUY && fresh.specialityOrNull() == Speciality.ISLAND_GUY
+                && fresh.origin().isEmpty(), "speciality: nascimento novo = Speciality de nascimento e ativa iguais");
+        Tag tag = CharacterProfile.CODEC.encodeStart(NbtOps.INSTANCE, fresh).getOrThrow();
+        CompoundTag nbt = (CompoundTag) tag;
+        check(f, nbt.getString("birth_speciality").equals("island_guy") && nbt.getString("current_speciality").equals("island_guy"),
+                "speciality: campos gravados no save");
+        // Sem current_speciality gravado, a ativa e a de nascimento; id desconhecido fica guardado, mas nao aparece.
+        CompoundTag noCurrent = nbt.copy();
+        noCurrent.remove("current_speciality");
+        CharacterProfile parsed = CharacterProfile.CODEC.parse(NbtOps.INSTANCE, noCurrent).getOrThrow();
+        check(f, parsed.equals(fresh), "speciality: ativa vazia = a de nascimento");
+        CompoundTag future = nbt.copy();
+        future.putString("birth_speciality", "futura");
+        future.putString("current_speciality", "futura");
+        CharacterProfile unknown = CharacterProfile.CODEC.parse(NbtOps.INSTANCE, future).getOrThrow();
+        check(f, unknown.birthSpeciality().equals("futura") && unknown.specialityOrNull() == null
+                && unknown.attributes().equals(fresh.attributes()), "speciality: id desconhecido preservado");
+        // A troca futura (nao implementada) so mudaria a ativa: os dois campos sao independentes no save.
+        CharacterProfile switched = new CharacterProfile(fresh.born(), fresh.origin(), fresh.attributes(), fresh.rerolls(),
+                fresh.rollCount(), fresh.skillPoints(), fresh.levelRewarded(), fresh.skills(), fresh.traits(), "island_guy", "vanilla");
+        CharacterProfile switchedBack = CharacterProfile.CODEC.parse(NbtOps.INSTANCE,
+                CharacterProfile.CODEC.encodeStart(NbtOps.INSTANCE, switched).getOrThrow()).getOrThrow();
+        check(f, switchedBack.birthSpecialityOrNull() == Speciality.ISLAND_GUY && switchedBack.specialityOrNull() == Speciality.VANILLA,
+                "speciality: nascimento e ativa gravadas separadamente");
+    }
+
+    /** Etapa 4.7: raridades e catalogo das Specialities (distribuicao exata, sem redistribuicao). */
+    private static void specialities(List<String> f) {
+        SpecialityOdds odds = SpecialityOdds.DEFAULT;
+        int[] approved = {415, 250, 200, 100, 30, 5};
+        SpecialityRarity[] all = SpecialityRarity.values();
+        check(f, all.length == approved.length, "speciality: seis raridades");
         int total = 0;
-        for (FamilyLegacyRarity r : all) {
-            check(f, odds.permille(r) == approved[r.ordinal()], "legacy: chance padrão de " + r.id());
+        for (SpecialityRarity r : all) {
+            check(f, odds.permille(r) == approved[r.ordinal()], "speciality: chance padrão de " + r.id());
             total += odds.permille(r);
         }
-        check(f, total == FamilyLegacyOdds.TOTAL, "legacy: soma padrão " + total);
-        check(f, FamilyLegacyRarity.highest() == FamilyLegacyRarity.BONER
-                && FamilyLegacyRarity.BONER.isHigherThan(FamilyLegacyRarity.LEGENDARY)
-                && FamilyLegacyRarity.LEGENDARY.isHigherThan(FamilyLegacyRarity.EPIC)
-                && all[all.length - 1] == FamilyLegacyRarity.BONER, "legacy: BONER acima de Legendary");
-        check(f, FamilyLegacyRarity.byId("boner") == FamilyLegacyRarity.BONER && FamilyLegacyRarity.byId("x") == null,
-                "legacy: ids de raridade");
+        check(f, total == SpecialityOdds.TOTAL, "speciality: soma padrão " + total);
+        check(f, SpecialityRarity.highest() == SpecialityRarity.BONER
+                && SpecialityRarity.BONER.isHigherThan(SpecialityRarity.LEGENDARY)
+                && SpecialityRarity.LEGENDARY.isHigherThan(SpecialityRarity.EPIC)
+                && all[all.length - 1] == SpecialityRarity.BONER, "speciality: BONER acima de Legendary");
+        check(f, SpecialityRarity.byId("boner") == SpecialityRarity.BONER && SpecialityRarity.byId("x") == null,
+                "speciality: ids de raridade");
 
         // Bilhetes: cada raridade ocupa exatamente a sua chance (probabilidade exata, sem arredondamento).
         int[] tickets = new int[all.length];
-        for (int t = 0; t < FamilyLegacyOdds.TOTAL; t++) tickets[odds.rarityAt(t).ordinal()]++;
-        for (FamilyLegacyRarity r : all) {
-            check(f, tickets[r.ordinal()] == approved[r.ordinal()], "legacy: bilhetes de " + r.id() + " = " + tickets[r.ordinal()]);
+        for (int t = 0; t < SpecialityOdds.TOTAL; t++) tickets[odds.rarityAt(t).ordinal()]++;
+        for (SpecialityRarity r : all) {
+            check(f, tickets[r.ordinal()] == approved[r.ordinal()], "speciality: bilhetes de " + r.id() + " = " + tickets[r.ordinal()]);
         }
-        check(f, odds.rarityAt(514) == FamilyLegacyRarity.COMMON && odds.rarityAt(515) == FamilyLegacyRarity.UNCOMMON
-                && odds.rarityAt(964) == FamilyLegacyRarity.EPIC && odds.rarityAt(965) == FamilyLegacyRarity.LEGENDARY
-                && odds.rarityAt(994) == FamilyLegacyRarity.LEGENDARY && odds.rarityAt(995) == FamilyLegacyRarity.BONER
-                && odds.rarityAt(999) == FamilyLegacyRarity.BONER, "legacy: limites dos bilhetes");
+        check(f, odds.rarityAt(414) == SpecialityRarity.COMMON && odds.rarityAt(415) == SpecialityRarity.UNCOMMON
+                && odds.rarityAt(664) == SpecialityRarity.UNCOMMON && odds.rarityAt(665) == SpecialityRarity.RARE
+                && odds.rarityAt(864) == SpecialityRarity.RARE && odds.rarityAt(865) == SpecialityRarity.EPIC
+                && odds.rarityAt(964) == SpecialityRarity.EPIC && odds.rarityAt(965) == SpecialityRarity.LEGENDARY
+                && odds.rarityAt(994) == SpecialityRarity.LEGENDARY && odds.rarityAt(995) == SpecialityRarity.BONER
+                && odds.rarityAt(999) == SpecialityRarity.BONER, "speciality: limites dos bilhetes");
 
         // Configuravel, mas sempre exata: soma != 100%, negativo, casa decimal extra ou raridade faltando sao recusados.
-        check(f, FamilyLegacyOdds.ofPercent(51.5, 30, 10, 5, 3, 0.5).equals(odds), "legacy: porcentagens aprovadas");
-        check(f, throwsIae(() -> FamilyLegacyOdds.of(515, 300, 100, 50, 30, 4)), "legacy: soma 99.9% aceita");
-        check(f, throwsIae(() -> FamilyLegacyOdds.of(520, 300, 100, 50, 30, 5)), "legacy: soma 100.5% aceita");
-        check(f, throwsIae(() -> FamilyLegacyOdds.of(525, 300, 100, 50, 30, -5)), "legacy: chance negativa aceita");
-        check(f, throwsIae(() -> FamilyLegacyOdds.of(515, 300, 100, 50, 35)), "legacy: raridade faltando aceita");
-        check(f, throwsIae(() -> FamilyLegacyOdds.ofPercent(51.45, 30, 10, 5, 3, 0.55)), "legacy: duas casas aceitas");
-        FamilyLegacyOdds custom = FamilyLegacyOdds.ofPercent(50, 30, 10, 5, 4.5, 0.5);
-        check(f, custom.permille(FamilyLegacyRarity.LEGENDARY) == 45 && custom.rarityAt(994) == FamilyLegacyRarity.LEGENDARY
-                && custom.rarityAt(995) == FamilyLegacyRarity.BONER
-                && custom.rarityAt(499) == FamilyLegacyRarity.COMMON && custom.rarityAt(500) == FamilyLegacyRarity.UNCOMMON,
-                "legacy: distribuição configurada");
+        check(f, SpecialityOdds.ofPercent(41.5, 25, 20, 10, 3, 0.5).equals(odds), "speciality: porcentagens aprovadas");
+        check(f, throwsIae(() -> SpecialityOdds.of(415, 250, 200, 100, 30, 4)), "speciality: soma 99.9% aceita");
+        check(f, throwsIae(() -> SpecialityOdds.of(420, 250, 200, 100, 30, 5)), "speciality: soma 100.5% aceita");
+        check(f, throwsIae(() -> SpecialityOdds.of(425, 250, 200, 100, 30, -5)), "speciality: chance negativa aceita");
+        check(f, throwsIae(() -> SpecialityOdds.of(415, 250, 200, 100, 35)), "speciality: raridade faltando aceita");
+        check(f, throwsIae(() -> SpecialityOdds.ofPercent(41.45, 25, 20, 10, 3, 0.55)), "speciality: duas casas aceitas");
+        SpecialityOdds custom = SpecialityOdds.ofPercent(50, 30, 10, 5, 4.5, 0.5);
+        check(f, custom.permille(SpecialityRarity.LEGENDARY) == 45 && custom.rarityAt(994) == SpecialityRarity.LEGENDARY
+                && custom.rarityAt(995) == SpecialityRarity.BONER
+                && custom.rarityAt(499) == SpecialityRarity.COMMON && custom.rarityAt(500) == SpecialityRarity.UNCOMMON,
+                "speciality: distribuição configurada");
 
-        // Amostra: a raridade sai com a chance aprovada mesmo com raridades vazias (sem redistribuição).
-        FamilyLegacy common = new FamilyLegacy("selftest_common", FamilyLegacyRarity.COMMON, BirthTrait.Eligibility.ALL);
-        FamilyLegacy maleEpic = new FamilyLegacy("selftest_male_epic", FamilyLegacyRarity.EPIC, BirthTrait.Eligibility.MALE_ONLY);
-        FamilyLegacies partial = FamilyLegacies.of(List.of(common, maleEpic));
+        // Catalogo: exatamente as 15 aprovadas, com a raridade aprovada, sem efeito e sorteaveis pelos dois corpos.
+        Map<SpecialityRarity, List<String>> expected = new EnumMap<>(SpecialityRarity.class);
+        expected.put(SpecialityRarity.COMMON, List.of("vanilla", "voyeurs", "exhibitionists", "foot_worshippers"));
+        expected.put(SpecialityRarity.UNCOMMON, List.of("ropebound", "spitters"));
+        expected.put(SpecialityRarity.RARE, List.of("showers_of_gold", "bootstompers", "dominants", "latex_royals"));
+        expected.put(SpecialityRarity.EPIC, List.of("scatborn", "cuckholders", "humiliationists"));
+        expected.put(SpecialityRarity.LEGENDARY, List.of("ultra_gooner"));
+        expected.put(SpecialityRarity.BONER, List.of("island_guy"));
+        check(f, Speciality.values().length == 15 && Specialities.CATALOG.all().size() == 15, "speciality: 15 no catálogo");
+        for (SpecialityRarity r : all) {
+            List<String> ids = Specialities.CATALOG.inRarity(r).stream().map(Speciality::id).toList();
+            check(f, ids.equals(expected.get(r)), "speciality: catálogo de " + r.id() + " = " + ids);
+            for (BirthTrait.Body body : BirthTrait.Body.values()) {
+                check(f, !Specialities.CATALOG.eligible(r, body).isEmpty(), "speciality: " + r.id() + " vazia para " + body);
+            }
+        }
+        for (Speciality sp : Speciality.values()) check(f, Speciality.byId(sp.id()) == sp, "speciality: id " + sp.id());
+        check(f, Speciality.byId("") == null && Speciality.byId("futura") == null, "speciality: id vazio/desconhecido");
+
+        // Amostra: a raridade sai com a chance aprovada mesmo com raridades vazias (sem redistribuicao).
+        Specialities partial = Specialities.of(List.of(Speciality.VANILLA, Speciality.SCATBORN));
         RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
         int samples = 200_000;
         int[] counts = new int[all.length];
         int empty = 0;
         for (int i = 0; i < samples; i++) {
-            FamilyLegacyRoll.Result r = FamilyLegacyRoll.roll(random, odds, partial, BirthTrait.Body.FEMALE);
+            SpecialityRoll.Result r = SpecialityRoll.roll(random, odds, partial, BirthTrait.Body.FEMALE);
             counts[r.rarity().ordinal()]++;
-            if (r.hasFamily()) {
-                if (r.family().rarity() != r.rarity() || r.status() != FamilyLegacyRoll.Status.ROLLED) {
-                    f.add("legacy: família fora da raridade sorteada " + r);
+            if (r.hasSpeciality()) {
+                if (r.speciality().rarity() != r.rarity() || r.status() != SpecialityRoll.Status.ROLLED) {
+                    f.add("speciality: Speciality fora da raridade sorteada " + r);
                     return;
                 }
             } else {
                 empty++;
-                if (r.status() != FamilyLegacyRoll.Status.NO_FAMILY_IN_RARITY || r.rarity() == FamilyLegacyRarity.COMMON) {
-                    f.add("legacy: resultado vazio inesperado " + r);
+                if (r.status() != SpecialityRoll.Status.NO_SPECIALITY_IN_RARITY
+                        || r.rarity() == SpecialityRarity.COMMON || r.rarity() == SpecialityRarity.EPIC) {
+                    f.add("speciality: resultado vazio inesperado " + r);
                     return;
                 }
             }
         }
-        for (FamilyLegacyRarity r : all) {
-            double expected = samples * approved[r.ordinal()] / 1000.0;
-            double tolerance = 5 * Math.sqrt(expected) + 1; // ~5 desvios-padrão
-            check(f, Math.abs(counts[r.ordinal()] - expected) <= tolerance,
-                    "legacy: amostra de " + r.id() + " = " + counts[r.ordinal()] + " (esperado ~" + (int) expected + ")");
+        for (SpecialityRarity r : all) {
+            double exp = samples * approved[r.ordinal()] / 1000.0;
+            double tolerance = 5 * Math.sqrt(exp) + 1; // ~5 desvios-padrao
+            check(f, Math.abs(counts[r.ordinal()] - exp) <= tolerance,
+                    "speciality: amostra de " + r.id() + " = " + counts[r.ordinal()] + " (esperado ~" + (int) exp + ")");
         }
-        check(f, empty == samples - counts[FamilyLegacyRarity.COMMON.ordinal()],
-                "legacy: raridades vazias redistribuídas (" + empty + ")");
-
-        // Elegibilidade dentro da raridade: só o corpo masculino recebe a família MALE_ONLY.
-        check(f, FamilyLegacyRoll.pickWithin(random, FamilyLegacyRarity.EPIC, partial, BirthTrait.Body.MALE).family() == maleEpic,
-                "legacy: família masculina não sorteada");
-        FamilyLegacyRoll.Result femaleEpic = FamilyLegacyRoll.pickWithin(random, FamilyLegacyRarity.EPIC, partial, BirthTrait.Body.FEMALE);
-        check(f, !femaleEpic.hasFamily() && femaleEpic.rarity() == FamilyLegacyRarity.EPIC,
-                "legacy: corpo inelegível recebeu família");
-        check(f, throwsIae(() -> FamilyLegacies.of(List.of(common, common))), "legacy: id duplicado aceito");
-
-        // Fora da roleta ao vivo até o catálogo ser finalizado; a roleta não sorteia família.
-        check(f, FamilyLegacies.CATALOG_FINALIZED || !FamilyLegacies.isLive(), "legacy: ativo sem catálogo finalizado");
-        check(f, FamilyLegacies.CATALOG_FINALIZED || FamilyLegacies.CATALOG.isEmpty(), "legacy: famílias inventadas no catálogo");
+        check(f, empty == samples - counts[SpecialityRarity.COMMON.ordinal()] - counts[SpecialityRarity.EPIC.ordinal()],
+                "speciality: raridades vazias redistribuídas (" + empty + ")");
+        SpecialityRoll.Result forcedEmpty = SpecialityRoll.pickWithin(random, SpecialityRarity.BONER, partial, BirthTrait.Body.MALE);
+        check(f, !forcedEmpty.hasSpeciality() && forcedEmpty.rarity() == SpecialityRarity.BONER,
+                "speciality: raridade vazia forçada não cai para outra");
+        check(f, throwsIae(() -> Specialities.of(List.of(Speciality.VANILLA, Speciality.VANILLA))), "speciality: duplicata aceita");
     }
 
     private static boolean throwsIae(Runnable action) {

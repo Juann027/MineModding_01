@@ -31,7 +31,7 @@ if [ "$ready" != 1 ]; then
   fail "servidor não ficou pronto"
   exec 3>&-; kill "$pid" 2>/dev/null; wait "$pid"
 else
-  for cmd in "summon tupinicraft:leao_do_fim 0 -60 0" "tupinianim list" "tupini selftest" "tupini skills list" "tupini finishers"; do
+  for cmd in "summon tupinicraft:leao_do_fim 0 -60 0" "tupinianim list" "tupini selftest" "tupini skills list" "tupini finishers" "tupini speciality odds"; do
     echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
@@ -48,6 +48,8 @@ grep -q 'Player animations: tupinicraft:idle, tupinicraft:wave' "$log" || fail "
 grep -q 'RespectCraft self-test: OK' "$log" || { grep 'Self-test failed' "$log"; fail "autoteste das regras falhou"; }
 grep -q 'Skills (18)' "$log" || fail "catálogo de habilidades não respondeu"
 grep -q 'Finishers: tupinicraft:takedown, tupinicraft:rasteira' "$log" || fail "catálogo de finalizações não respondeu"
+# Etapa 4.7: chances de raridade das Specialities carregadas da config do servidor (padrão aprovado).
+grep -q 'boner = 0.5% (specialities: 1)' "$log" || fail "chances das Specialities não responderam"
 if grep -E 'NoClassDefFoundError|ClassNotFoundException|invalid dist|RuntimeDistCleaner' "$log"; then
   fail "erro de classe exclusiva do cliente no servidor dedicado"
 fi
