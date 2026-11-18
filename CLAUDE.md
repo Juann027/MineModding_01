@@ -38,7 +38,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/tupinianim`. |
 | `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/tupinitest`. |
 | `character`, `client.character` | **Character Creator** (tecla K → `CharacterHubScreen`): aparência (`CharacterAppearance`, `CharacterAppearanceService`). |
-| `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`), **traços de nascimento** (`BirthTrait`) e **Family Legacy** (`FamilyLegacyRarity`, `FamilyLegacyOdds`, `FamilyLegacyRoll`, `FamilyLegacies`; ainda desligado). |
+| `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`), **traços de nascimento** (`BirthTrait`) e **Specialities** (`Speciality`, `SpecialityRarity`, `SpecialityOdds`, `SpecialityRoll`, `Specialities`, `SpecialityConfig`). |
 | `skill`, `client.skilltree` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`. |
 | `needs`, `client.hud` | **Necessidades** (`Needs`, `NeedsRules`, `NeedsService`) e **consumíveis** (`NeedEffects`/`NeedEffectDef`, `ConsumableItem`, `ChamberPotItem`). Orbe de Emoção na tela; painel Body & Traits no inventário. |
 | `network` | Payloads (`GameplayNetworking`, `TestGameNetworking`) e caches de cliente. |
@@ -60,13 +60,13 @@ sistema em que vai mexer; veja o fim deste arquivo).
   cada tick. Animações trocam pelo relógio do servidor (`PlayerAnimationState.at`); não mande um pacote por clip.
 - **Modificadores de atributo** do mod são transitórios (`tupinicraft:stat/...`) e recolocados por
   `SkillService.refreshModifiers`; nunca grave no save.
-- **Roleta:** 8 origens com peso e bônus (`BirthOrigin`); sorteio no servidor; no máximo **1** novo giro
-  (`CharacterProfile.canReroll`), que zera habilidades, devolve os pontos e sorteia origem, atributos e traços de
-  novo. Continuar envia `BirthConfirmRequest` e descarta o novo giro restante (`birthConfirmed`). A tela só
+- **Roleta:** sorteia Speciality, atributos e traços no servidor (as 8 origens com bônus de `BirthOrigin` são
+  legadas); no máximo **1** novo giro (`CharacterProfile.canReroll`), que zera habilidades, devolve os pontos e
+  sorteia Speciality, atributos e traços de novo. Continuar envia `BirthConfirmRequest` e descarta o novo giro restante (`birthConfirmed`). A tela só
   apresenta o resultado. Todo `BirthRollRequest` (com o `rollCount` esperado) recebe um `BirthRollReply`; nunca
   descarte pedido em silêncio.
 - **Três conceitos separados:** **atributos** (`CharacterAttribute`: Força, Agilidade, Vigor, Inteligência,
-  Carisma, Sorte — vêm do sorteio + bônus da origem), **necessidades** (`Need`, medidores que mudam no jogo) e
+  Carisma, Sorte — vêm do sorteio; fichas antigas incluem o bônus da origem legada), **necessidades** (`Need`, medidores que mudam no jogo) e
   **traços de nascimento** (`BirthTrait`, sorteados à parte, nunca derivados da origem; gravados em
   `birth_traits`). Traço sem efeito aprovado fica com `effects` vazio (sem bônus oculto); efeitos de traços usam
   `SkillEffect` e são aplicados por `SkillService` como os de habilidades.
@@ -76,11 +76,15 @@ sistema em que vai mexer; veja o fim deste arquivo).
   Trocar o corpo com resultado **não confirmado** troca o traço inelegível por um de mesma polaridade,
   determinístico (`CharacterProfile.withTraitsCoherentWith`), sem sortear, sem mexer no novo giro. Fertile/Infertile
   não têm efeito; **não há gravidez** (não implemente sem pedido).
-- **Family Legacy (Etapa 4.7):** raridades `FamilyLegacyRarity` (Common 51,5 · Uncommon 30 · Rare 10 · Epic 5 ·
-  Legendary 3 · BONER 0,5%; BONER é a mais alta), chances exatas em milésimos (`FamilyLegacyOdds`, config SERVER
-  `tupinicraft-family-legacy-server.toml`). Sorteio no servidor: raridade primeiro, depois família elegível
-  (`FamilyLegacyRoll`); raridade sem família dá `NO_FAMILY_IN_RARITY`, **nunca redistribui**. Catálogo
-  (`FamilyLegacies`) vazio e `CATALOG_FINALIZED = false`: fora da roleta ao vivo. Não invente famílias nem efeitos.
+- **Specialities (Etapa 4.7):** a roleta sorteia uma das **15** `Speciality` no lugar das origens sociais. Raridade
+  primeiro (`SpecialityRarity`: Common 41,5 · Uncommon 25 · Rare 20 · Epic 10 · Legendary 3 · BONER 0,5%; BONER é a
+  mais alta), depois uma Speciality elegível dela (`SpecialityRoll`); chances exatas em milésimos (`SpecialityOdds`,
+  config SERVER `tupinicraft-speciality-server.toml`); raridade sem Speciality dá `NO_SPECIALITY_IN_RARITY`, **nunca
+  redistribui**. Ficha grava `birth_speciality` e `current_speciality` (hoje iguais; a troca no fim de jogo não existe
+  ainda). Specialities **não têm perks, modificadores nem efeitos** (virão nas Skill Trees) e não dão bônus de atributo.
+  Fichas antigas mantêm a origem social (`BirthOrigin`, só exibição/legado) e **nunca** recebem Speciality ao carregar;
+  só um novo giro troca a origem por uma Speciality. Raridade forçada só por `/tupini admin roleta <jogador> <raridade>`.
+  Não invente Specialities, não mude nomes/raridades e não implemente Rage Mode nem gravidez.
 - **Rig/render:** não cancele `RenderPlayerEvent.Pre` nem desenhe o jogador fora do renderer vanilla. Em
   `PlayerRigModel.compose` mantenha o `GeoBone::resetStateChanges` no fim. Peça de corpo nova = `BodyLayerDefinition`
   (não crie `RenderLayer` por peça). Pele/rosto do criador são Body Layers sobre a skin da conta; não troque a textura.
@@ -107,9 +111,9 @@ sistema em que vai mexer; veja o fim deste arquivo).
 
 | Dado | Onde fica |
 |---|---|
-| `tupinicraft:character_profile`, `tupinicraft:needs`, `tupinicraft:need_effects`, `tupinicraft:player_animation` | attachments (`ModAttachments`); nomes de campos dos Codecs também são estáveis (incl. `birth_traits` e os legados `hidratacao`/`energia`) |
+| `tupinicraft:character_profile`, `tupinicraft:needs`, `tupinicraft:need_effects`, `tupinicraft:player_animation` | attachments (`ModAttachments`); nomes de campos dos Codecs também são estáveis (incl. `birth_traits`, `birth_speciality`, `current_speciality` e os legados `hidratacao`/`energia`) |
 | `tupinicraft_character_appearance_v1`, `tupinicraft_special_defeats`, `tupinicraft_allow_mob_finishers_test` | `persistentData` do jogador |
-| ids de `BirthOrigin`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
+| ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
 | itens, `tupinicraft:leao_do_fim` | registries |
 
 - Id de origem aposentado: adicione o alias em `profile.LegacyOriginIds` (lido pelo Codec da ficha e regravado com o
@@ -171,7 +175,7 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 - Handoffs das etapas em [`docs/handoffs/`](docs/handoffs/README.md): o índice diz etapa, sistema, status e
   limitações. **Abra só o handoff do sistema que a tarefa toca** (nunca todos): rig/Body Layers → Etapa 2; telas,
   criador, roleta, skills, necessidades, finalizações → Etapas 3/3.1; animações e Blockbench → Etapas 4/4.1;
-  contador de derrotas → 4.2; Family Legacy → 4.7; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
+  contador de derrotas → 4.2; Specialities → 4.7; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
   roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada; traços por corpo
   (universais × só masculinos) e textos em inglês → 4.6.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

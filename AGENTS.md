@@ -11,11 +11,11 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
 - **Servidor autoritativo:** o cliente envia intenções; cada dado tem um único serviço dono (`ProfileService`,
   `NeedsService`, `PlayerAnimationService`, `CharacterAppearanceService`, `DefeatCounter`). Estenda o que existe.
 - **Separação de lado:** `net.minecraft.client.*` só dentro de `com.tupinicraft.client`.
-- **Saves:** não renomeie ids persistidos (attachments, chaves de `persistentData`, ids de origens, atributos,
+- **Saves:** não renomeie ids persistidos (attachments, chaves de `persistentData`, ids de origens, Specialities, atributos,
   necessidades, habilidades, itens e entidades). Id aposentado → alias em `profile.LegacyOriginIds` + `SelfTest`.
 - **Personagem:** atributos (`CharacterAttribute`), necessidades (`Need`; ativas = Coom, Bexiga, Intestino, Emoção;
-  Hidratação/Energia são legadas e inativas) e traços de nascimento (`BirthTrait`) são sistemas separados. Origem não
-  é traço. Traço sem efeito aprovado não ganha bônus. Elegibilidade (`BirthTrait.Eligibility`) só filtra sorteios novos
+  Hidratação/Energia são legadas e inativas) e traços de nascimento (`BirthTrait`) são sistemas separados. Origem/Speciality não
+  é traço; Specialities não têm efeito (Etapa 4.7). Traço sem efeito aprovado não ganha bônus. Elegibilidade (`BirthTrait.Eligibility`) só filtra sorteios novos
   pelo corpo do criador; traço gravado nunca é apagado (Etapa 4.6).
 - **Idioma:** texto visível ao jogador em inglês, só em `en_us.json` (não recrie `pt_br.json`). Código, comentários,
   docs e ids continuam como estão.
