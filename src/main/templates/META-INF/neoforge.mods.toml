@@ -8,7 +8,7 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="Juann027"
 description='''
-RespectCraft: RPG de humor com criador de personagem, roleta de nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas, finalizações cinematográficas e o mob Leão do Fim.
+RespectCraft: a comedy RPG with a character creator, birth roulette and birth traits, skill trees, needs and consumables, a GeckoLib player rig with synchronized animations, cinematic finishers and the End Lion mob.
 '''
 
 [[dependencies.${mod_id}]]

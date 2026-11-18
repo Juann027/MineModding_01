@@ -79,7 +79,7 @@ public final class FinisherTestMechanic {
     private FinisherTestMechanic() {}
 
     private static void message(ServerPlayer player, String text) {
-        player.sendSystemMessage(Component.literal("[RespectCraft Teste] " + text));
+        player.sendSystemMessage(Component.literal("[RespectCraft Test] " + text));
     }
 
     public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
@@ -91,15 +91,15 @@ public final class FinisherTestMechanic {
         if (target instanceof ServerPlayer victim) {
             if (victim.isSpectator() || victim.isCreative()) return;
             if (!FinisherRules.isVulnerable(victim.getHealth(), victim.getMaxHealth())) {
-                message(attacker, "O jogador precisa estar abaixo de 25% de vida.");
+                message(attacker, "The player must be below 25% health.");
             } else {
                 invite(attacker, victim);
             }
         } else if (target instanceof Mob mob && FinisherRules.isValidMobSize(mob.getBbWidth(), mob.getBbHeight())) {
             if (!FinisherRules.isVulnerable(mob.getHealth(), mob.getMaxHealth())) {
-                message(attacker, "O mob precisa estar abaixo de 25% de vida.");
+                message(attacker, "The mob must be below 25% health.");
             } else if (!start(attacker, mob)) {
-                message(attacker, "Alvo ocupado, protegido ou em cooldown.");
+                message(attacker, "Target is busy, protected or on cooldown.");
             }
         } else {
             return;
@@ -110,31 +110,31 @@ public final class FinisherTestMechanic {
 
     private static void invite(ServerPlayer attacker, ServerPlayer victim) {
         if (!available(attacker, victim)) {
-            message(attacker, "Finalizacao indisponivel (cooldown, sessao ativa ou distancia).");
+            message(attacker, "Finisher unavailable (cooldown, active session or distance).");
             return;
         }
         long now = victim.level().getGameTime();
         Invite old = PENDING.get(victim.getUUID());
         if (old != null && now < old.until()) {
-            message(attacker, "Esse jogador ja recebeu um convite.");
+            message(attacker, "That player already has an invite.");
             return;
         }
         PENDING.put(victim.getUUID(), new Invite(attacker.getUUID(), now + FinisherRules.INVITE_TICKS));
-        message(attacker, "Convite de finalizacao de COMBATE enviado. Aguardando autorizacao.");
-        message(victim, attacker.getGameProfile().getName() + " solicitou uma finalizacao de teste nao explicita. "
-                + "/tupinitest finisher accept ou /tupinitest finisher deny (15s). "
-                + "Para cancelar durante a acao: /stopitstopnow ou Shift.");
+        message(attacker, "COMBAT finisher invite sent. Waiting for consent.");
+        message(victim, attacker.getGameProfile().getName() + " requested a non-explicit test finisher. "
+                + "/tupinitest finisher accept or /tupinitest finisher deny (15s). "
+                + "To cancel during the action: /stopitstopnow or Shift.");
     }
 
     public static int accept(ServerPlayer victim) {
         Invite invite = PENDING.remove(victim.getUUID());
         if (invite == null || victim.level().getGameTime() >= invite.until()) {
-            message(victim, "Nao ha convite valido.");
+            message(victim, "There is no valid invite.");
             return 0;
         }
         ServerPlayer attacker = victim.server.getPlayerList().getPlayer(invite.attacker());
         if (attacker == null || !start(attacker, victim)) {
-            message(victim, "A finalizacao nao pode mais ser iniciada.");
+            message(victim, "The finisher can no longer start.");
             return 0;
         }
         return 1;
@@ -143,15 +143,15 @@ public final class FinisherTestMechanic {
     public static int deny(ServerPlayer victim) {
         Invite invite = PENDING.remove(victim.getUUID());
         if (invite == null) return 0;
-        message(victim, "Convite recusado.");
+        message(victim, "Invite declined.");
         ServerPlayer attacker = victim.server.getPlayerList().getPlayer(invite.attacker());
-        if (attacker != null) message(attacker, "Convite recusado.");
+        if (attacker != null) message(attacker, "Invite declined.");
         return 1;
     }
 
     public static int mobOptIn(ServerPlayer player, boolean allowed) {
         player.getPersistentData().putBoolean(MOB_OPT_IN_KEY, allowed);
-        message(player, allowed ? "TESTES de finalizacao por mobs permitidos." : "TESTES de finalizacao por mobs desativados.");
+        message(player, allowed ? "Mob finisher TESTS allowed." : "Mob finisher TESTS disabled.");
         return 1;
     }
 
@@ -163,14 +163,14 @@ public final class FinisherTestMechanic {
     /** Permite testar a futura API de mobs SEM adicionar IA a todos os mobs existentes. */
     public static int mobDemo(ServerPlayer target) {
         if (!target.getPersistentData().getBoolean(MOB_OPT_IN_KEY)) {
-            message(target, "Ative antes: /tupinitest finisher mobs on");
+            message(target, "Enable it first: /tupinitest finisher mobs on");
             return 0;
         }
         Mob mob = target.level().getEntitiesOfClass(Mob.class, target.getBoundingBox().inflate(3.0D),
                 m -> m.isAlive() && FinisherRules.isValidMobSize(m.getBbWidth(), m.getBbHeight()))
                 .stream().min((a,b) -> Double.compare(a.distanceToSqr(target), b.distanceToSqr(target))).orElse(null);
         if (mob == null || !tryStartFromMob(mob, target)) {
-            message(target, "Nenhum mob compativel proximo ou alvo nao vulneravel/disponivel.");
+            message(target, "No compatible mob nearby, or the target is not vulnerable/available.");
             return 0;
         }
         return 1;
@@ -245,8 +245,8 @@ public final class FinisherTestMechanic {
             PlayerAnimationService.play(v, finisher.victim(), now, Optional.of(attacker.getUUID()), params, true);
         }
         sendVisual(session, true);
-        if (attacker instanceof ServerPlayer p) message(p, "Finalizacao de teste iniciada. /stopitstopnow cancela.");
-        if (target instanceof ServerPlayer p) message(p, "Teste iniciado. Pressione Shift ou /stopitstopnow para cancelar.");
+        if (attacker instanceof ServerPlayer p) message(p, "Test finisher started. /stopitstopnow cancels.");
+        if (target instanceof ServerPlayer p) message(p, "Test started. Press Shift or /stopitstopnow to cancel.");
         return true;
     }
 
@@ -354,8 +354,8 @@ public final class FinisherTestMechanic {
         if (SESSIONS.get(s.attacker.getUUID()) != s) return;
         release(s);
         stopAnimations(s);
-        if (s.attacker instanceof ServerPlayer p) message(p, "Finalizacao cancelada: " + reason);
-        if (s.target instanceof ServerPlayer p) message(p, "Finalizacao cancelada: " + reason);
+        if (s.attacker instanceof ServerPlayer p) message(p, "Finisher cancelled: " + reason);
+        if (s.target instanceof ServerPlayer p) message(p, "Finisher cancelled: " + reason);
     }
 
     private static void complete(Session s) {
@@ -368,22 +368,22 @@ public final class FinisherTestMechanic {
         if (s.target instanceof ServerPlayer player && s.finisher.recoveryInScene()) {
             // A vitima ja se levantou dentro do clip: os dois voltam ao controle normal agora.
             int updated = DefeatCounter.increment(player);
-            message(player, "Derrota especial de TESTE registrada (" + updated + ").");
+            message(player, "Special TEST defeat recorded (" + updated + ").");
         } else if (s.target instanceof ServerPlayer player) {
             int updated = DefeatCounter.increment(player);
             INCAPACITATED.put(player.getUUID(), new Incapacitated(player.position(), now + FinisherRules.INCAPACITATED_TICKS, player.level().dimension()));
-            message(player, "Derrota especial de TESTE registrada (" + updated + "). Recuperacao: 10s. /stopitstopnow libera.");
+            message(player, "Special TEST defeat recorded (" + updated + "). Recovery: 10s. /stopitstopnow releases you.");
             // Fica caida durante a recuperacao (loop parado pelo servidor quando ela se recupera).
             PlayerAnimationService.play(player, Finishers.KNOCKED_DOWN, now, Optional.empty(), new CompoundTag(), true);
         }
-        if (s.attacker instanceof ServerPlayer player) message(player, "Finalizacao de combate de teste concluida.");
+        if (s.attacker instanceof ServerPlayer player) message(player, "Test combat finisher complete.");
     }
 
     public static int emergencyStop(ServerPlayer player) {
         boolean changed = false;
         Session s = SESSIONS.get(player.getUUID());
         if (s != null) {
-            abort(s, "solicitacao do jogador");
+            abort(s, "player request");
             changed = true;
         }
         if (INCAPACITATED.remove(player.getUUID()) != null) {
@@ -392,8 +392,8 @@ public final class FinisherTestMechanic {
         }
         if (PENDING.remove(player.getUUID()) != null) changed = true;
         if (PENDING.entrySet().removeIf(e -> e.getValue().attacker().equals(player.getUUID()))) changed = true;
-        if (changed) message(player, "Interacao e/ou recuperacao encerradas.");
-        else message(player, "Voce nao esta em uma finalizacao ou recuperacao.");
+        if (changed) message(player, "Interaction and/or recovery ended.");
+        else message(player, "You are not in a finisher or recovery.");
         return changed ? 1 : 0;
     }
 
@@ -410,7 +410,7 @@ public final class FinisherTestMechanic {
             if (now >= incap.until() || !player.level().dimension().equals(incap.dimension())) {
                 INCAPACITATED.remove(player.getUUID());
                 stopIfOwn(player, Finishers.KNOCKED_DOWN);
-                message(player, "Recuperado.");
+                message(player, "Recovered.");
             } else {
                 freezePlayer(player, incap.anchor());
             }
@@ -422,12 +422,12 @@ public final class FinisherTestMechanic {
                 || s.attacker.isRemoved() || s.target.isRemoved()
                 || s.attacker.level() != s.target.level()
                 || s.attacker.distanceToSqr(s.target) > 16.0D) {
-            abort(s, "participante indisponivel ou afastado");
+            abort(s, "participant unavailable or too far");
             return;
         }
         // A vitima pode cancelar por Shift ou comando; o executor tambem pode usar o comando.
         if (s.target instanceof ServerPlayer target && target.isShiftKeyDown()) {
-            abort(s, "cancelamento por Shift");
+            abort(s, "cancelled with Shift");
             return;
         }
         if (now >= s.finishAt) {
@@ -462,21 +462,21 @@ public final class FinisherTestMechanic {
         if (s != null) {
             // Uma tentativa de dano interrompe a cena, SEM aplicar o dano da tentativa.
             event.setCanceled(true);
-            abort(s, "interferencia por dano");
+            abort(s, "interrupted by damage");
         }
     }
 
     public static void onDeath(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide()) return;
         Session s = SESSIONS.get(event.getEntity().getUUID());
-        if (s != null) abort(s, "morte");
+        if (s != null) abort(s, "death");
         INCAPACITATED.remove(event.getEntity().getUUID());
     }
 
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         Session s = SESSIONS.get(player.getUUID());
-        if (s != null) abort(s, "desconexao");
+        if (s != null) abort(s, "disconnect");
         INCAPACITATED.remove(player.getUUID());
         PENDING.remove(player.getUUID());
         PENDING.entrySet().removeIf(e -> e.getValue().attacker().equals(player.getUUID()));

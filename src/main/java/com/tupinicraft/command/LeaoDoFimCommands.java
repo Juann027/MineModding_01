@@ -26,7 +26,7 @@ public final class LeaoDoFimCommands {
                                 .executes(context -> {
                                     String action = StringArgumentType.getString(context, "action");
                                     if (!ACTIONS.contains(action)) {
-                                        context.getSource().sendFailure(Component.literal("Ação inválida: " + action));
+                                        context.getSource().sendFailure(Component.literal("Invalid action: " + action));
                                         return 0;
                                     }
                                     int count = 0;
@@ -41,11 +41,11 @@ public final class LeaoDoFimCommands {
                                         count++;
                                     }
                                     if (count == 0) {
-                                        context.getSource().sendFailure(Component.literal("Nenhum LeãoDoFim vivo selecionado."));
+                                        context.getSource().sendFailure(Component.literal("No living End Lion selected."));
                                     } else {
                                         int affected = count;
                                         context.getSource().sendSuccess(() -> Component.literal(
-                                                "LeãoDoFim: " + action + " aplicado a " + affected + " entidade(s)."), true);
+                                                "End Lion: " + action + " applied to " + affected + " entity(ies)."), true);
                                     }
                                     return count;
                                 }))));

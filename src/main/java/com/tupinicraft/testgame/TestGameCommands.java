@@ -28,7 +28,7 @@ public final class TestGameCommands {
                                 .executes(ctx -> {
                                     ServerPlayer player = ctx.getSource().getPlayerOrException();
                                     int count = DefeatCounter.get(player);
-                                    ctx.getSource().sendSuccess(() -> Component.literal("Derrotas especiais de teste: " + count), false);
+                                    ctx.getSource().sendSuccess(() -> Component.literal("Special test defeats: " + count), false);
                                     return count;
                                 }))
                         .then(Commands.literal("add")
@@ -38,7 +38,7 @@ public final class TestGameCommands {
                                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                                             int count = DefeatCounter.increment(target);
                                             ctx.getSource().sendSuccess(() -> Component.literal(
-                                                    "Derrotas especiais de " + target.getGameProfile().getName() + ": " + count), true);
+                                                    "Special defeats of " + target.getGameProfile().getName() + ": " + count), true);
                                             return 1;
                                         })))
                         .then(Commands.literal("set")
@@ -49,7 +49,7 @@ public final class TestGameCommands {
                                                     ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                                                     int count = DefeatCounter.set(target, IntegerArgumentType.getInteger(ctx, "value"));
                                                     ctx.getSource().sendSuccess(() -> Component.literal(
-                                                            "Derrotas especiais de " + target.getGameProfile().getName() + ": " + count), true);
+                                                            "Special defeats of " + target.getGameProfile().getName() + ": " + count), true);
                                                     return 1;
                                                 }))))));
     }

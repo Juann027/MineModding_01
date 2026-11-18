@@ -52,7 +52,7 @@ for source_name, dest_name in [('lionxx.png', 'leao_do_fim.png'), ('lionxx_glowm
     assert hashlib.sha256(original).digest() == hashlib.sha256(exported).digest()
     assert exported[:8] == b'\x89PNG\r\n\x1a\n'
     assert struct.unpack('>II', exported[16:24]) == (128, 128)
-for lang in ('pt_br', 'en_us'):
+for lang in ('en_us',):  # en_us e o unico idioma (Etapa 4.6: texto visivel em ingles)
     data = json.loads((ASSETS / 'lang' / (lang + '.json')).read_text())
     assert data['entity.tupinicraft.leao_do_fim'] and data['item.tupinicraft.leao_do_fim_spawn_egg']
 print(f'PASS: 45 bones, 127 cubes, 14 original animations, {key_count} keyframes, 5 filtered layers, textures and translations')
