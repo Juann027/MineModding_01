@@ -43,11 +43,11 @@ fi
 grep -v DEBUG "$log" | grep -E 'tupinicraft|TupiniCraft|RespectCraft|Exception|Error|Summon|summon|Unknown|entity' | head -60
 [ "$(grep -c 'Summoned new' "$log")" -ge 1 ] || fail "Leão do Fim não foi invocado no servidor dedicado"
 # Animation Manager carregado no servidor dedicado (catalogo e comando), sem classes de cliente.
-grep -q 'Animações de jogador: tupinicraft:idle, tupinicraft:wave' "$log" || fail "catálogo de animações de jogador não respondeu no servidor"
+grep -q 'Player animations: tupinicraft:idle, tupinicraft:wave' "$log" || fail "catálogo de animações de jogador não respondeu no servidor"
 # Etapa 3: autoteste das regras (roleta, necessidades, habilidades, camera, Codecs) e catalogos.
-grep -q 'Autoteste RespectCraft: OK' "$log" || { grep 'Autoteste falhou' "$log"; fail "autoteste das regras falhou"; }
-grep -q 'Habilidades (18)' "$log" || fail "catálogo de habilidades não respondeu"
-grep -q 'Finalizações: tupinicraft:takedown, tupinicraft:rasteira' "$log" || fail "catálogo de finalizações não respondeu"
+grep -q 'RespectCraft self-test: OK' "$log" || { grep 'Self-test failed' "$log"; fail "autoteste das regras falhou"; }
+grep -q 'Skills (18)' "$log" || fail "catálogo de habilidades não respondeu"
+grep -q 'Finishers: tupinicraft:takedown, tupinicraft:rasteira' "$log" || fail "catálogo de finalizações não respondeu"
 if grep -E 'NoClassDefFoundError|ClassNotFoundException|invalid dist|RuntimeDistCleaner' "$log"; then
   fail "erro de classe exclusiva do cliente no servidor dedicado"
 fi

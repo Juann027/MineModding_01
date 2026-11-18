@@ -31,7 +31,7 @@ public final class PlayerAnimationCommands {
                 .then(Commands.literal("list").executes(ctx -> {
                     String ids = PlayerAnimations.all().stream().map(def -> def.id().toString())
                             .collect(Collectors.joining(", "));
-                    ctx.getSource().sendSuccess(() -> Component.literal("Animações de jogador: " + ids), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal("Player animations: " + ids), false);
                     return PlayerAnimations.all().size();
                 }))
                 .then(Commands.literal("play")
@@ -57,7 +57,7 @@ public final class PlayerAnimationCommands {
                                 if (PlayerAnimationService.advance(player)) advanced++;
                             }
                             int total = advanced;
-                            ctx.getSource().sendSuccess(() -> Component.literal("Sequências avançadas: " + total), false);
+                            ctx.getSource().sendSuccess(() -> Component.literal("Sequences advanced: " + total), false);
                             return total;
                         })))
                 .then(Commands.literal("stop")
@@ -67,7 +67,7 @@ public final class PlayerAnimationCommands {
                                 if (PlayerAnimationService.stop(player, PlayerAnimationEvent.EndReason.STOPPED)) stopped++;
                             }
                             int total = stopped;
-                            ctx.getSource().sendSuccess(() -> Component.literal("Animações interrompidas: " + total), false);
+                            ctx.getSource().sendSuccess(() -> Component.literal("Animations stopped: " + total), false);
                             return total;
                         }))));
     }
@@ -75,7 +75,7 @@ public final class PlayerAnimationCommands {
     private static PlayerAnimationDef definition(CommandContext<CommandSourceStack> ctx) {
         ResourceLocation id = ResourceLocationArgument.getId(ctx, "animacao");
         PlayerAnimationDef def = PlayerAnimations.get(id);
-        if (def == null) ctx.getSource().sendFailure(Component.literal("Animação desconhecida: " + id));
+        if (def == null) ctx.getSource().sendFailure(Component.literal("Unknown animation: " + id));
         return def;
     }
 
@@ -90,12 +90,12 @@ public final class PlayerAnimationCommands {
         }
         int total = started;
         if (total == 0) {
-            ctx.getSource().sendFailure(Component.literal("Nenhum jogador pôde iniciar " + def.id()
-                    + " (morto, espectador ou com animação de prioridade maior)."));
+            ctx.getSource().sendFailure(Component.literal("No player could start " + def.id()
+                    + " (dead, spectator or playing a higher-priority animation)."));
             return 0;
         }
-        ctx.getSource().sendSuccess(() -> Component.literal("Animação " + def.id() + " iniciada em "
-                + total + " jogador(es)."), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("Animation " + def.id() + " started for "
+                + total + " player(s)."), false);
         return total;
     }
 
@@ -114,20 +114,20 @@ public final class PlayerAnimationCommands {
                 try {
                     ticks = Integer.parseInt(token.substring(at + 1));
                 } catch (NumberFormatException e) {
-                    error.append("duração inválida em '").append(token).append("'");
+                    error.append("invalid duration in '").append(token).append("'");
                     return Optional.empty();
                 }
             }
             ResourceLocation id = ResourceLocation.tryParse(name.contains(":") ? name : "tupinicraft:" + name);
             PlayerAnimationDef def = id == null ? null : PlayerAnimations.get(id);
             if (def == null) {
-                error.append("animação desconhecida: ").append(name);
+                error.append("unknown animation: ").append(name);
                 return Optional.empty();
             }
             sequence = sequence == null ? AnimationSequence.of(def, ticks) : sequence.thenFor(def, ticks);
         }
         if (sequence == null) {
-            error.append("informe ao menos uma animação");
+            error.append("provide at least one animation");
             return Optional.empty();
         }
         Optional<String> problem = sequence.problem();
@@ -141,7 +141,7 @@ public final class PlayerAnimationCommands {
             StringBuilder error = new StringBuilder();
             Optional<AnimationSequence> parsed = parseSequence(StringArgumentType.getString(ctx, "passos"), error);
             if (parsed.isEmpty()) {
-                ctx.getSource().sendFailure(Component.literal("Sequência inválida: " + error));
+                ctx.getSource().sendFailure(Component.literal("Invalid sequence: " + error));
                 return 0;
             }
             sequence = parsed.get();
@@ -153,12 +153,12 @@ public final class PlayerAnimationCommands {
         int total = started;
         int ticks = sequence.totalTicks();
         if (total == 0) {
-            ctx.getSource().sendFailure(Component.literal("Nenhum jogador pôde iniciar a sequência "
-                    + "(morto, espectador ou com animação de prioridade maior)."));
+            ctx.getSource().sendFailure(Component.literal("No player could start the sequence "
+                    + "(dead, spectator or playing a higher-priority animation)."));
             return 0;
         }
-        ctx.getSource().sendSuccess(() -> Component.literal("Sequência de " + ticks + " ticks iniciada em "
-                + total + " jogador(es)."), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("Sequence of " + ticks + " ticks started for "
+                + total + " player(s)."), false);
         return total;
     }
 
@@ -168,10 +168,10 @@ public final class PlayerAnimationCommands {
         ServerPlayer first = EntityArgument.getPlayer(ctx, "primeiro");
         ServerPlayer second = EntityArgument.getPlayer(ctx, "segundo");
         if (!PlayerAnimationService.playTogether(first, def, second, def, new CompoundTag())) {
-            ctx.getSource().sendFailure(Component.literal("Não foi possível iniciar a sequência sincronizada."));
+            ctx.getSource().sendFailure(Component.literal("Could not start the synchronized sequence."));
             return 0;
         }
-        ctx.getSource().sendSuccess(() -> Component.literal("Sequência sincronizada " + def.id() + ": "
+        ctx.getSource().sendSuccess(() -> Component.literal("Synchronized sequence " + def.id() + ": "
                 + first.getGameProfile().getName() + " + " + second.getGameProfile().getName()), false);
         return 2;
     }

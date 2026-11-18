@@ -15,7 +15,10 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   necessidades, habilidades, itens e entidades). Id aposentado → alias em `profile.LegacyOriginIds` + `SelfTest`.
 - **Personagem:** atributos (`CharacterAttribute`), necessidades (`Need`; ativas = Coom, Bexiga, Intestino, Emoção;
   Hidratação/Energia são legadas e inativas) e traços de nascimento (`BirthTrait`) são sistemas separados. Origem não
-  é traço. Traço sem efeito aprovado não ganha bônus.
+  é traço. Traço sem efeito aprovado não ganha bônus. Elegibilidade (`BirthTrait.Eligibility`) só filtra sorteios novos
+  pelo corpo do criador; traço gravado nunca é apagado (Etapa 4.6).
+- **Idioma:** texto visível ao jogador em inglês, só em `en_us.json` (não recrie `pt_br.json`). Código, comentários,
+  docs e ids continuam como estão.
 - **Tema:** eleições, política, partidos, mandatos, urna, economia e símbolos nacionais foram removidos; não
   reintroduza sem pedido explícito.
 - **Animações:** dados em `PlayerAnimations`; `.bbmodel` em `model_sources/player/`; respeite

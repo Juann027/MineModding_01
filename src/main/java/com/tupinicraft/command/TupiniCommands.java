@@ -81,33 +81,33 @@ public final class TupiniCommands {
         var n = NeedsService.get(player);
         String needs = java.util.Arrays.stream(Need.ACTIVE)
                 .map(need -> need.id() + "=" + n.percent(need) + "%").collect(Collectors.joining(", "));
-        c.getSource().sendSuccess(() -> Component.literal(player.getGameProfile().getName() + ": nascido=" + p.born()
-                + " origem=" + (p.origin().isEmpty() ? "-" : p.origin()) + " rerolls=" + p.rerolls()
-                + " pontos=" + p.skillPoints() + " habilidades=" + p.skills().size()
-                + " tracos=" + (p.traits().isEmpty() ? "-" : String.join(",", p.traits()))
-                + "\n" + attrs + "\n" + needs + "\nefeitos=" + NeedsService.activeEffects(player).entries()), false);
+        c.getSource().sendSuccess(() -> Component.literal(player.getGameProfile().getName() + ": born=" + p.born()
+                + " origin=" + (p.origin().isEmpty() ? "-" : p.origin()) + " rerolls=" + p.rerolls()
+                + " points=" + p.skillPoints() + " skills=" + p.skills().size()
+                + " traits=" + (p.traits().isEmpty() ? "-" : String.join(",", p.traits()))
+                + "\n" + attrs + "\n" + needs + "\neffects=" + NeedsService.activeEffects(player).entries()), false);
         return 1;
     }
 
     private static int listSkills(CommandContext<CommandSourceStack> c) {
         String list = Skills.all().stream().map(s -> s.id().toString()).collect(Collectors.joining(", "));
-        c.getSource().sendSuccess(() -> Component.literal("Habilidades (" + Skills.all().size() + "): " + list), false);
+        c.getSource().sendSuccess(() -> Component.literal("Skills (" + Skills.all().size() + "): " + list), false);
         return Skills.all().size();
     }
 
     private static int listFinishers(CommandContext<CommandSourceStack> c) {
         String list = Finishers.all().stream().map(FinisherDef::id).map(Object::toString).collect(Collectors.joining(", "));
-        c.getSource().sendSuccess(() -> Component.literal("Finalizações: " + list), false);
+        c.getSource().sendSuccess(() -> Component.literal("Finishers: " + list), false);
         return Finishers.all().size();
     }
 
     private static int selfTest(CommandContext<CommandSourceStack> c) {
         List<String> failures = SelfTest.run();
         if (failures.isEmpty()) {
-            c.getSource().sendSuccess(() -> Component.literal("Autoteste RespectCraft: OK"), true);
+            c.getSource().sendSuccess(() -> Component.literal("RespectCraft self-test: OK"), true);
             return 1;
         }
-        for (String failure : failures) c.getSource().sendFailure(Component.literal("Autoteste falhou: " + failure));
+        for (String failure : failures) c.getSource().sendFailure(Component.literal("Self-test failed: " + failure));
         return 0;
     }
 
@@ -116,7 +116,7 @@ public final class TupiniCommands {
         int amount = IntegerArgumentType.getInteger(c, "quantidade");
         CharacterProfile p = ProfileService.get(player);
         ProfileService.set(player, p.withPoints(amount, p.levelRewarded()));
-        c.getSource().sendSuccess(() -> Component.literal("Pontos de habilidade: " + amount), true);
+        c.getSource().sendSuccess(() -> Component.literal("Skill points: " + amount), true);
         return 1;
     }
 
@@ -125,7 +125,7 @@ public final class TupiniCommands {
         // Giro forcado pelo admin: nao concede novo giro ao jogador (mantem o que ele tinha; antes do nascimento, 1).
         CharacterProfile before = ProfileService.get(player);
         BirthRoulette.Result result = ProfileService.roll(player, before.born() ? before.rerolls() : BirthRoulette.FREE_REROLLS);
-        c.getSource().sendSuccess(() -> Component.literal("Roleta: " + result.origin().id() + " "
+        c.getSource().sendSuccess(() -> Component.literal("Roulette: " + result.origin().id() + " "
                 + java.util.Arrays.toString(result.attributes())), true);
         return 1;
     }
@@ -136,7 +136,7 @@ public final class TupiniCommands {
         NeedsService.set(player, com.tupinicraft.needs.Needs.DEFAULT);
         NeedsService.clearEffects(player);
         NeedsService.sync(player);
-        c.getSource().sendSuccess(() -> Component.literal("Ficha de " + player.getGameProfile().getName() + " zerada."), true);
+        c.getSource().sendSuccess(() -> Component.literal("Character sheet of " + player.getGameProfile().getName() + " reset."), true);
         return 1;
     }
 
@@ -145,30 +145,30 @@ public final class TupiniCommands {
         var id = ResourceLocationArgument.getId(c, "id");
         SkillDef def = Skills.get(id);
         if (def == null) {
-            c.getSource().sendFailure(Component.literal("Habilidade desconhecida: " + id));
+            c.getSource().sendFailure(Component.literal("Unknown skill: " + id));
             return 0;
         }
         CharacterProfile p = ProfileService.get(player);
         ProfileService.set(player, p.withPoints(p.skillPoints() + def.cost(), p.levelRewarded()));
         if (!SkillService.purchase(player, id)) {
-            c.getSource().sendFailure(Component.literal("Não foi possível liberar (nascimento, requisito ou já comprada)."));
+            c.getSource().sendFailure(Component.literal("Could not unlock (not born, missing requirement or already owned)."));
             return 0;
         }
-        c.getSource().sendSuccess(() -> Component.literal("Habilidade liberada: " + id), true);
+        c.getSource().sendSuccess(() -> Component.literal("Skill unlocked: " + id), true);
         return 1;
     }
 
     private static int forceFinisher(CommandContext<CommandSourceStack> c, FinisherDef def) throws CommandSyntaxException {
         if (!(EntityArgument.getEntity(c, "executor") instanceof net.minecraft.world.entity.LivingEntity attacker)
                 || !(EntityArgument.getEntity(c, "alvo") instanceof net.minecraft.world.entity.LivingEntity target)) {
-            c.getSource().sendFailure(Component.literal("Executor e alvo precisam ser entidades vivas."));
+            c.getSource().sendFailure(Component.literal("Attacker and target must be living entities."));
             return 0;
         }
         if (!com.tupinicraft.testgame.FinisherTestMechanic.forceStart(attacker, target, def)) {
-            c.getSource().sendFailure(Component.literal("Não foi possível iniciar (distância, sessão ativa ou montaria)."));
+            c.getSource().sendFailure(Component.literal("Could not start (distance, active session or mount)."));
             return 0;
         }
-        c.getSource().sendSuccess(() -> Component.literal("Finalização iniciada."), true);
+        c.getSource().sendSuccess(() -> Component.literal("Finisher started."), true);
         return 1;
     }
 
@@ -176,7 +176,7 @@ public final class TupiniCommands {
         ServerPlayer player = EntityArgument.getPlayer(c, "jogador");
         Need need = Need.byId(StringArgumentType.getString(c, "tipo"));
         if (need == null || !need.active()) {
-            c.getSource().sendFailure(Component.literal("Necessidade desconhecida ou inativa."));
+            c.getSource().sendFailure(Component.literal("Unknown or inactive need."));
             return 0;
         }
         int value = IntegerArgumentType.getInteger(c, "valor");
@@ -192,11 +192,11 @@ public final class TupiniCommands {
         String id = StringArgumentType.getString(c, "id");
         var def = com.tupinicraft.needs.NeedEffects.get(id);
         if (def == null) {
-            c.getSource().sendFailure(Component.literal("Efeito desconhecido: " + id));
+            c.getSource().sendFailure(Component.literal("Unknown effect: " + id));
             return 0;
         }
         NeedsService.consume(player, def);
-        c.getSource().sendSuccess(() -> Component.literal("Efeito aplicado: " + id + " (ativos: "
+        c.getSource().sendSuccess(() -> Component.literal("Effect applied: " + id + " (active: "
                 + NeedsService.activeEffects(player).entries().size() + ")"), true);
         return 1;
     }
