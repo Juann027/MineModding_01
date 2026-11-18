@@ -1,7 +1,8 @@
 package com.tupinicraft.profile;
 
 /**
- * Origens da roleta de nascimento. Peso define a chance; bonus somam aos atributos sorteados.
+ * Origens sociais LEGADAS (ate a Etapa 4.6). Desde a Etapa 4.7 a roleta sorteia {@link Speciality}; estas origens
+ * nao sao mais sorteadas e so existem para exibir fichas antigas (o bonus delas ja esta nos atributos gravados).
  * Os ids sao persistidos (nao renomear; ids aposentados ficam em {@link LegacyOriginIds}).
  * Puro: sem classes do Minecraft.
  */

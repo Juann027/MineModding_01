@@ -15,7 +15,8 @@ import net.minecraft.network.codec.StreamCodec;
  * Imutavel; altere so por {@link ProfileService}. Nomes de campos do Codec sao estaveis.
  *
  * @param born          a roleta de nascimento ja foi girada
- * @param origin        id de {@link BirthOrigin} (vazio antes do nascimento)
+ * @param origin        id de {@link BirthOrigin}: so fichas anteriores a Etapa 4.7 (origem social legada, mantida
+ *                      como esta); vazio em nascimentos novos e antes do nascimento
  * @param attributes    um valor por {@link CharacterAttribute}, na ordem do enum
  * @param rerolls       novas tentativas de roleta restantes
  * @param rollCount     quantas vezes a roleta ja girou (a tela anima quando muda)
@@ -23,12 +24,18 @@ import net.minecraft.network.codec.StreamCodec;
  * @param levelRewarded maior nivel de XP vanilla que ja rendeu pontos
  * @param skills        ids das habilidades compradas
  * @param traits        ids dos {@link BirthTrait} sorteados no nascimento (Etapa 4.5; vazio em fichas anteriores)
+ * @param birthSpeciality   id da {@link Speciality} sorteada no nascimento (Etapa 4.7; vazio em fichas anteriores)
+ * @param currentSpeciality id da Speciality ativa. Hoje sempre igual a de nascimento; existe para a futura troca
+ *                          no fim de jogo (nao implementada). Vazio = a de nascimento.
  */
 public record CharacterProfile(boolean born, String origin, List<Integer> attributes, int rerolls, int rollCount,
-                               int skillPoints, int levelRewarded, List<String> skills, List<String> traits) {
+                               int skillPoints, int levelRewarded, List<String> skills, List<String> traits,
+                               String birthSpeciality, String currentSpeciality) {
     /** Limite de tracos guardados/enviados (protege o pacote; o sorteio usa {@link BirthTrait#PER_BIRTH}). */
     public static final int MAX_TRAITS = 8;
     public static final CharacterProfile DEFAULT = new CharacterProfile(false, "", defaultAttributes(), 0, 0, 0, 0, List.of(), List.of());
+    /** Limite do id de Speciality na rede. */
+    private static final int MAX_ID_LENGTH = 64;
 
     public static final Codec<CharacterProfile> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.BOOL.optionalFieldOf("born", false).forGetter(CharacterProfile::born),
@@ -41,7 +48,11 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
             Codec.INT.optionalFieldOf("level_rewarded", 0).forGetter(CharacterProfile::levelRewarded),
             Codec.STRING.listOf().optionalFieldOf("skills", List.of()).forGetter(CharacterProfile::skills),
             // Etapa 4.5: fichas antigas nao tem o campo e carregam sem tracos (estado neutro).
-            Codec.STRING.listOf().optionalFieldOf("birth_traits", List.of()).forGetter(CharacterProfile::traits)
+            Codec.STRING.listOf().optionalFieldOf("birth_traits", List.of()).forGetter(CharacterProfile::traits),
+            // Etapa 4.7: fichas antigas nao tem os campos e continuam com a origem social (nenhuma Speciality e
+            // atribuida ao carregar).
+            Codec.STRING.optionalFieldOf("birth_speciality", "").forGetter(CharacterProfile::birthSpeciality),
+            Codec.STRING.optionalFieldOf("current_speciality", "").forGetter(CharacterProfile::currentSpeciality)
     ).apply(i, CharacterProfile::new));
 
     public static final StreamCodec<ByteBuf, CharacterProfile> STREAM_CODEC = new StreamCodec<>() {
@@ -56,7 +67,10 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
             int level = ByteBufCodecs.VAR_INT.decode(buf);
             List<String> skills = ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list(512)).decode(buf);
             List<String> traits = ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list(MAX_TRAITS)).decode(buf);
-            return new CharacterProfile(born, origin, attributes, rerolls, rollCount, points, level, skills, traits);
+            String birthSpeciality = ByteBufCodecs.stringUtf8(MAX_ID_LENGTH).decode(buf);
+            String currentSpeciality = ByteBufCodecs.stringUtf8(MAX_ID_LENGTH).decode(buf);
+            return new CharacterProfile(born, origin, attributes, rerolls, rollCount, points, level, skills, traits,
+                    birthSpeciality, currentSpeciality);
         }
 
         @Override
@@ -70,6 +84,8 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
             ByteBufCodecs.VAR_INT.encode(buf, p.levelRewarded());
             ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list(512)).encode(buf, p.skills());
             ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list(MAX_TRAITS)).encode(buf, p.traits());
+            ByteBufCodecs.stringUtf8(MAX_ID_LENGTH).encode(buf, p.birthSpeciality());
+            ByteBufCodecs.stringUtf8(MAX_ID_LENGTH).encode(buf, p.currentSpeciality());
         }
     };
 
@@ -83,6 +99,17 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
         rerolls = born ? Math.max(0, Math.min(BirthRoulette.FREE_REROLLS, rerolls)) : 0;
         skillPoints = Math.max(0, skillPoints);
         levelRewarded = Math.max(0, levelRewarded);
+        origin = origin == null ? "" : origin;
+        birthSpeciality = birthSpeciality == null || birthSpeciality.length() > MAX_ID_LENGTH ? "" : birthSpeciality;
+        currentSpeciality = currentSpeciality == null || currentSpeciality.length() > MAX_ID_LENGTH ? "" : currentSpeciality;
+        // Sem troca registrada, a Speciality ativa e a de nascimento.
+        if (currentSpeciality.isEmpty()) currentSpeciality = birthSpeciality;
+    }
+
+    /** Ficha sem Speciality (anterior a Etapa 4.7, ou ainda sem nascimento). */
+    public CharacterProfile(boolean born, String origin, List<Integer> attributes, int rerolls, int rollCount,
+                            int skillPoints, int levelRewarded, List<String> skills, List<String> traits) {
+        this(born, origin, attributes, rerolls, rollCount, skillPoints, levelRewarded, skills, traits, "", "");
     }
 
     private static List<Integer> defaultAttributes() {
@@ -103,7 +130,17 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
 
     public int attribute(CharacterAttribute attribute) { return attributes.get(attribute.ordinal()); }
 
+    /** Origem social legada (so fichas anteriores a Etapa 4.7); null em nascimentos novos. */
     public BirthOrigin originOrNull() { return BirthOrigin.byId(origin); }
+
+    /** Speciality sorteada no nascimento; null em fichas antigas, antes do nascimento ou com id desconhecido. */
+    public Speciality birthSpecialityOrNull() { return Speciality.byId(birthSpeciality); }
+
+    /** Speciality ativa (hoje igual a de nascimento); null como em {@link #birthSpecialityOrNull}. */
+    public Speciality specialityOrNull() { return Speciality.byId(currentSpeciality); }
+
+    /** Ja nasceu e tem um resultado conhecido para mostrar: uma Speciality ou, em ficha antiga, a origem legada. */
+    public boolean hasBirthResult() { return born && (specialityOrNull() != null || originOrNull() != null); }
 
     /** Pode pedir o (unico) novo giro? */
     public boolean canReroll() { return born && rerolls > 0; }
@@ -130,7 +167,8 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
 
     /** Confirma o resultado atual: o novo giro restante e descartado (nao volta mais). */
     public CharacterProfile confirmBirth() {
-        return new CharacterProfile(born, origin, attributes, 0, rollCount, skillPoints, levelRewarded, skills, traits);
+        return new CharacterProfile(born, origin, attributes, 0, rollCount, skillPoints, levelRewarded, skills, traits,
+                birthSpeciality, currentSpeciality);
     }
 
     public CharacterProfile withBirth(BirthRoulette.Result result, int rerollsLeft) {
@@ -140,15 +178,17 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
         List<String> traitIds = new ArrayList<>();
         for (BirthTrait trait : result.traits()) traitIds.add(trait.id());
         // Re-girar devolve os pontos gastos: as habilidades sao zeradas junto com os atributos. Os tracos do
-        // giro anterior sao substituidos pelos novos (nunca somados).
-        return new CharacterProfile(true, result.origin().id(), values, rerollsLeft, rollCount + 1,
-                startPoints + Math.max(0, levelRewarded), levelRewarded, List.of(), traitIds);
+        // giro anterior sao substituidos pelos novos (nunca somados). Nascimento novo nao tem origem social: a
+        // Speciality sorteada vale para o nascimento e como ativa.
+        String speciality = result.speciality().id();
+        return new CharacterProfile(true, "", values, rerollsLeft, rollCount + 1,
+                startPoints + Math.max(0, levelRewarded), levelRewarded, List.of(), traitIds, speciality, speciality);
     }
 
     /**
      * Troca de corpo durante a criacao: num resultado <b>ainda nao confirmado</b> (nasceu e ainda tem o novo giro),
      * cada traco que nao pode sair para o corpo novo vira um traco elegivel de mesma polaridade
-     * ({@link BirthTrait#coherentWith}). Nao sorteia, nao muda quantidade, origem, atributos, pontos nem o novo
+     * ({@link BirthTrait#coherentWith}). Nao sorteia, nao muda quantidade, Speciality, origem, atributos, pontos nem o novo
      * giro. Resultado confirmado (ou sem nascimento) fica intacto: traco gravado nunca e apagado por elegibilidade.
      * Devolve a mesma instancia quando nada muda.
      */
@@ -163,14 +203,17 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
             next.add(coherent == null ? id : coherent.id());
         }
         if (!changed) return this;
-        return new CharacterProfile(born, origin, attributes, rerolls, rollCount, skillPoints, levelRewarded, skills, next);
+        return new CharacterProfile(born, origin, attributes, rerolls, rollCount, skillPoints, levelRewarded, skills, next,
+                birthSpeciality, currentSpeciality);
     }
 
     public CharacterProfile withSkills(List<String> newSkills, int newPoints) {
-        return new CharacterProfile(born, origin, attributes, rerolls, rollCount, newPoints, levelRewarded, newSkills, traits);
+        return new CharacterProfile(born, origin, attributes, rerolls, rollCount, newPoints, levelRewarded, newSkills, traits,
+                birthSpeciality, currentSpeciality);
     }
 
     public CharacterProfile withPoints(int newPoints, int newLevelRewarded) {
-        return new CharacterProfile(born, origin, attributes, rerolls, rollCount, newPoints, newLevelRewarded, skills, traits);
+        return new CharacterProfile(born, origin, attributes, rerolls, rollCount, newPoints, newLevelRewarded, skills, traits,
+                birthSpeciality, currentSpeciality);
     }
 }

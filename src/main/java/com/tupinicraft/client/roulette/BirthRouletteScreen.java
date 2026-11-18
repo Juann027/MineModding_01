@@ -12,6 +12,9 @@ import com.tupinicraft.profile.BirthRoulette;
 import com.tupinicraft.profile.BirthTrait;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
+import com.tupinicraft.profile.Speciality;
+import com.tupinicraft.profile.SpecialityOdds;
+import com.tupinicraft.profile.SpecialityRarity;
 import com.tupinicraft.registry.ModSounds;
 import com.tupinicraft.skill.SkillDef;
 import net.minecraft.client.gui.GuiGraphics;
@@ -25,7 +28,10 @@ import org.joml.Matrix4f;
 
 /**
  * Roleta de nascimento. O sorteio e do servidor: a tela gira enquanto espera a resposta e depois desacelera ate
- * parar na origem sorteada, revela os atributos um a um, com som e VFX. Fatias proporcionais as chances.
+ * parar na raridade sorteada, mostra a Speciality (nome, raridade, descricao) e revela os atributos um a um, com
+ * som e VFX. Etapa 4.7: as fatias sao as seis raridades, proporcionais a distribuicao aprovada
+ * ({@link SpecialityOdds#DEFAULT}; a config do servidor so muda o sorteio, nao o desenho). Fichas antigas com
+ * origem social legada mostram essa origem (com o bonus que ela deu) e param no topo da roda.
  *
  * <p>Maquina de estados (Etapa 4.5): {@code IDLE} aguardando sorteio -> {@code WAITING} pedido enviado, girando
  * -> {@code SPINNING} resposta recebida, desacelerando ate a origem -> {@code REVEAL} atributos -> {@code DONE}
@@ -64,7 +70,7 @@ public final class BirthRouletteScreen extends TupiScreen {
         shownRollCount = p.rollCount();
         if (hasResult(p)) {
             phase = Phase.DONE;
-            angle = prevAngle = restingAngle(p.originOrNull());
+            angle = prevAngle = restingAngle(p);
             revealTick = 999;
         } else {
             phase = Phase.IDLE;
@@ -72,7 +78,7 @@ public final class BirthRouletteScreen extends TupiScreen {
     }
 
     private static boolean hasResult(CharacterProfile p) {
-        return p.born() && p.originOrNull() != null;
+        return p.hasBirthResult();
     }
 
     @Override
@@ -153,23 +159,35 @@ public final class BirthRouletteScreen extends TupiScreen {
             spinLength = 20;
             return;
         }
-        float target = restingAngle(p.originOrNull());
+        float target = restingAngle(p);
         float base = angle + (reveal ? 720F : 360F);
         spinTo = base + Mth.positiveModulo(target - base, 360F);
         spinLength = reveal ? 50 : 30;
         revealAfterSpin = reveal;
     }
 
-    /** Angulo em que o centro da fatia da origem fica sob o ponteiro. */
-    private static float restingAngle(BirthOrigin origin) {
-        float total = BirthOrigin.totalWeight();
+    /** Angulo em que o centro da fatia da raridade da Speciality fica sob o ponteiro (ficha legada: topo). */
+    private static float restingAngle(CharacterProfile p) {
+        Speciality speciality = p.specialityOrNull();
+        if (speciality == null) return 0;
         float start = 0;
-        for (BirthOrigin o : BirthOrigin.values()) {
-            float size = 360F * o.weight() / total;
-            if (o == origin) return -(start + size / 2F);
+        for (SpecialityRarity r : SpecialityRarity.values()) {
+            float size = sliceSize(r);
+            if (r == speciality.rarity()) return -(start + size / 2F);
             start += size;
         }
         return 0;
+    }
+
+    private static float sliceSize(SpecialityRarity rarity) {
+        return 360F * SpecialityOdds.DEFAULT.permille(rarity) / SpecialityOdds.TOTAL;
+    }
+
+    private static int resultColor(CharacterProfile p) {
+        Speciality speciality = p.specialityOrNull();
+        if (speciality != null) return speciality.rarity().color();
+        BirthOrigin origin = p.originOrNull();
+        return origin == null ? Ui.GOLD : origin.color();
     }
 
     @Override
@@ -207,8 +225,7 @@ public final class BirthRouletteScreen extends TupiScreen {
                     if (revealAfterSpin) {
                         phase = Phase.REVEAL;
                         revealTick = 0;
-                        BirthOrigin origin = p.originOrNull();
-                        int color = origin == null ? Ui.GOLD : origin.color();
+                        int color = resultColor(p);
                         vfx.flash(cx, cy - radius, 50, color, 16);
                         vfx.ring(cx, cy, radius + 30, color, 20);
                         vfx.burst(cx, cy - radius, 50, color, 4F);
@@ -258,11 +275,10 @@ public final class BirthRouletteScreen extends TupiScreen {
 
     private static int segmentAtPointer(float angle) {
         float pos = Mth.positiveModulo(-angle, 360F);
-        float total = BirthOrigin.totalWeight();
         float start = 0;
-        for (BirthOrigin o : BirthOrigin.values()) {
-            float size = 360F * o.weight() / total;
-            if (pos < start + size) return o.ordinal();
+        for (SpecialityRarity r : SpecialityRarity.values()) {
+            float size = sliceSize(r);
+            if (pos < start + size) return r.ordinal();
             start += size;
         }
         return 0;
@@ -277,13 +293,21 @@ public final class BirthRouletteScreen extends TupiScreen {
         float a = Mth.lerp(partialTick, prevAngle, angle);
         drawWheel(g, a);
         CharacterProfile p = ProfileClientCache.profile();
-        BirthOrigin origin = p.originOrNull();
+        Speciality speciality = p.specialityOrNull();
+        // Origem social so em ficha antiga (sem Speciality): o bonus dela continua nos atributos.
+        BirthOrigin origin = speciality == null ? p.originOrNull() : null;
         int x = attrX();
-        boolean showResult = (phase == Phase.REVEAL || phase == Phase.DONE) && origin != null && p.born();
-        if (showResult) {
+        boolean showResult = (phase == Phase.REVEAL || phase == Phase.DONE) && hasResult(p);
+        if (showResult && speciality != null) {
+            SpecialityRarity rarity = speciality.rarity();
+            Component rarityName = Component.translatable(rarity.translationKey());
+            g.drawString(font, Component.translatable(speciality.translationKey()), x, top + 30, rarity.color(), true);
+            g.drawString(font, rarityName, x + attrW() - font.width(rarityName), top + 30, rarity.color(), false);
+            drawWrapped(g, Component.translatable(speciality.translationKey() + ".desc"), x, top + 42, attrW(), 2);
+        } else if (showResult && origin != null) {
             Ui.icon(g, SkillDef.iconTexture(origin.icon()), x, top + 29, 20);
             g.drawString(font, Component.translatable("origin.tupinicraft." + origin.id()), x + 24, top + 30, origin.color(), true);
-            g.drawString(font, Component.translatable("origin.tupinicraft." + origin.id() + ".desc"), x + 24, top + 41, Ui.MUTED, false);
+            g.drawString(font, Component.translatable("gui.tupinicraft.speciality.legacy_origin"), x + 24, top + 41, Ui.MUTED, false);
         } else {
             g.drawWordWrap(font, Component.translatable(KEY + "intro"), x, top + 28, attrW(), Ui.MUTED);
         }
@@ -315,7 +339,15 @@ public final class BirthRouletteScreen extends TupiScreen {
         }
     }
 
-    /** Traco de nascimento sorteado junto (separado da origem): nome e Buff/Debuff/Neutro; descricao na dica. */
+    /** Ate {@code maxLines} linhas de texto quebrado (a descricao curta da Speciality). */
+    private void drawWrapped(GuiGraphics g, Component text, int x, int y, int width, int maxLines) {
+        var lines = font.split(text, width);
+        for (int i = 0; i < Math.min(maxLines, lines.size()); i++) {
+            g.drawString(font, lines.get(i), x, y + i * 9, Ui.MUTED, false);
+        }
+    }
+
+    /** Traco de nascimento sorteado junto (separado da Speciality): nome e Buff/Debuff/Neutro; descricao na dica. */
     private void drawTraits(GuiGraphics g, CharacterProfile p, int x, int y, int mouseX, int mouseY) {
         java.util.List<BirthTrait> traits = p.birthTraits();
         String label = Component.translatable("gui.tupinicraft.traits").getString() + ": ";
@@ -345,20 +377,26 @@ public final class BirthRouletteScreen extends TupiScreen {
         // Aro externo
         disc(g, cx, cy, radius + 5, 0xFF06080A);
         disc(g, cx, cy, radius + 3, 0xFFD6B84A);
-        float total = BirthOrigin.totalWeight();
         float start = rotation;
-        int highlighted = (phase == Phase.REVEAL || phase == Phase.DONE) ? segmentAtPointer(rotation) : -1;
-        for (BirthOrigin o : BirthOrigin.values()) {
-            float size = 360F * o.weight() / total;
-            int color = o.color();
-            if (o.ordinal() % 2 == 1) color = Ui.lerpColor(color, 0xFF000000, 0.15F);
-            if (highlighted == o.ordinal()) color = Ui.lerpColor(color, 0xFFFFFFFF, 0.25F + 0.1F * Mth.sin(ticks * 0.3F));
+        CharacterProfile p = ProfileClientCache.profile();
+        int highlighted = (phase == Phase.REVEAL || phase == Phase.DONE) && p.specialityOrNull() != null
+                ? segmentAtPointer(rotation) : -1;
+        for (SpecialityRarity r : SpecialityRarity.values()) {
+            float size = sliceSize(r);
+            int color = Ui.lerpColor(r.color(), 0xFF000000, 0.2F);
+            if (highlighted == r.ordinal()) color = Ui.lerpColor(r.color(), 0xFFFFFFFF, 0.25F + 0.1F * Mth.sin(ticks * 0.3F));
             sector(g, cx, cy, radius, start, start + size, color);
-            // icone no meio da fatia
-            float mid = (float) Math.toRadians(start + size / 2F - 90F);
-            int ix = Math.round(cx + Mth.cos(mid) * radius * 0.66F) - 7;
-            int iy = Math.round(cy + Mth.sin(mid) * radius * 0.66F) - 7;
-            if (size > 18) Ui.icon(g, SkillDef.iconTexture(o.icon()), ix, iy, 14);
+            // nome da raridade no meio da fatia (so nas que cabem)
+            if (size > 30) {
+                float mid = (float) Math.toRadians(start + size / 2F - 90F);
+                String label = Component.translatable(r.translationKey()).getString();
+                float lx = cx + Mth.cos(mid) * radius * 0.62F, ly = cy + Mth.sin(mid) * radius * 0.62F;
+                g.pose().pushPose();
+                g.pose().translate(lx, ly, 0);
+                g.pose().scale(0.75F, 0.75F, 1F);
+                g.drawString(font, label, -font.width(label) / 2, -4, 0xFFFFFFFF, true);
+                g.pose().popPose();
+            }
             // divisoria
             float edge = (float) Math.toRadians(start - 90F);
             Ui.line(g, cx, cy, cx + Mth.cos(edge) * radius, cy + Mth.sin(edge) * radius, 1, 0xC006080A);

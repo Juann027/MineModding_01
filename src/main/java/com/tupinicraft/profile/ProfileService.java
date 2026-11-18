@@ -69,14 +69,23 @@ public final class ProfileService {
      * (attachment salvo) e a tela so o apresenta. Aparencia, reinicio do servidor e reabrir a tela nao o alteram.
      */
     public static BirthRoulette.Result roll(ServerPlayer player, int rerollsLeft) {
+        return roll(player, rerollsLeft, null);
+    }
+
+    /**
+     * Mesmo giro, com a raridade da Speciality forcada. {@code forcedRarity} nao nulo so vem do teste
+     * administrativo ({@code /tupini admin roleta <jogador> <raridade>}, permissao 2); o jogador nunca escolhe.
+     */
+    public static BirthRoulette.Result roll(ServerPlayer player, int rerollsLeft, SpecialityRarity forcedRarity) {
         RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
-        BirthRoulette.Result result = BirthRoulette.roll(random, body(player));
+        BirthRoulette.Result result = BirthRoulette.roll(random, body(player), SpecialityConfig.odds(), forcedRarity);
         CharacterProfile next = get(player).withBirth(result, rerollsLeft);
         player.getPersistentData().remove(LEGACY_LAST_ROLL_KEY);
         set(player, next);
         celebrate(player);
-        TupiniCraft.LOGGER.info("Roleta de nascimento: {} nasceu em {} {} tracos={}", player.getGameProfile().getName(),
-                result.origin().id(), java.util.Arrays.toString(result.attributes()), next.traits());
+        TupiniCraft.LOGGER.info("Roleta de nascimento: {} nasceu {} ({}{}) {} tracos={}", player.getGameProfile().getName(),
+                result.speciality().id(), result.rarity().id(), forcedRarity == null ? "" : ", raridade forcada pelo admin",
+                java.util.Arrays.toString(result.attributes()), next.traits());
         return result;
     }
 

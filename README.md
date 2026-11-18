@@ -10,11 +10,12 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 ## Funcionalidades
 
 - **Character Creator** (tecla **K**): menu do personagem com prévia 3D, corpo, pele, rosto, cabelos e cores.
-- **Roleta de nascimento:** sorteio no servidor de uma entre 8 origens (Favela, Sertão, Pampa, Amazônia, Classe Média,
-  Família Intelectual, Família Artística, Berço de Ouro), dos 6 atributos (Força, Agilidade, Vigor, Inteligência,
-  Carisma, Sorte) e de um **traço de nascimento** (buff, debuff ou neutro), com **um** novo giro opcional. Continuar
-  confirma o resultado.
-- **Traços de nascimento:** características individuais separadas da origem e dos atributos. O sorteio usa o corpo
+- **Roleta de nascimento:** sorteio no servidor de uma **Speciality** (15, em seis raridades: Common 41,5%,
+  Uncommon 25%, Rare 20%, Epic 10%, Legendary 3%, BONER 0,5% — a raridade sai primeiro, depois a Speciality dela), dos
+  6 atributos (Força, Agilidade, Vigor, Inteligência, Carisma, Sorte) e de um **traço de nascimento** (buff, debuff ou
+  neutro), com **um** novo giro opcional. Continuar confirma o resultado. Specialities ainda não têm perks nem efeitos.
+  Personagens criados antes da 4.7 mantêm a origem social antiga (Favela, Sertão etc.) até usarem o novo giro.
+- **Traços de nascimento:** características individuais separadas da Speciality e dos atributos. O sorteio usa o corpo
   escolhido no criador. **Universais** (masculino e feminino): High Endurance (buff), Limp (debuff), Fertile (buff),
   Infertile (debuff), Perfectly Average (neutro). **Só no sorteio masculino:** Heavy Loader, Loadless, Hung, Tiny Dick.
   Traço já gravado nunca é apagado ao mudar a aparência. Por enquanto são só descrição: nenhum tem efeito de jogo.
