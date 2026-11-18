@@ -241,5 +241,11 @@
   "trait.tupinicraft.fertile": "Fertile",
   "trait.tupinicraft.fertile.desc": "Remarkably fertile. Classification only for now.",
   "trait.tupinicraft.infertile": "Infertile",
-  "trait.tupinicraft.infertile.desc": "Not very fertile. Classification only for now."
+  "trait.tupinicraft.infertile.desc": "Not very fertile. Classification only for now.",
+  "family_legacy.tupinicraft.rarity.common": "Common",
+  "family_legacy.tupinicraft.rarity.uncommon": "Uncommon",
+  "family_legacy.tupinicraft.rarity.rare": "Rare",
+  "family_legacy.tupinicraft.rarity.epic": "Epic",
+  "family_legacy.tupinicraft.rarity.legendary": "Legendary",
+  "family_legacy.tupinicraft.rarity.boner": "BONER"
 }

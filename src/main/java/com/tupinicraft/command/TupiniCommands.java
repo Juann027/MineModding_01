@@ -13,6 +13,11 @@ import com.tupinicraft.profile.BirthRoulette;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
 import com.tupinicraft.profile.ProfileService;
+import com.tupinicraft.profile.FamilyLegacies;
+import com.tupinicraft.profile.FamilyLegacyConfig;
+import com.tupinicraft.profile.FamilyLegacyOdds;
+import com.tupinicraft.profile.FamilyLegacyRarity;
+import com.tupinicraft.profile.FamilyLegacyRoll;
 import com.tupinicraft.selftest.SelfTest;
 import com.tupinicraft.skill.SkillDef;
 import com.tupinicraft.skill.SkillService;
@@ -39,6 +44,10 @@ public final class TupiniCommands {
                 .then(Commands.literal("skills").then(Commands.literal("list").executes(TupiniCommands::listSkills)))
                 .then(Commands.literal("finishers").executes(TupiniCommands::listFinishers))
                 .then(Commands.literal("selftest").requires(s -> s.hasPermission(2)).executes(TupiniCommands::selfTest))
+                .then(Commands.literal("familylegacy").requires(s -> s.hasPermission(2))
+                        .then(Commands.literal("odds").executes(TupiniCommands::familyLegacyOdds))
+                        .then(Commands.literal("simulate").then(Commands.argument("rolls", IntegerArgumentType.integer(1, 1_000_000))
+                                .executes(TupiniCommands::familyLegacySimulate))))
                 .then(Commands.literal("admin").requires(s -> s.hasPermission(2))
                         .then(Commands.literal("perfil").then(Commands.argument("jogador", EntityArgument.player())
                                 .executes(c -> profile(c, EntityArgument.getPlayer(c, "jogador")))))
@@ -99,6 +108,46 @@ public final class TupiniCommands {
         String list = Finishers.all().stream().map(FinisherDef::id).map(Object::toString).collect(Collectors.joining(", "));
         c.getSource().sendSuccess(() -> Component.literal("Finishers: " + list), false);
         return Finishers.all().size();
+    }
+
+    /** Chances ativas do Family Legacy e estado do catalogo (o sorteio ainda nao esta na roleta). */
+    private static int familyLegacyOdds(CommandContext<CommandSourceStack> c) {
+        FamilyLegacyOdds odds = FamilyLegacyConfig.odds();
+        String error = FamilyLegacyConfig.error();
+        StringBuilder sb = new StringBuilder("Family Legacy rarity odds"
+                + (error == null ? "" : " (config invalid: " + error + "; using defaults)") + ":");
+        for (FamilyLegacyRarity rarity : FamilyLegacyRarity.values()) {
+            sb.append("\n ").append(rarity.id()).append(" = ").append(FamilyLegacyOdds.formatPercent(odds.permille(rarity)))
+                    .append(" (families: ").append(FamilyLegacies.CATALOG.inRarity(rarity).size()).append(")");
+        }
+        sb.append("\nCatalog finalized: ").append(FamilyLegacies.CATALOG_FINALIZED)
+                .append(". Live in Birth Roulette: ").append(FamilyLegacies.isLive());
+        c.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
+        return 1;
+    }
+
+    /** Simula sorteios de raridade no servidor (nao grava nada na ficha). */
+    private static int familyLegacySimulate(CommandContext<CommandSourceStack> c) {
+        int rolls = IntegerArgumentType.getInteger(c, "rolls");
+        FamilyLegacyOdds odds = FamilyLegacyConfig.odds();
+        java.util.random.RandomGenerator random = java.util.random.RandomGenerator.of("L64X128MixRandom");
+        int[] counts = new int[FamilyLegacyRarity.values().length];
+        int withoutFamily = 0;
+        for (int i = 0; i < rolls; i++) {
+            FamilyLegacyRoll.Result result = FamilyLegacyRoll.roll(random, odds, FamilyLegacies.CATALOG,
+                    com.tupinicraft.profile.BirthTrait.Body.MALE);
+            counts[result.rarity().ordinal()]++;
+            if (!result.hasFamily()) withoutFamily++;
+        }
+        StringBuilder sb = new StringBuilder("Family Legacy simulation (" + rolls + " rolls):");
+        for (FamilyLegacyRarity rarity : FamilyLegacyRarity.values()) {
+            sb.append("\n ").append(rarity.id()).append(" = ").append(counts[rarity.ordinal()])
+                    .append(String.format(java.util.Locale.ROOT, " (%.2f%%, expected %s)",
+                            100.0 * counts[rarity.ordinal()] / rolls, FamilyLegacyOdds.formatPercent(odds.permille(rarity))));
+        }
+        sb.append("\nRolls with no registered family in the rolled rarity: ").append(withoutFamily);
+        c.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
+        return rolls;
     }
 
     private static int selfTest(CommandContext<CommandSourceStack> c) {

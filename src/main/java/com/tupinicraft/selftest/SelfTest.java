@@ -15,6 +15,11 @@ import com.tupinicraft.profile.BirthRoulette;
 import com.tupinicraft.profile.BirthTrait;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
+import com.tupinicraft.profile.FamilyLegacies;
+import com.tupinicraft.profile.FamilyLegacy;
+import com.tupinicraft.profile.FamilyLegacyOdds;
+import com.tupinicraft.profile.FamilyLegacyRarity;
+import com.tupinicraft.profile.FamilyLegacyRoll;
 import com.tupinicraft.skill.SkillDef;
 import com.tupinicraft.skill.Skills;
 import java.util.ArrayList;
@@ -48,6 +53,7 @@ public final class SelfTest {
             codecs(f);
             sequences(f);
             defeats(f);
+            familyLegacy(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
@@ -429,6 +435,104 @@ public final class SelfTest {
             CharacterProfile decoded = CharacterProfile.STREAM_CODEC.decode(buf);
             check(f, decoded.equals(sample) && buf.readableBytes() == 0, "compat: ficha pela rede " + sample.origin());
             buf.release();
+        }
+    }
+
+    /** Etapa 4.7: raridades do Family Legacy (distribuicao exata, sem redistribuicao, fora da roleta ao vivo). */
+    private static void familyLegacy(List<String> f) {
+        FamilyLegacyOdds odds = FamilyLegacyOdds.DEFAULT;
+        int[] approved = {515, 300, 100, 50, 30, 5};
+        FamilyLegacyRarity[] all = FamilyLegacyRarity.values();
+        check(f, all.length == approved.length, "legacy: seis raridades");
+        int total = 0;
+        for (FamilyLegacyRarity r : all) {
+            check(f, odds.permille(r) == approved[r.ordinal()], "legacy: chance padrão de " + r.id());
+            total += odds.permille(r);
+        }
+        check(f, total == FamilyLegacyOdds.TOTAL, "legacy: soma padrão " + total);
+        check(f, FamilyLegacyRarity.highest() == FamilyLegacyRarity.BONER
+                && FamilyLegacyRarity.BONER.isHigherThan(FamilyLegacyRarity.LEGENDARY)
+                && FamilyLegacyRarity.LEGENDARY.isHigherThan(FamilyLegacyRarity.EPIC)
+                && all[all.length - 1] == FamilyLegacyRarity.BONER, "legacy: BONER acima de Legendary");
+        check(f, FamilyLegacyRarity.byId("boner") == FamilyLegacyRarity.BONER && FamilyLegacyRarity.byId("x") == null,
+                "legacy: ids de raridade");
+
+        // Bilhetes: cada raridade ocupa exatamente a sua chance (probabilidade exata, sem arredondamento).
+        int[] tickets = new int[all.length];
+        for (int t = 0; t < FamilyLegacyOdds.TOTAL; t++) tickets[odds.rarityAt(t).ordinal()]++;
+        for (FamilyLegacyRarity r : all) {
+            check(f, tickets[r.ordinal()] == approved[r.ordinal()], "legacy: bilhetes de " + r.id() + " = " + tickets[r.ordinal()]);
+        }
+        check(f, odds.rarityAt(514) == FamilyLegacyRarity.COMMON && odds.rarityAt(515) == FamilyLegacyRarity.UNCOMMON
+                && odds.rarityAt(964) == FamilyLegacyRarity.EPIC && odds.rarityAt(965) == FamilyLegacyRarity.LEGENDARY
+                && odds.rarityAt(994) == FamilyLegacyRarity.LEGENDARY && odds.rarityAt(995) == FamilyLegacyRarity.BONER
+                && odds.rarityAt(999) == FamilyLegacyRarity.BONER, "legacy: limites dos bilhetes");
+
+        // Configuravel, mas sempre exata: soma != 100%, negativo, casa decimal extra ou raridade faltando sao recusados.
+        check(f, FamilyLegacyOdds.ofPercent(51.5, 30, 10, 5, 3, 0.5).equals(odds), "legacy: porcentagens aprovadas");
+        check(f, throwsIae(() -> FamilyLegacyOdds.of(515, 300, 100, 50, 30, 4)), "legacy: soma 99.9% aceita");
+        check(f, throwsIae(() -> FamilyLegacyOdds.of(520, 300, 100, 50, 30, 5)), "legacy: soma 100.5% aceita");
+        check(f, throwsIae(() -> FamilyLegacyOdds.of(525, 300, 100, 50, 30, -5)), "legacy: chance negativa aceita");
+        check(f, throwsIae(() -> FamilyLegacyOdds.of(515, 300, 100, 50, 35)), "legacy: raridade faltando aceita");
+        check(f, throwsIae(() -> FamilyLegacyOdds.ofPercent(51.45, 30, 10, 5, 3, 0.55)), "legacy: duas casas aceitas");
+        FamilyLegacyOdds custom = FamilyLegacyOdds.ofPercent(50, 30, 10, 5, 4.5, 0.5);
+        check(f, custom.permille(FamilyLegacyRarity.LEGENDARY) == 45 && custom.rarityAt(994) == FamilyLegacyRarity.LEGENDARY
+                && custom.rarityAt(995) == FamilyLegacyRarity.BONER
+                && custom.rarityAt(499) == FamilyLegacyRarity.COMMON && custom.rarityAt(500) == FamilyLegacyRarity.UNCOMMON,
+                "legacy: distribuição configurada");
+
+        // Amostra: a raridade sai com a chance aprovada mesmo com raridades vazias (sem redistribuição).
+        FamilyLegacy common = new FamilyLegacy("selftest_common", FamilyLegacyRarity.COMMON, BirthTrait.Eligibility.ALL);
+        FamilyLegacy maleEpic = new FamilyLegacy("selftest_male_epic", FamilyLegacyRarity.EPIC, BirthTrait.Eligibility.MALE_ONLY);
+        FamilyLegacies partial = FamilyLegacies.of(List.of(common, maleEpic));
+        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        int samples = 200_000;
+        int[] counts = new int[all.length];
+        int empty = 0;
+        for (int i = 0; i < samples; i++) {
+            FamilyLegacyRoll.Result r = FamilyLegacyRoll.roll(random, odds, partial, BirthTrait.Body.FEMALE);
+            counts[r.rarity().ordinal()]++;
+            if (r.hasFamily()) {
+                if (r.family().rarity() != r.rarity() || r.status() != FamilyLegacyRoll.Status.ROLLED) {
+                    f.add("legacy: família fora da raridade sorteada " + r);
+                    return;
+                }
+            } else {
+                empty++;
+                if (r.status() != FamilyLegacyRoll.Status.NO_FAMILY_IN_RARITY || r.rarity() == FamilyLegacyRarity.COMMON) {
+                    f.add("legacy: resultado vazio inesperado " + r);
+                    return;
+                }
+            }
+        }
+        for (FamilyLegacyRarity r : all) {
+            double expected = samples * approved[r.ordinal()] / 1000.0;
+            double tolerance = 5 * Math.sqrt(expected) + 1; // ~5 desvios-padrão
+            check(f, Math.abs(counts[r.ordinal()] - expected) <= tolerance,
+                    "legacy: amostra de " + r.id() + " = " + counts[r.ordinal()] + " (esperado ~" + (int) expected + ")");
+        }
+        check(f, empty == samples - counts[FamilyLegacyRarity.COMMON.ordinal()],
+                "legacy: raridades vazias redistribuídas (" + empty + ")");
+
+        // Elegibilidade dentro da raridade: só o corpo masculino recebe a família MALE_ONLY.
+        check(f, FamilyLegacyRoll.pickWithin(random, FamilyLegacyRarity.EPIC, partial, BirthTrait.Body.MALE).family() == maleEpic,
+                "legacy: família masculina não sorteada");
+        FamilyLegacyRoll.Result femaleEpic = FamilyLegacyRoll.pickWithin(random, FamilyLegacyRarity.EPIC, partial, BirthTrait.Body.FEMALE);
+        check(f, !femaleEpic.hasFamily() && femaleEpic.rarity() == FamilyLegacyRarity.EPIC,
+                "legacy: corpo inelegível recebeu família");
+        check(f, throwsIae(() -> FamilyLegacies.of(List.of(common, common))), "legacy: id duplicado aceito");
+
+        // Fora da roleta ao vivo até o catálogo ser finalizado; a roleta não sorteia família.
+        check(f, FamilyLegacies.CATALOG_FINALIZED || !FamilyLegacies.isLive(), "legacy: ativo sem catálogo finalizado");
+        check(f, FamilyLegacies.CATALOG_FINALIZED || FamilyLegacies.CATALOG.isEmpty(), "legacy: famílias inventadas no catálogo");
+    }
+
+    private static boolean throwsIae(Runnable action) {
+        try {
+            action.run();
+            return false;
+        } catch (IllegalArgumentException e) {
+            return true;
         }
     }
 
