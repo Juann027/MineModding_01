@@ -14,8 +14,12 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
   Família Intelectual, Família Artística, Berço de Ouro), dos 6 atributos (Força, Agilidade, Vigor, Inteligência,
   Carisma, Sorte) e de um **traço de nascimento** (buff, debuff ou neutro), com **um** novo giro opcional. Continuar
   confirma o resultado.
-- **Traços de nascimento:** características individuais separadas da origem e dos atributos (ex.: Resistência Alta,
-  Molenga, Carregadão, Bem-Dotado). Por enquanto são só descrição: nenhum tem efeito de jogo.
+- **Traços de nascimento:** características individuais separadas da origem e dos atributos. O sorteio usa o corpo
+  escolhido no criador. **Universais** (masculino e feminino): High Endurance (buff), Limp (debuff), Fertile (buff),
+  Infertile (debuff), Perfectly Average (neutro). **Só no sorteio masculino:** Heavy Loader, Loadless, Hung, Tiny Dick.
+  Traço já gravado nunca é apagado ao mudar a aparência. Por enquanto são só descrição: nenhum tem efeito de jogo.
+- **Idioma:** todo texto visível do mod está em inglês (`en_us.json` é o único arquivo de idioma; outros idiomas do
+  jogo caem no inglês).
 - **Skill Trees:** abas Combate, Sobrevivência e Malandragem, 18 habilidades compradas com pontos ganhos por nível
   de XP.
 - **Necessidades:** Coom, Bexiga, Intestino e Emoção, com orbe de Emoção na tela e painel Body & Traits no

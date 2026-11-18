@@ -70,6 +70,12 @@ sistema em que vai mexer; veja o fim deste arquivo).
   **traços de nascimento** (`BirthTrait`, sorteados à parte, nunca derivados da origem; gravados em
   `birth_traits`). Traço sem efeito aprovado fica com `effects` vazio (sem bônus oculto); efeitos de traços usam
   `SkillEffect` e são aplicados por `SkillService` como os de habilidades.
+- **Elegibilidade de traços (Etapa 4.6):** `BirthTrait.Eligibility` = `ALL` (High Endurance, Limp, Fertile, Infertile,
+  Perfectly Average) ou `MALE_ONLY` (Heavy Loader, Loadless, Hung, Tiny Dick). O servidor sorteia com o corpo da
+  aparência salva (`ProfileService.body`). Elegibilidade vale só para sorteios novos: traço gravado nunca é apagado.
+  Trocar o corpo com resultado **não confirmado** troca o traço inelegível por um de mesma polaridade,
+  determinístico (`CharacterProfile.withTraitsCoherentWith`), sem sortear, sem mexer no novo giro. Fertile/Infertile
+  não têm efeito; **não há gravidez** (não implemente sem pedido).
 - **Rig/render:** não cancele `RenderPlayerEvent.Pre` nem desenhe o jogador fora do renderer vanilla. Em
   `PlayerRigModel.compose` mantenha o `GeoBone::resetStateChanges` no fim. Peça de corpo nova = `BodyLayerDefinition`
   (não crie `RenderLayer` por peça). Pele/rosto do criador são Body Layers sobre a skin da conta; não troque a textura.
@@ -83,7 +89,9 @@ sistema em que vai mexer; veja o fim deste arquivo).
   não penalizam e não aparecem. Não as reative sem pedido. Medidores detalhados só no painel do inventário e no
   menu K; na tela de jogo, só o orbe de Emoção. Consumível novo = entrada em `NeedEffects`.
 - **Telas** herdam `client.ui.TupiScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
-- **Textos** em português do Brasil via `Component`/lang (`pt_br.json` e `en_us.json` com as mesmas chaves).
+- **Textos visíveis ao jogador em inglês** (Etapa 4.6) via `Component`/lang: `en_us.json` é o único arquivo de idioma
+  (não recrie `pt_br.json`; outros idiomas caem no inglês). Mensagens de comando/chat também em inglês. Código,
+  comentários, docs e ids internos seguem como estão.
 - **Mobs:** recursos `geo/entity/<nome>.geo.json`, `animations/entity/<nome>.animation.json`,
   `textures/entity/<nome>.png`; GeckoLib só anima, dano/alvo/IA no servidor. Registre em `ModEntities` + atributos,
   renderer em `client.render` registrado em `TupiniCraftClient`.
@@ -131,7 +139,7 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 ./gradlew runServer                      # servidor dedicado (aceita comandos no console)
 ```
 
-- Não há JUnit. Regra pura nova entra no `selftest.SelfTest` (sai como `Autoteste RespectCraft: OK` no smoke test).
+- Não há JUnit. Regra pura nova entra no `selftest.SelfTest` (sai como `RespectCraft self-test: OK` no smoke test).
 - O CI (`.github/workflows/build.yml`) roda `bbsync.py`, `./gradlew build` e o teste de fumaça.
 - Teste com clientes reais (`tools/visual-test/helpers.sh`, Xvfb) só quando a mudança afeta render, telas ou
   sincronização multiplayer; um cenário representativo basta. Não repita a validação de etapas anteriores nem rode
@@ -159,5 +167,6 @@ python3 tools/player_anim/test_export.py # proteção do exportador
   limitações. **Abra só o handoff do sistema que a tarefa toca** (nunca todos): rig/Body Layers → Etapa 2; telas,
   criador, roleta, skills, necessidades, finalizações → Etapas 3/3.1; animações e Blockbench → Etapas 4/4.1;
   contador de derrotas → 4.2; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
-  roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada.
+  roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada; traços por corpo
+  (universais × só masculinos) e textos em inglês → 4.6.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.
