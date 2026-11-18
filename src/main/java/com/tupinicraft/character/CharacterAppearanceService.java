@@ -23,8 +23,11 @@ public final class CharacterAppearanceService {
     public static void apply(ServerPlayer player, int packed) {
         CharacterAppearance requested = CharacterAppearance.fromPacked(packed);
         if (requested == null || !requested.created()) return;
+        int previousBody = get(player).bodyType();
         player.getPersistentData().putInt(DATA_KEY, requested.pack());
         broadcast(player);
+        // A ficha e de ProfileService: so avisa que o corpo mudou (resultado nao confirmado fica coerente).
+        if (requested.bodyType() != previousBody) com.tupinicraft.profile.ProfileService.onBodyChanged(player);
     }
 
     private static CharacterAppearanceSyncPayload snapshot(ServerPlayer player) {

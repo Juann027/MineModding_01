@@ -1,6 +1,7 @@
 package com.tupinicraft.profile;
 
 import com.tupinicraft.TupiniCraft;
+import com.tupinicraft.character.CharacterAppearanceService;
 import com.tupinicraft.network.GameplayNetworking;
 import com.tupinicraft.registry.ModAttachments;
 import com.tupinicraft.registry.ModSounds;
@@ -69,7 +70,7 @@ public final class ProfileService {
      */
     public static BirthRoulette.Result roll(ServerPlayer player, int rerollsLeft) {
         RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
-        BirthRoulette.Result result = BirthRoulette.roll(random);
+        BirthRoulette.Result result = BirthRoulette.roll(random, body(player));
         CharacterProfile next = get(player).withBirth(result, rerollsLeft);
         player.getPersistentData().remove(LEGACY_LAST_ROLL_KEY);
         set(player, next);
@@ -77,6 +78,21 @@ public final class ProfileService {
         TupiniCraft.LOGGER.info("Roleta de nascimento: {} nasceu em {} {} tracos={}", player.getGameProfile().getName(),
                 result.origin().id(), java.util.Arrays.toString(result.attributes()), next.traits());
         return result;
+    }
+
+    /** Corpo escolhido no Character Creator (aparencia salva no servidor); sem aparencia = masculino. */
+    public static BirthTrait.Body body(ServerPlayer player) {
+        return BirthTrait.Body.fromBodyType(CharacterAppearanceService.get(player).bodyType());
+    }
+
+    /**
+     * Chamado quando a aparencia salva muda: mantem o resultado ainda nao confirmado coerente com o corpo
+     * ({@link CharacterProfile#withTraitsCoherentWith}). Resultado confirmado nao muda.
+     */
+    public static void onBodyChanged(ServerPlayer player) {
+        CharacterProfile profile = get(player);
+        CharacterProfile next = profile.withTraitsCoherentWith(body(player));
+        if (next != profile) set(player, next);
     }
 
     /** Som e particulas de "nascimento", vistos e ouvidos por quem estiver perto. */

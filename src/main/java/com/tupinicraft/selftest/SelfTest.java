@@ -12,6 +12,7 @@ import com.tupinicraft.needs.Needs;
 import com.tupinicraft.needs.NeedsRules;
 import com.tupinicraft.profile.BirthOrigin;
 import com.tupinicraft.profile.BirthRoulette;
+import com.tupinicraft.profile.BirthTrait;
 import com.tupinicraft.profile.CharacterAttribute;
 import com.tupinicraft.profile.CharacterProfile;
 import com.tupinicraft.skill.SkillDef;
@@ -61,7 +62,7 @@ public final class SelfTest {
         RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
         Map<BirthOrigin, Integer> counts = new EnumMap<>(BirthOrigin.class);
         for (int i = 0; i < 20_000; i++) {
-            BirthRoulette.Result r = BirthRoulette.roll(random);
+            BirthRoulette.Result r = BirthRoulette.roll(random, i % 2 == 0 ? BirthTrait.Body.MALE : BirthTrait.Body.FEMALE);
             counts.merge(r.origin(), 1, Integer::sum);
             int sum = 0;
             for (int v : r.attributes()) {
@@ -155,9 +156,9 @@ public final class SelfTest {
         check(f, com.tupinicraft.needs.ActiveNeedEffects.CODEC.parse(NbtOps.INSTANCE, at).getOrThrow().equals(active), "efeitos: codec");
 
         // Roleta: um unico novo giro, so depois do nascimento; fichas antigas com mais giros sao corrigidas.
-        CharacterProfile born = CharacterProfile.DEFAULT.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom")), BirthRoulette.FREE_REROLLS);
+        CharacterProfile born = CharacterProfile.DEFAULT.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom"), BirthTrait.Body.MALE), BirthRoulette.FREE_REROLLS);
         check(f, born.canReroll() && born.rerolls() == 1, "roleta: um novo giro após nascer");
-        CharacterProfile afterReroll = born.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom")), born.rerolls() - 1);
+        CharacterProfile afterReroll = born.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom"), BirthTrait.Body.MALE), born.rerolls() - 1);
         check(f, !afterReroll.canReroll(), "roleta: segundo novo giro bloqueado");
         check(f, new CharacterProfile(true, "sertao", List.of(), 5, 1, 0, 0, List.of(), List.of()).rerolls() == 1, "roleta: ficha antiga com 5 giros");
         check(f, !CharacterProfile.DEFAULT.canReroll(), "roleta: sem nascimento não há novo giro");
@@ -188,25 +189,25 @@ public final class SelfTest {
 
     /** Etapa 4.5: tracos de nascimento (sistema separado da origem, dos atributos e das necessidades). */
     private static void traits(List<String> f, CharacterProfile born, CharacterProfile afterReroll) {
-        check(f, born.birthTraits().size() == com.tupinicraft.profile.BirthTrait.PER_BIRTH,
-                "traços: nascimento sorteia " + com.tupinicraft.profile.BirthTrait.PER_BIRTH + " = " + born.traits());
-        check(f, afterReroll.traits().size() == com.tupinicraft.profile.BirthTrait.PER_BIRTH,
+        check(f, born.birthTraits().size() == BirthTrait.PER_BIRTH,
+                "traços: nascimento sorteia " + BirthTrait.PER_BIRTH + " = " + born.traits());
+        check(f, afterReroll.traits().size() == BirthTrait.PER_BIRTH,
                 "traços: novo giro substitui (não soma) = " + afterReroll.traits());
-        Map<com.tupinicraft.profile.BirthTrait, Integer> seen = new EnumMap<>(com.tupinicraft.profile.BirthTrait.class);
+        Map<BirthTrait, Integer> seen = new EnumMap<>(BirthTrait.class);
         RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
         for (int i = 0; i < 4_000; i++) {
-            for (com.tupinicraft.profile.BirthTrait t : com.tupinicraft.profile.BirthTrait.roll(random)) seen.merge(t, 1, Integer::sum);
+            for (BirthTrait t : BirthTrait.roll(random, i % 2 == 0 ? BirthTrait.Body.MALE : BirthTrait.Body.FEMALE)) seen.merge(t, 1, Integer::sum);
         }
-        check(f, seen.size() == com.tupinicraft.profile.BirthTrait.values().length, "traços: todos sorteáveis = " + seen.keySet());
+        check(f, seen.size() == BirthTrait.values().length, "traços: todos sorteáveis = " + seen.keySet());
         java.util.Set<String> ids = new java.util.HashSet<>();
-        for (com.tupinicraft.profile.BirthTrait t : com.tupinicraft.profile.BirthTrait.values()) {
+        for (BirthTrait t : BirthTrait.values()) {
             check(f, ids.add(t.id()) && t.weight() > 0, "traços: id duplicado ou peso inválido " + t.id());
             // Nenhum efeito aprovado ainda: nada de bonus oculto.
             check(f, !t.hasEffect(), "traços: efeito não aprovado em " + t.id());
         }
         // Atributos e origem nao dependem dos tracos: mesmo resultado com e sem tracos.
         BirthRoulette.Result r = new BirthRoulette.Result(BirthOrigin.CLASSE_MEDIA, new int[] {4, 5, 5, 6, 4, 3},
-                List.of(com.tupinicraft.profile.BirthTrait.HUNG));
+                List.of(BirthTrait.HUNG));
         CharacterProfile withTrait = CharacterProfile.DEFAULT.withBirth(r, 1);
         CharacterProfile noTrait = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(r.origin(), r.attributes()), 1);
         check(f, withTrait.attributes().equals(noTrait.attributes()) && withTrait.origin().equals(noTrait.origin())
@@ -214,8 +215,107 @@ public final class SelfTest {
         check(f, new CharacterProfile(true, "sertao", List.of(), 1, 1, 0, 0, List.of(), List.of("hung", "hung", "futuro"))
                 .traits().equals(List.of("hung", "futuro"))
                 && new CharacterProfile(true, "sertao", List.of(), 1, 1, 0, 0, List.of(), List.of("hung", "futuro"))
-                .birthTraits().equals(List.of(com.tupinicraft.profile.BirthTrait.HUNG)),
+                .birthTraits().equals(List.of(BirthTrait.HUNG)),
                 "traços: sem duplicatas; id desconhecido guardado mas não exibido");
+        traitEligibility(f);
+    }
+
+    /** Etapa 4.6: conjunto masculino x feminino, Fertile/Infertile universais, saves e troca de corpo. */
+    private static void traitEligibility(List<String> f) {
+        BirthTrait.Body male = BirthTrait.Body.MALE;
+        BirthTrait.Body female = BirthTrait.Body.FEMALE;
+        List<BirthTrait> exclusive = List.of(BirthTrait.HEAVY_LOADER, BirthTrait.LOADLESS, BirthTrait.HUNG, BirthTrait.TINY_DICK);
+        // 1. Sorteio masculino: todos os tracos, um por nascimento.
+        Map<BirthTrait, Integer> maleSeen = new EnumMap<>(BirthTrait.class);
+        Map<BirthTrait, Integer> femaleSeen = new EnumMap<>(BirthTrait.class);
+        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        boolean onePerBirth = true;
+        for (int i = 0; i < 6_000; i++) {
+            List<BirthTrait> m = BirthRoulette.roll(random, male).traits();
+            List<BirthTrait> w = BirthRoulette.roll(random, female).traits();
+            onePerBirth &= m.size() == BirthTrait.PER_BIRTH && w.size() == BirthTrait.PER_BIRTH;
+            for (BirthTrait t : m) maleSeen.merge(t, 1, Integer::sum);
+            for (BirthTrait t : w) femaleSeen.merge(t, 1, Integer::sum);
+        }
+        check(f, onePerBirth, "traços 4.6: um traço por nascimento nos dois sorteios");
+        check(f, maleSeen.keySet().equals(Set.of(BirthTrait.values())), "traços 4.6: sorteio masculino = " + maleSeen.keySet());
+        // 2. Sorteio feminino: exatamente o conjunto pedido.
+        Set<BirthTrait> femaleSet = Set.of(BirthTrait.HIGH_ENDURANCE, BirthTrait.LIMP, BirthTrait.FERTILE,
+                BirthTrait.INFERTILE, BirthTrait.AVERAGE);
+        check(f, femaleSeen.keySet().equals(femaleSet) && Set.copyOf(BirthTrait.pool(female)).equals(femaleSet),
+                "traços 4.6: sorteio feminino = " + femaleSeen.keySet());
+        // 3/4. Fertile e Infertile universais, com polaridade e peso.
+        for (BirthTrait t : List.of(BirthTrait.FERTILE, BirthTrait.INFERTILE)) {
+            check(f, t.eligibleFor(male) && t.eligibleFor(female) && t.eligibility() == BirthTrait.Eligibility.ALL
+                    && t.weight() > 0 && !t.hasEffect(), "traços 4.6: " + t.id() + " universal e sem efeito");
+        }
+        check(f, BirthTrait.FERTILE.polarity() == BirthTrait.Polarity.BUFF
+                && BirthTrait.INFERTILE.polarity() == BirthTrait.Polarity.DEBUFF, "traços 4.6: polaridade de fertile/infertile");
+        // 5. Exclusivos masculinos fora do sorteio feminino (e ainda registrados).
+        for (BirthTrait t : exclusive) {
+            check(f, !t.eligibleFor(female) && t.eligibleFor(male) && !femaleSeen.containsKey(t)
+                    && BirthTrait.byId(t.id()) == t, "traços 4.6: exclusivo masculino no sorteio feminino " + t.id());
+        }
+        // Sem vantagem entre os sexos: em cada conjunto, peso de buffs = peso de debuffs.
+        for (BirthTrait.Body body : BirthTrait.Body.values()) {
+            int balance = 0;
+            for (BirthTrait t : BirthTrait.pool(body)) balance += t.polarity() == BirthTrait.Polarity.BUFF ? t.weight()
+                    : t.polarity() == BirthTrait.Polarity.DEBUFF ? -t.weight() : 0;
+            check(f, balance == 0, "traços 4.6: buffs e debuffs equilibrados no conjunto " + body);
+        }
+        check(f, BirthTrait.Body.fromBodyType(1) == female && BirthTrait.Body.fromBodyType(0) == male
+                && com.tupinicraft.character.CharacterAppearance.BODY_IDS[1].equals("feminino"), "traços 4.6: índice do corpo");
+        // 6. Ids novos estaveis e persistidos (save e rede).
+        check(f, BirthTrait.FERTILE.id().equals("fertile") && BirthTrait.INFERTILE.id().equals("infertile")
+                && BirthTrait.byId("fertile") == BirthTrait.FERTILE && BirthTrait.byId("infertile") == BirthTrait.INFERTILE,
+                "traços 4.6: ids fertile/infertile");
+        for (BirthTrait t : List.of(BirthTrait.FERTILE, BirthTrait.INFERTILE)) {
+            CharacterProfile p = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(BirthOrigin.SERTAO,
+                    new int[] {4, 5, 5, 6, 4, 3}, List.of(t)), 1);
+            Tag tag = CharacterProfile.CODEC.encodeStart(NbtOps.INSTANCE, p).getOrThrow();
+            ByteBuf buf = Unpooled.buffer();
+            CharacterProfile.STREAM_CODEC.encode(buf, p);
+            check(f, ((CompoundTag) tag).getList("birth_traits", Tag.TAG_STRING).getString(0).equals(t.id())
+                    && CharacterProfile.CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow().birthTraits().equals(List.of(t))
+                    && CharacterProfile.STREAM_CODEC.decode(buf).equals(p), "traços 4.6: " + t.id() + " persiste no save e na rede");
+        }
+        // 7. Perfis antigos: traco exclusivo masculino ja confirmado continua, mesmo com corpo feminino.
+        CharacterProfile oldMale = new CharacterProfile(true, "sertao", List.of(), 0, 1, 2, 0, List.of(), List.of("tiny_dick"));
+        check(f, oldMale.birthConfirmed() && oldMale.withTraitsCoherentWith(female) == oldMale
+                && oldMale.birthTraits().equals(List.of(BirthTrait.TINY_DICK)), "traços 4.6: traço confirmado preservado após trocar o corpo");
+        CharacterProfile noTraits = new CharacterProfile(true, "sertao", List.of(), 1, 1, 2, 0, List.of(), List.of());
+        check(f, noTraits.withTraitsCoherentWith(female) == noTraits && CharacterProfile.DEFAULT.withTraitsCoherentWith(female)
+                == CharacterProfile.DEFAULT, "traços 4.6: ficha sem traço ou sem nascimento não ganha traço");
+        CharacterProfile future = new CharacterProfile(true, "sertao", List.of(), 1, 1, 2, 0, List.of(), List.of("futuro"));
+        check(f, future.withTraitsCoherentWith(female).traits().equals(List.of("futuro")), "traços 4.6: id desconhecido preservado");
+        // Troca de corpo num resultado nao confirmado: coerente, mesma polaridade, sem traço extra, sem sortear de novo.
+        for (BirthTrait t : exclusive) {
+            CharacterProfile pending = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(BirthOrigin.PAMPA,
+                    new int[] {6, 4, 4, 3, 3, 5}, List.of(t)), BirthRoulette.FREE_REROLLS);
+            CharacterProfile asFemale = pending.withTraitsCoherentWith(female);
+            List<BirthTrait> now = asFemale.birthTraits();
+            check(f, now.size() == 1 && now.get(0).eligibleFor(female) && now.get(0).polarity() == t.polarity()
+                    && asFemale.origin().equals(pending.origin()) && asFemale.attributes().equals(pending.attributes())
+                    && asFemale.rerolls() == pending.rerolls() && asFemale.rollCount() == pending.rollCount()
+                    && asFemale.skillPoints() == pending.skillPoints(), "traços 4.6: troca de corpo coerente " + t.id() + " -> " + now);
+            // Alternar de novo nao muda mais nada (sem pescar tracos) e e deterministico.
+            CharacterProfile back = asFemale.withTraitsCoherentWith(male).withTraitsCoherentWith(female).withTraitsCoherentWith(male);
+            check(f, back.traits().equals(asFemale.traits())
+                    && pending.withTraitsCoherentWith(female).traits().equals(asFemale.traits()),
+                    "traços 4.6: alternar o corpo não gera traços novos " + t.id());
+        }
+        // 8. Reroll unico preservado: trocar o corpo nao devolve nem gasta o novo giro.
+        CharacterProfile pending = CharacterProfile.DEFAULT.withBirth(BirthRoulette.roll(random, male), BirthRoulette.FREE_REROLLS);
+        CharacterProfile switched = pending.withTraitsCoherentWith(female);
+        check(f, switched.canReroll() && switched.rerolls() == 1 && switched.rollCount() == pending.rollCount(),
+                "traços 4.6: troca de corpo mantém o único novo giro");
+        CharacterProfile rerolled = switched.withBirth(BirthRoulette.roll(random, female), BirthRoulette.rerollsAfter(switched));
+        check(f, !rerolled.canReroll() && rerolled.birthTraits().size() == 1 && rerolled.birthTraits().get(0).eligibleFor(female)
+                && BirthRoulette.validate(rerolled, true, rerolled.rollCount()) == BirthRoulette.Outcome.NO_REROLLS
+                && rerolled.withTraitsCoherentWith(male) == rerolled, "traços 4.6: novo giro feminino consumido e não restaurado");
+        CharacterProfile confirmed = BirthRoulette.confirm(switched, switched.rollCount());
+        check(f, !confirmed.canReroll() && confirmed.withTraitsCoherentWith(male) == confirmed
+                && confirmed.traits().equals(switched.traits()), "traços 4.6: Continue preserva o resultado confirmado");
     }
 
     private static void skills(List<String> f) {
@@ -318,7 +418,7 @@ public final class SelfTest {
                 "compat: ficha da v0.5.7 sem traços carrega intacta");
         // Gravar de novo inclui o campo novo e volta igual.
         CharacterProfile withTraits = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(BirthOrigin.PAMPA,
-                new int[] {6, 4, 4, 3, 3, 5}, List.of(com.tupinicraft.profile.BirthTrait.LIMP)), 1);
+                new int[] {6, 4, 4, 3, 3, 5}, List.of(BirthTrait.LIMP)), 1);
         Tag tag = CharacterProfile.CODEC.encodeStart(NbtOps.INSTANCE, withTraits).getOrThrow();
         check(f, ((CompoundTag) tag).getList("birth_traits", Tag.TAG_STRING).getString(0).equals("limp")
                 && CharacterProfile.CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow().equals(withTraits), "compat: traços ida e volta no save");

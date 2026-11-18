@@ -145,6 +145,27 @@ public record CharacterProfile(boolean born, String origin, List<Integer> attrib
                 startPoints + Math.max(0, levelRewarded), levelRewarded, List.of(), traitIds);
     }
 
+    /**
+     * Troca de corpo durante a criacao: num resultado <b>ainda nao confirmado</b> (nasceu e ainda tem o novo giro),
+     * cada traco que nao pode sair para o corpo novo vira um traco elegivel de mesma polaridade
+     * ({@link BirthTrait#coherentWith}). Nao sorteia, nao muda quantidade, origem, atributos, pontos nem o novo
+     * giro. Resultado confirmado (ou sem nascimento) fica intacto: traco gravado nunca e apagado por elegibilidade.
+     * Devolve a mesma instancia quando nada muda.
+     */
+    public CharacterProfile withTraitsCoherentWith(BirthTrait.Body body) {
+        if (!born || birthConfirmed()) return this;
+        List<String> next = new ArrayList<>();
+        boolean changed = false;
+        for (String id : traits) {
+            BirthTrait trait = BirthTrait.byId(id);
+            BirthTrait coherent = trait == null ? null : BirthTrait.coherentWith(trait, body, rollCount);
+            changed |= coherent != trait;
+            next.add(coherent == null ? id : coherent.id());
+        }
+        if (!changed) return this;
+        return new CharacterProfile(born, origin, attributes, rerolls, rollCount, skillPoints, levelRewarded, skills, next);
+    }
+
     public CharacterProfile withSkills(List<String> newSkills, int newPoints) {
         return new CharacterProfile(born, origin, attributes, rerolls, rollCount, newPoints, levelRewarded, newSkills, traits);
     }

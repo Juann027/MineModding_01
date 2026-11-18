@@ -81,7 +81,8 @@ public final class BirthRoulette {
         return BirthOrigin.values()[0];
     }
 
-    public static Result roll(RandomGenerator random) {
+    /** Sorteio com o conjunto de tracos do corpo informado (o servidor le o corpo da aparencia salva). */
+    public static Result roll(RandomGenerator random, BirthTrait.Body body) {
         BirthOrigin origin = pickOrigin(random);
         CharacterAttribute[] all = CharacterAttribute.values();
         int[] values = new int[all.length];
@@ -98,8 +99,8 @@ public final class BirthRoulette {
         for (CharacterAttribute attribute : all) {
             values[attribute.ordinal()] = CharacterAttribute.clamp(values[attribute.ordinal()] + origin.bonus(attribute));
         }
-        // Tracos depois dos atributos: sorteio independente da origem.
-        return new Result(origin, values, BirthTrait.roll(random));
+        // Tracos depois dos atributos: independentes da origem; o corpo so filtra quais podem sair.
+        return new Result(origin, values, BirthTrait.roll(random, body));
     }
 
     /** Pontos de habilidade iniciais: 2, mais 1 a cada 2 pontos de Inteligencia acima da base. */
