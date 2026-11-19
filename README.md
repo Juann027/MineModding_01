@@ -10,8 +10,8 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 
 ## Funcionalidades
 
-- **Menu holográfico do personagem** (tecla **K**, Etapa 4.8.1): painéis flutuantes em perspectiva real, com
-  profundidade, paralaxe, o próprio jogador em 3D, partículas e animações de abertura/troca/fechamento. Seções
+- **Menu holográfico do personagem** (tecla **K**, Etapa 4.8.1): placas flutuantes num arco em volta do ponto de
+  vista, em perspectiva real, com profundidade, paralaxe, o próprio jogador em 3D, partículas e animações de abertura/troca/fechamento. Seções
   Overview, Character, Body & Traits, Speciality e Skills; opções visuais no painel **Display** (tamanho, opacidade,
   intensidade, movimento reduzido, alto contraste) gravadas em `config/respectcraft-holomenu-client.toml`.
 - **Character Creator** (primeira vez na tecla **K**, depois em Appearance no menu): prévia 3D, corpo, pele, rosto,

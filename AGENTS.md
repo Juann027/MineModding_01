@@ -26,7 +26,7 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   reintroduza sem pedido explícito.
 - **Finalizações (Etapa 4.8):** cada participante usa o próprio rig (`FinisherParticipants`, `EntityFinisherClip`);
   sessão sempre com um jogador; contador só de jogador; `BossDefeatEvent` é só preparação (nada concedido).
-- **Menu K (Etapa 4.8.1):** holográfico em `client.holo` (perspectiva real, clique pelo raio inverso, config de
+- **Menu K (Etapa 4.8.1):** holográfico em `client.holo` (placas num arco em volta do olho, perspectiva real, clique pelo raio inverso, config de
   cliente); a árvore de habilidades é a seção Skills. Os antigos `CharacterHubScreen`/`SkillTreeScreen` não existem mais.
 - **Animações:** dados em `PlayerAnimations`; `.bbmodel` em `model_sources/player/`; respeite
   `tools/player_anim/master.json` e nunca use `export.py --force` sobre edições do Blockbench.

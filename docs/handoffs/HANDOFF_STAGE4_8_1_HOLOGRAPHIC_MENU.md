@@ -1,9 +1,13 @@
 # Handoff — Etapa 4.8.1: menu holográfico do personagem (tecla K)
 
 Rework **completo da apresentação** do menu da tecla K. O `CharacterHubScreen` e a `SkillTreeScreen` planos foram
-removidos e substituídos por `client.holo.HoloCharacterScreen`: painéis projetados em perspectiva real, com
-profundidade, paralaxe, holograma 3D do próprio jogador, partículas, abertura/fechamento animados e transições entre
-seções. **Nenhum sistema de jogo mudou**: ficha, Specialities, traços, atributos, necessidades, compras de habilidade,
+removidos e substituídos por `client.holo.HoloCharacterScreen`: **placas holográficas soltas no espaço, num arco em
+volta do ponto de vista**, projetadas em perspectiva real, com profundidade, paralaxe, holograma 3D do próprio
+jogador, feixes de luz, partículas, montagem/dobra animadas e navegação espacial entre seções.
+
+> **Correção de direção (pedido do dono, antes do merge):** a primeira versão era um "painel de controle" plano
+> (barra lateral fixa + painel central grande + cartão do jogador). Ela foi substituída pela composição em arco
+> descrita aqui; a arquitetura de render/clique foi mantida e a composição foi refeita. **Nenhum sistema de jogo mudou**: ficha, Specialities, traços, atributos, necessidades, compras de habilidade,
 save e rede são os mesmos; o menu só lê as caches do cliente e manda os mesmos pedidos ao servidor.
 `mod_version` continua `0.5.7` (sem release).
 
@@ -20,13 +24,26 @@ Guia técnico usado: a skill `immersive-minecraft-ui` (anexada ao pedido), valid
 | 04 Speciality | Speciality atual com a cor da raridade (Common cinza, Uncommon verde, Rare azul, Epic roxo, Legendary dourado, BONER rosa), descrição completa, Speciality de nascimento quando for diferente, escada das seis raridades com as chances reais do servidor (`SpecialityOddsSync`). **Sem botão de troca** (não existe troca) |
 | 05 Skills | A árvore que já existia (3 ramos, 18 habilidades, bloqueado/disponível/comprado, custo, pré-requisitos), arrastar para mover, clicar para pedir a compra (`SkillPurchaseRequest`, validada pelo servidor); a tela só comemora quando a ficha nova chega |
 
-Barra lateral: as cinco seções (com selo de pontos em Skills) e as ações que o menu antigo tinha — **Appearance**
-(Character Creator), **Birth/Birth roulette** (roleta), **Display** (novo, opções visuais) e **Back to game**.
-Placa de identidade (nome, Speciality, raridade, traço, pontos) sob o holograma do jogador nas seções estreitas.
+**Composição espacial (o que flutua onde):**
 
-Controles: clique, roda (sobre a barra troca de seção; sobre o painel rola), arrastar (árvore, sliders, girar o
-jogador), botão direito/meio arrastado inclina a cena (volta sozinha), `Tab`/`Shift+Tab`, `↑`/`↓`, `1`–`5`,
-`PgUp`/`PgDn`, `←`/`→` (ramo da árvore), `R` recentraliza, `Esc` fecha o Display ou o menu, `K` fecha.
+- **Arco de placas:** cada seção é uma placa própria num cilindro centrado no olho. A seção escolhida fica na frente,
+  no plano de referência (texto pixel a pixel); as vizinhas ficam a ±31°, viradas para o olho, 24% mais fundas, mais
+  apagadas e um pouco abaixo; as de ±2 passos somem na lateral. O mundo aparece entre as placas.
+- **Navegar = girar o arco:** a placa nova vem do lado para a frente e a antiga recua girando para o outro lado (mola
+  levemente subamortecida). Clicar numa placa de lado a traz para a frente; chips, `←`/`→`, `Tab`, `1`–`5` e a roda
+  (fora da placa da frente) também giram o arco. Placas de lado mostram o conteúdo de verdade, sem hover interno.
+- **Fita de identidade** acima do arco, inclinada para baixo (de frente para o olho): marca, nome, Speciality com a cor
+  da raridade, traço, pontos e as ações que o menu antigo tinha — **Appearance** (Character Creator), **Birth/Birth
+  roulette** (roleta), **Display** (novo, opções visuais) e **fechar** — como ícones com dica.
+- **Chips de seção** numa fileira curva abaixo do arco, inclinada para cima; o ativo avança e acende.
+- **Holograma do jogador** de pé na frente, à esquerda, num pedestal (`z +56`); na seção Character ele sobe no palco
+  da própria placa e acompanha o arco quando ela gira.
+- **Rastros de luz** ligam a fita à placa da frente, a placa ao chip ativo e às vizinhas, com pulsos correndo por eles.
+
+Controles: clique, roda (sobre a placa da frente rola; fora dela gira o arco), arrastar (árvore, sliders, girar o
+jogador), botão direito/meio arrastado inclina a cena (volta sozinha), `←`/`→`/`Tab`/`Shift+Tab`/`1`–`5` giram o
+arco, `↑`/`↓`/`PgUp`/`PgDn` rolam, `[`/`]` trocam o ramo da árvore, `R` recentraliza, `Esc` fecha o Display ou o
+menu, `K` fecha.
 
 ## 2. Arquitetura de renderização
 
@@ -47,7 +64,7 @@ HoloCharacterScreen (Screen, nao pausa)
 | `Holo3D` | Passada 3D: troca/restaura projeção e model-view, profundidade, cull, neblina, luzes; quads texturizados, linhas, anéis, sprites, jogador |
 | `HoloParticles` | Vetor fixo (260) de partículas em espaço de layout, um lote aditivo |
 | `HoloView` + `OverviewView`, `CharacterView`, `BodyView`, `SpecialityView`, `SkillsView` | Conteúdo das seções (cabeçalho fixo + corpo rolável) |
-| `HoloNav`, `HoloSettings` | Barra lateral/placa e painel modal Display |
+| `HoloNav`, `HoloSettings` | Fita de identidade, chips de seção e painel modal Display |
 | `HoloConfig`, `HoloBackdrop`, `HoloClient`, `HoloAnim`, `HoloStyle`, `HoloZone` | Config de cliente, fundo pelo Rimulib, registro, envelopes, paleta, regiões |
 | `com.respectcraft.ui.HoloGeometry` | Matemática pura (JOML) de projeção, painel e clique — comum, testada no `SelfTest` |
 
@@ -72,12 +89,16 @@ religa o teste em cada lote (bug achado no cliente real: o vidro cobria o jogado
   plano de referência) e **olho** (câmera virtual em `0,0,0` olhando para `-z`).
 - Câmera do menu: FOV vertical fixo de 42° (`HoloCharacterScreen.FOV`), independente do FOV do jogo — a leitura e o
   clique não mudam com o FOV (testado com FOV 110). Plano de referência a `H / (2·tan 21°)`.
-- O menu ocupa no máximo 660 × 370 unidades, centralizado; na menor GUI (320 × 240) usa a tela inteira.
-  "Menu size" acima de 100% nunca deixa o layout menor que 320 × 240.
-- Barra lateral: `dz = +10`, girada 16° pela borda **de fora** (a de dentro recua: cabine). Placa: `dz = +14`, −16° pela
-  borda de fora e 14° de inclinação. Painel principal no plano de referência. Modal Display a `+34`, empurra o resto
-  para trás. Holograma do jogador a `+36` (encaixado) ou `+30` (palco). Fundo a `−320`, partículas de `−260` a `+70`.
-- Seções estreitas encolhem o painel até o conteúdo (cache visual por seção); Skills e Character usam o painel largo.
+- **Arco:** `onArc(painel, ângulo, raio, y, w, h)` põe o centro do painel em `olho + raio·(sen θ, 0, −cos θ)` e gira
+  `−θ` (de frente para o olho). Raio da placa da frente = distância do plano de referência; vizinhas `×1,24`; ±2 passos
+  `×1,36` e transparentes. Posição contínua `carousel` (em índices de seção) com mola; o ângulo de cada placa é
+  `(índice − carousel)·31°`, então a transição é o próprio giro do arco.
+- Fita: arco 0°, raio `×1,06` (atrás), inclinação −15° pela borda de baixo. Chips: cilindro `×1,01`, passo angular pela
+  largura do chip, inclinação +16° pela borda de cima; o ativo avança `×0,03`. Modal Display a `+40`, empurra o resto
+  para trás. Fundo (anéis) a `−360`, anel e raios de chão em volta do olho, partículas de `−300` a `+140`.
+- Largura da placa: 46% da tela (290–350); na menor GUI (320 × 240) ocupa quase a tela, as vizinhas viram faixas nas
+  bordas e o holograma do jogador só aparece no palco. "Menu size" acima de 100% nunca deixa o layout menor que 320 × 240.
+- Placas de seção estreitas encolhem até o conteúdo (cache visual por seção); Skills e Character usam a altura inteira.
 
 **Ancoragem híbrida.** O menu nasce na frente da câmera. A paralaxe vem do cursor (olho desloca até 38 × 22 unidades,
 com suavização e só depois de 0,42 s) e da câmera real: se ela gira (empurrão, giro do servidor), a cena acompanha 60%
@@ -89,7 +110,8 @@ entidades, blocos ou partículas do jogo).
 
 Cada quadro congela as matrizes de todos os painéis **antes** de desenhar. O cursor vira raio pela inversa de
 `projeção · visão · layout · modelo` direto no espaço local do painel (`HoloGeometry.hit`), e o painel com menor `t`
-(mais perto) ganha; o Display, aberto, captura tudo. O conteúdo registra as regiões (`HoloZone`) **durante** o
+(mais perto) ganha; o Display, aberto, captura tudo. Placas de lado só aceitam o clique que as traz para a frente
+(o conteúdo delas aparece, mas sem hover nem regiões ativas); chips, fita e a placa da frente têm regiões normais. O conteúdo registra as regiões (`HoloZone`) **durante** o
 desenho, e o clique usa as regiões do último quadro desenhado, com as mesmas matrizes — o que se vê é o que responde.
 Arrastos capturam a região até soltar e seguem o cursor no plano do painel mesmo fora dela (`intersect` sem limite).
 O cursor da janela é lido em pixels reais (`MouseHandler`), sem o arredondamento da GUI. Botões soltos fora da janela
@@ -103,24 +125,26 @@ nunca chega na hotbar (conferido: slot 0 → 0 depois de rolar).
 | K (fora de tela) | Abre na Overview; se o menu próprio do Rimulib (`MenuApi.isOpen/capturesInput`) estiver aberto, não abre por cima |
 | K / Esc / Back to game | Fechamento animado (~0,26 s; 0,1 s com movimento reduzido) e então `setScreen(null)` (cursor capturado de novo, movimento volta) |
 | Esc com Display aberto | Fecha só o Display (grava a config) |
-| Outra tela (morte, troca de dimensão, desconexão, Appearance, Birth) | `removed()`: libera os 5 framebuffers, tira a camada do Rimulib, solta arrastos, limpa partículas, grava a config pendente |
+| Outra tela (morte, troca de dimensão, desconexão, Appearance, Birth) | `removed()`: libera os framebuffers (5 placas, fita, 5 chips, Display), tira a camada do Rimulib, solta arrastos, limpa partículas, grava a config pendente |
 | Resize / escala de GUI | `init()` refaz o layout; as superfícies só realocam quando o tamanho em pixels muda |
 | Logout | `HoloBackdrop.clear()` (a camada do Rimulib nunca fica ativa sem o menu) |
 | Fechamento travado | Força o fechamento depois de 1,5 s |
 
 ## 6. Animações e efeitos
 
-- **Fase A (0–0,12 s):** ponto de luz e anel no centro, som curto (`ui.hover` grave).
-- **Fase B (0,05–0,4 s):** feixes do ponto até cada painel; cada painel vem do fundo (`dz −170`), abre como uma linha
-  que desdobra na vertical (mola curta), com o contorno se desenhando a partir do canto; cascata: barra, principal, placa.
-- **Fase C (0,2–0,6 s):** conteúdo entra linha a linha (35 ms entre itens), barras crescem até o valor exato, holograma
-  do jogador surge com mola, paralaxe liga a partir de 0,42 s. O clique já funciona a partir de ~0,1 s.
-- **Troca de seção (~0,3 s):** o painel atual recua (`dz −130`, giro leve, some), o novo vem da frente (`+70`) com uma
-  varredura holográfica; o marcador da barra desliza com mola; o jogador vai da placa para o palco (Character).
-- **Fechamento:** conteúdo some primeiro, painéis recolhem numa linha e recuam, contorno vira faíscas.
-- **Contínuo:** contornos com brilho, cantoneiras, faixa de varredura sob o texto, anéis de fundo girando, grade de
-  chão em perspectiva, partículas subindo, anel de varredura no holograma, mira holográfica no ponto do clique, pulsos
-  nas ligações da árvore, faíscas na compra/clique.
+- **Fase A (0–0,15 s):** ponto de luz à frente do olho, som curto (`ui.hover` grave).
+- **Fase B (0,03–0,5 s):** feixes do ponto até cada placa; cada placa chega no ar **de perfil** (girada ~78° para o
+  lado em que fica no arco), vinda do fundo (`dz −160`), e desdobra com mola enquanto o contorno se desenha; cascata:
+  fita, placa da frente, vizinhas, chips um a um.
+- **Fase C (0,25–0,7 s):** conteúdo entra linha a linha (35 ms entre itens), barras crescem até o valor exato, o
+  holograma do jogador surge com mola, rastros de luz acendem, paralaxe liga a partir de 0,42 s. O clique já funciona
+  a partir de ~0,1 s.
+- **Troca de seção:** o arco gira com mola (~0,5 s, leve passada do ponto): as placas varrem o espaço girando,
+  a nova vem para a frente com uma varredura holográfica; o chip ativo avança; o jogador sobe/desce do palco.
+- **Fechamento (~0,3 s):** conteúdo some primeiro, as placas giram de perfil, encolhem e recuam, contornos viram faíscas.
+- **Contínuo:** contornos com brilho, cantoneiras, faixa de varredura sob o texto, anéis de fundo girando, anel e
+  raios de chão em volta do ponto de vista, partículas espalhadas em volume (entre e na frente das placas), pulsos
+  correndo pelos rastros de luz, anel de varredura no holograma, mira holográfica no ponto do cursor, faíscas no clique.
 - **Rimulib (fundo):** passada própria `assets/respectcraft/shaders/fx/holo_backdrop.fsh` no estágio
   `FxApi.stage("respectcraft")`: dessatura (−65%), vinheta azul e varredura fraca **só no mundo** (antes da GUI). No
   cliente real a saturação média do chão caiu de 0,41 para 0,24 com o fundo ligado.
@@ -145,8 +169,8 @@ painel espacial genérico, e o K precisa abrir sem item.
 reduzido (fades curtos, sem paralaxe, partículas, inclinação nem mola), alto contraste (vidro escuro opaco, texto mais
 claro, sem linhas de varredura) e fundo do mundo. Tudo funciona com movimento reduzido/intensidade 0.
 
-Desempenho: 5 framebuffers no máximo (barra, principal ×2 para a transição, placa, Display), criados uma vez e só
-realocados quando o tamanho muda; partículas num vetor fixo; um lote por tipo (quads, linhas, brilhos); nenhum pacote
+Desempenho: um framebuffer por placa (5 seções, fita, 5 chips pequenos e o Display), criados uma vez e só realocados
+quando o tamanho muda; placas fora do arco (±2 passos) não são desenhadas; partículas num vetor fixo; um lote por tipo (quads, linhas, brilhos); nenhum pacote
 no hover (a compra só sai no clique). A passada do Rimulib mediu 5,2 ms por quadro no llvmpipe (CPU).
 Nada do pacote `client` carrega no servidor dedicado (`HoloGeometry` é JOML puro).
 
@@ -163,36 +187,41 @@ Rodados nesta sessão de nuvem, com o código final:
 **Cliente real** (Xvfb + openbox, Mesa llvmpipe, `xdotool`, capturas ImageMagick, vídeo `ffmpeg` a 30 fps) contra o
 servidor dedicado de desenvolvimento, jogador `Dev` (skin Slim). Roteiro em `tools/visual-test/helpers.sh`.
 
-| # | Cenário | Resultado | Evidência |
+**Validação espacial pedida para o merge** (composição em arco, `docs/evidencias/etapa4_8_1/`):
+
+| # | Pedido | Resultado | Evidência |
 |---|---|---|---|
-| 1–2 | K abre; abertura em três fases (ponto/feixes → painéis desdobram do fundo → cascata) assentada ~0,55 s | OK | `01_abertura_quadros_30fps.jpg` |
-| 3 | Perspectiva e paralaxe: cursor nos cantos opostos — painel principal idêntico pixel a pixel, barra, holograma, anéis e partículas se deslocam; botão direito inclina a cena e volta | OK | `03_…`, `10_…` |
-| 4 | As cinco seções (por clique projetado, `1`–`5`, `Tab`) | OK | `02`, `04`, `06`, `07`, `11` |
-| 5 | Prévia 3D: skin, Slim, cabelo, rosto, rig; na frente do vidro; arrastar gira | OK (bug de profundidade achado e corrigido) | `04`, `05` |
-| 6–8 | Atributos exatos; quatro necessidades com o limite crítico do servidor; traço com classificação e descrição | OK | `02`, `06` |
-| 9 | Nome longo ("The Foot Worshippers") ajustado ao painel, também em 320×240 | OK | `11` |
-| 10 | Skills: troca de ramo, arrastar, compra validada pelo servidor (pontos 4→3→2→1, nó vira comprado, filhos liberados) em GUI 1, 2 e 3 | OK | `07`, `12` |
-| 11 | Clique alinhado em painéis inclinados/projetados (abas da barra girada, nós, sliders) | OK | — |
-| 12 | Roda: rola/troca seção, hotbar intacta (slot 0 → 0); arrastar slider no modal | OK | `08` |
-| 13 | Esc e K fecham; movimento volta (Z 7,5 → 12,8 segurando W) e o mouse volta a girar a câmera (yaw 0 → 45°) | OK | `16` |
-| 14 | Reabrir 6× seguidas, fechando no meio da abertura | OK, sem exceção | — |
-| 15–16 | GUI 2 (1280×720 → 640×360) e GUI 3 (960×720 → 320×240, a menor); GUI 1 a 854×455 numa versão anterior | OK | `11`, `12` |
-| 17 | FOV 110 com GUI 3: menu e clique iguais | OK | `11` |
-| 18 | Redimensionar a janela com o menu aberto (1280×720 → 1000×600 → volta) | OK, layout refeito | `14` |
-| 19 | Desconectar/reconectar (fechar e reabrir o cliente várias vezes; ficha e config mantidas) | OK | — |
-| 20 | Servidor dedicado sem classe de cliente | OK (teste de fumaça) | — |
-| — | Morte com o menu aberto (tela de morte assume, sem efeito preso); respawn e K de novo; troca para o Nether com o menu aberto | OK | `15`, `17` |
-| — | Display: opacidade 90→60%, alto contraste, movimento reduzido (fade de ~0,15 s), fundo do mundo ligado/desligado; gravado no `.toml` | OK | `08`, `09`, `13` |
-| — | Fundo do Rimulib: saturação média do chão 0,41 → 0,24 com o fundo ligado (só o 2D: 0,41) | OK | `02` |
+| 1 | Vista frontal com placas em profundidades diferentes | Placa da frente no plano de referência, vizinha girada e mais funda, fita inclinada acima, chips em arco abaixo, jogador à frente, mundo visível entre elas | `01_frontal_placas_em_profundidades.jpg` |
+| 2 | Vista em perspectiva com giro/paralaxe visível | Botão direito inclina a cena: placas viram trapézios, a vizinha fica pendurada no arco, o jogador fica entre elas | `02_perspectiva_inclinada_paralaxe.jpg` |
+| 3 | Transição entre seções com placas se movendo em 3D | Overview → Speciality (3 passos): Character e Body varrem o espaço girando, Speciality vem para a frente e assenta com mola | `03_transicao_arco_overview_para_speciality.jpg` (quadros a 30 fps) |
+| 4 | Mouse num painel projetado inclinado | Cena inclinada (−26°): clique na aba "Survival" desenhada em ângulo troca o ramo da árvore; hover/clique no chip da ponta (girado e inclinado) e na placa lateral girada trazem a seção para a frente | `04_clique_em_aba_inclinada_survival.jpg`, `05_hover_e_clique_em_chip_e_placa_lateral.jpg` |
+| 5 | Série de quadros da abertura | Ponto de luz → feixes → placas chegam de perfil e desdobram → jogador surge → chips um a um → vizinha gira para o lugar | `06_abertura_quadros.jpg` |
+| — | Menor GUI (GUI 3, 960×720 → 320×240) | Placa da frente quase na tela toda, vizinhas como faixas inclinadas nas bordas, fita e chips cabem | `07_gui3_320x240.jpg` |
+| — | Jogador no palco da placa Character | Rig, skin Slim, cabelo e rosto, na frente do vidro, girável por arrasto | `08_character_jogador_no_palco.jpg` |
+
+Também conferido no cliente real (a maior parte na primeira versão, com a mesma arquitetura de render/clique/ciclo de
+vida, e repetido na composição em arco onde a mudança tocava):
+
+| Cenário | Resultado |
+|---|---|
+| K abre na Overview; Esc/K fecham com a dobra; movimento (Z 7,5 → 12,8 com W) e giro do mouse (yaw 0 → 45°) voltam | OK |
+| Atributos exatos; quatro necessidades com o limite crítico do servidor; traço com classificação; nome longo ("The Foot Worshippers") ajustado também em 320×240 | OK |
+| Skills: troca de ramo (inclusive com a cena inclinada), arrastar, compra validada pelo servidor (pontos 4→3→2→1) em GUI 1, 2 e 3 | OK |
+| Roda: rola a placa da frente / gira o arco; hotbar intacta (slot 0 → 0) | OK |
+| Reabrir 6× seguidas fechando no meio da abertura; redimensionar com o menu aberto; morte e ida ao Nether com o menu aberto; reconectar | OK, sem exceção |
+| GUI 2 (1280×720) e GUI 3 (960×720 = 320×240); FOV 110 sem efeito no menu nem no clique | OK |
+| Display: opacidade, alto contraste, movimento reduzido (fade de ~0,15 s), fundo do mundo; gravado no `.toml` | OK |
+| Fundo do Rimulib: saturação média do chão 0,41 → 0,24 com o fundo ligado | OK |
 
 Achados e corrigidos durante o teste real: Rimulib `UiApi.text` usa o `y` como linha de base; vidro cobrindo o jogador
-(teste de profundidade desligado pelos `RenderType`); barra lateral e placa saindo da tela (giro pelo pivô central);
-`ScreenFx.desaturate` sem efeito no 1.3.0 (trocado por passada própria); coluna da aparência apertada em 320×240.
+(teste de profundidade desligado pelos `RenderType`); `ScreenFx.desaturate` sem efeito no 1.3.0 (trocado por passada
+própria); coluna da aparência apertada em 320×240; na composição em arco, fileira de chips perto demais (saía da tela)
+e holograma do jogador grande demais.
 
 ## 10. Limitações conhecidas
 
 - Teste visual só em software (Xvfb + llvmpipe, sem GPU real) e sem som (sem OpenAL no Xvfb).
-- O texto dos painéis inclinados (barra lateral, placa) passa por filtro linear; só o painel principal em repouso é
+- O texto das placas inclinadas (vizinhas, fita, chips) passa por filtro linear; só a placa da frente em repouso é
   pixel a pixel. Durante a abertura/troca/inclinação o texto fica levemente suavizado até assentar.
 - A altura das maiúsculas das fontes do Rimulib foi medida no cliente (GUI 2); se outra versão do Rimulib mudar as
   métricas, ajuste `HoloCanvas.capHeight`.
@@ -211,4 +240,7 @@ Achados e corrigidos durante o teste real: Rimulib `UiApi.text` usa o `y` como l
   `RespectCraftClient` (config de cliente e estágio do Rimulib), `SelfTest` (`holoGeometry`).
 - Evidências: `docs/evidencias/etapa4_8_1/`.
 
-PR_E_MERGE
+## 12. PR
+
+[Juann027/MineModding_01#35](https://github.com/Juann027/MineModding_01/pull/35) — **não integrado**: aguardando a
+conferência visual do dono depois da correção de direção para a composição em arco.
