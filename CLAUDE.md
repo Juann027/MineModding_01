@@ -104,6 +104,8 @@ sistema em que vai mexer; veja o fim deste arquivo).
   não penalizam e não aparecem. Não as reative sem pedido. Medidores detalhados só no painel do inventário e no
   menu K; na tela de jogo, só o orbe de Emoção. Consumível novo = entrada em `NeedEffects`.
 - **Telas** herdam `client.ui.RespectScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
+  Texto nunca passa da coluna/painel: quebre ou encurte com `Ui.wrap`/`Ui.fit` e ofereça a dica com o texto inteiro
+  (Etapa 4.7.2). Confira GUI 2, GUI 3 e a menor GUI (320×240).
 - **Textos visíveis ao jogador em inglês** (Etapa 4.6) via `Component`/lang: `en_us.json` é o único arquivo de idioma
   (não recrie `pt_br.json`; outros idiomas caem no inglês). Mensagens de comando/chat também em inglês. Código,
   comentários, docs e ids internos seguem como estão.
@@ -187,5 +189,5 @@ python3 tools/player_anim/test_export.py # proteção do exportador
   contador de derrotas → 4.2; Specialities → 4.7; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
   roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada; traços por corpo
   (universais × só masculinos) e textos em inglês → 4.6; rebrand técnico (mod id/pacote/comandos/configs) e roda da
-  roleta com chances do servidor → 4.7.1.
+  roleta com chances do servidor → 4.7.1; layout de texto do Hub e do painel Body & Traits → 4.7.2.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.
