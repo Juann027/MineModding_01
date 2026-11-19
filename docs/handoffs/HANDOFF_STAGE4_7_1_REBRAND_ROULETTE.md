@@ -135,5 +135,6 @@ comandos novos.
 
 ## Entrega
 
-- Branch `claude/admiring-edison-7gx3t6`; PR e merge registrados no índice (`docs/handoffs/README.md`) e na mensagem
-  final da sessão.
+- Branch `claude/admiring-edison-7gx3t6`, PR [#30](https://github.com/Juann027/MineModding_01/pull/30), CI **Build**
+  verde (build + teste de fumaça), integrado na `main` com o merge commit `122c29967f3922ceb7509bc1c92300bc8fa02e05`.
+- Sem release: `mod_version` continua `0.5.7`.
