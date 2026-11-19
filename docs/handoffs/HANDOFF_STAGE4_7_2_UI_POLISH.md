@@ -84,4 +84,4 @@ Nenhum alias nem camada de compatibilidade foi criado.
 
 ## Entrega
 
-- Branch `claude/keen-mayer-8zadhb`, PR e merge commit: veja o índice dos handoffs (registrados após o merge).
+- Branch `claude/keen-mayer-8zadhb`, PR [#32](https://github.com/Juann027/MineModding_01/pull/32); merge commit registrado após o merge.

@@ -23,7 +23,7 @@ e o `CLAUDE.md`.
 | 4.6 | Traços por corpo (universais × só masculinos), Fertile/Infertile, texto visível em inglês | [HANDOFF_BIRTH_TRAITS_STAGE4_6.md](HANDOFF_BIRTH_TRAITS_STAGE4_6.md) | Concluída | Fertile/Infertile sem efeito; sem gravidez |
 | 4.7 | Specialities na roleta (15, raridades 41,5/25/20/10/3/0,5%, BONER no topo), `birth`/`current` Speciality, origens sociais legadas | [HANDOFF_SPECIALITIES_STAGE4_7.md](HANDOFF_SPECIALITIES_STAGE4_7.md) | Concluída | Specialities sem perks/efeitos; troca no fim de jogo não implementada |
 | 4.7.1 | Rebrand técnico (mod id/namespace `respectcraft`, pacote `com.respectcraft`, `/respectcraft`, configs `respectcraft-*`), roda com fatias iguais e chances reais do servidor, revelação BONER | [HANDOFF_STAGE4_7_1_REBRAND_ROULETTE.md](HANDOFF_STAGE4_7_1_REBRAND_ROULETTE.md) | Concluída (PR #30) | **Mundos anteriores não são compatíveis** |
-| 4.7.2 | Polimento: traço de nascimento no Character Hub sem passar da borda, nomes longos de Speciality no painel Body & Traits, conferência pós-rebrand | [HANDOFF_STAGE4_7_2_UI_POLISH.md](HANDOFF_STAGE4_7_2_UI_POLISH.md) | Concluída | Descrição da Speciality na roleta ainda em uma linha |
+| 4.7.2 | Polimento: traço de nascimento no Character Hub sem passar da borda, nomes longos de Speciality no painel Body & Traits, conferência pós-rebrand | [HANDOFF_STAGE4_7_2_UI_POLISH.md](HANDOFF_STAGE4_7_2_UI_POLISH.md) | Concluída (PR #32) | Descrição da Speciality na roleta ainda em uma linha |
 
 Não há handoff da Etapa 4.3 neste repositório.
 
