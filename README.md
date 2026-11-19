@@ -10,7 +10,12 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 
 ## Funcionalidades
 
-- **Character Creator** (tecla **K**): menu do personagem com prévia 3D, corpo, pele, rosto, cabelos e cores.
+- **Menu holográfico do personagem** (tecla **K**, Etapa 4.8.1): placas flutuantes num arco em volta do ponto de
+  vista, em perspectiva real, com profundidade, paralaxe, o próprio jogador em 3D, partículas e animações de abertura/troca/fechamento. Seções
+  Overview, Character, Body & Traits, Speciality e Skills; opções visuais no painel **Display** (tamanho, opacidade,
+  intensidade, movimento reduzido, alto contraste) gravadas em `config/respectcraft-holomenu-client.toml`.
+- **Character Creator** (primeira vez na tecla **K**, depois em Appearance no menu): prévia 3D, corpo, pele, rosto,
+  cabelos e cores.
 - **Roleta de nascimento:** sorteio no servidor de uma **Speciality** (15, em seis raridades: Common 41,5%,
   Uncommon 25%, Rare 20%, Epic 10%, Legendary 3%, BONER 0,5% — a raridade sai primeiro, depois a Speciality dela), dos
   6 atributos (Força, Agilidade, Vigor, Inteligência, Carisma, Sorte) e de um **traço de nascimento** (buff, debuff ou

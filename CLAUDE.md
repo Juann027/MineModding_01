@@ -40,9 +40,10 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `client.bodylayer` | **Body Layers**: busto, cabelo, pele, rosto e acessórios como `BodyLayerDefinition` em `BodyLayers`. |
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/respectcraft anim`. |
 | `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/respectcraft test` (e `/stopitstopnow`). |
-| `character`, `client.character` | **Character Creator** (tecla K → `CharacterHubScreen`): aparência (`CharacterAppearance`, `CharacterAppearanceService`). |
+| `character`, `client.character` | **Character Creator** (primeira vez na tecla K): aparência (`CharacterAppearance`, `CharacterAppearanceService`). |
+| `client.holo`, `ui` | **Menu holográfico da tecla K** (Etapa 4.8.1): `HoloCharacterScreen` (placas das seções Overview, Character, Body & Traits, Speciality, Skills num arco em volta do olho; navegar gira o arco), superfícies por painel + passada 3D (`Holo3D`), clique pelo raio inverso (`ui.HoloGeometry`, puro, no `SelfTest`), config de cliente `respectcraft-holomenu-client.toml`. |
 | `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`), **traços de nascimento** (`BirthTrait`) e **Specialities** (`Speciality`, `SpecialityRarity`, `SpecialityOdds`, `SpecialityRoll`, `Specialities`, `SpecialityConfig`). |
-| `skill`, `client.skilltree` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`. |
+| `skill` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`; a árvore é a seção Skills do menu K (`client.holo.SkillsView`). |
 | `needs`, `client.hud` | **Necessidades** (`Needs`, `NeedsRules`, `NeedsService`) e **consumíveis** (`NeedEffects`/`NeedEffectDef`, `ConsumableItem`, `ChamberPotItem`). Orbe de Emoção na tela; painel Body & Traits no inventário. |
 | `network` | Payloads (`GameplayNetworking`, `TestGameNetworking`) e caches de cliente. |
 | `entity`, `client.render`, `command` | Mob **Leão do Fim** (GeckoLib + SmartBrainLib), renderer e `/leaodofim`. `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim` e `test`). |
@@ -111,6 +112,11 @@ sistema em que vai mexer; veja o fim deste arquivo).
   são **dados legados inativos** (`Need.active() == false`): continuam no Codec, mas não mudam, não afetam a Emoção,
   não penalizam e não aparecem. Não as reative sem pedido. Medidores detalhados só no painel do inventário e no
   menu K; na tela de jogo, só o orbe de Emoção. Consumível novo = entrada em `NeedEffects`.
+- **Menu K holográfico (Etapa 4.8.1):** desenho e clique usam as mesmas matrizes do quadro (`HoloPanel`); conteúdo
+  novo entra numa `HoloView` desenhada com `HoloCanvas` (regiões registradas no desenho). Não aloque framebuffer por
+  quadro, não crie entidades/blocos para o menu e devolva todo o estado GL em `Holo3D.end`. Fundo do mundo pelo Rimulib
+  com passada própria (`FxApi` + `shaders/fx/holo_backdrop.fsh`): os campos de `Frame.screen()` sozinhos não fazem nada
+  no 1.3.0. Fontes do Rimulib: o `y` do `UiApi.text` é a linha de base (`HoloCanvas.capHeight`).
 - **Telas** herdam `client.ui.RespectScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
   Texto nunca passa da coluna/painel: quebre ou encurte com `Ui.wrap`/`Ui.fit` e ofereça a dica com o texto inteiro
   (Etapa 4.7.2). Confira GUI 2, GUI 3 e a menor GUI (320×240).
@@ -199,5 +205,6 @@ python3 tools/player_anim/test_export.py # proteção do exportador
   (preparação) → 4.8; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
   roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada; traços por corpo
   (universais × só masculinos) e textos em inglês → 4.6; rebrand técnico (mod id/pacote/comandos/configs) e roda da
-  roleta com chances do servidor → 4.7.1; layout de texto do Hub e do painel Body & Traits → 4.7.2.
+  roleta com chances do servidor → 4.7.1; layout de texto do Hub e do painel Body & Traits → 4.7.2; menu holográfico da
+  tecla K (projeção, clique, Rimulib UiApi/FxApi) → 4.8.1.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.
