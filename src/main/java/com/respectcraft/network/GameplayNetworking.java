@@ -6,6 +6,8 @@ import com.respectcraft.needs.Needs;
 import com.respectcraft.profile.BirthRoulette;
 import com.respectcraft.profile.CharacterProfile;
 import com.respectcraft.profile.ProfileService;
+import com.respectcraft.profile.SpecialityOdds;
+import com.respectcraft.profile.SpecialityRarity;
 import com.respectcraft.skill.SkillService;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -83,6 +85,28 @@ public final class GameplayNetworking {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    /**
+     * Servidor -> dono: chances de raridade das Specialities ativas no servidor (config), em milesimos na ordem de
+     * {@link SpecialityRarity}. So exibicao: a roleta mostra as chances reais; o sorteio continua so no servidor e
+     * o cliente nunca envia chances. Mandado no login, antes de cada resposta de giro e quando a config recarrega.
+     */
+    public record SpecialityOddsSync(java.util.List<Integer> permille) implements CustomPacketPayload {
+        public static final Type<SpecialityOddsSync> TYPE = new Type<>(RespectCraft.id("speciality_odds_sync"));
+        public static final StreamCodec<ByteBuf, SpecialityOddsSync> STREAM_CODEC =
+                ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(SpecialityRarity.values().length))
+                        .map(SpecialityOddsSync::new, SpecialityOddsSync::permille);
+
+        public static SpecialityOddsSync of(SpecialityOdds odds) {
+            return new SpecialityOddsSync(java.util.Arrays.stream(odds.toPermilleArray()).boxed().toList());
+        }
+
+        public SpecialityOdds odds() {
+            return SpecialityOdds.ofOrDefault(permille.stream().mapToInt(Integer::intValue).toArray());
+        }
+
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     /** Cliente -> servidor: comprar a habilidade. */
     public record SkillPurchaseRequest(ResourceLocation skill) implements CustomPacketPayload {
         public static final Type<SkillPurchaseRequest> TYPE = new Type<>(RespectCraft.id("skill_purchase_request"));
@@ -94,7 +118,8 @@ public final class GameplayNetworking {
     public static void register(RegisterPayloadHandlersEvent event) {
         // "2": a roleta passou a ter pedido com rollCount esperado e resposta explicita (Etapa 4.5).
         // "3": ficha com tracos de nascimento e confirmacao do resultado (Etapa 4.5 revisada).
-        var registrar = event.registrar("3");
+        // "4": mod id respectcraft e chances de raridade sincronizadas para a roleta (Etapa 4.7.1).
+        var registrar = event.registrar("4");
         registrar.playToClient(ProfileSync.TYPE, ProfileSync.STREAM_CODEC,
                 (payload, context) -> ProfileClientCache.receive(payload.profile()));
         registrar.playToClient(NeedsSync.TYPE, NeedsSync.STREAM_CODEC,
@@ -103,6 +128,8 @@ public final class GameplayNetworking {
                 (payload, context) -> ProfileClientCache.receive(payload.effects()));
         registrar.playToClient(BirthRollReply.TYPE, BirthRollReply.STREAM_CODEC,
                 (payload, context) -> ProfileClientCache.receive(payload));
+        registrar.playToClient(SpecialityOddsSync.TYPE, SpecialityOddsSync.STREAM_CODEC,
+                (payload, context) -> ProfileClientCache.receive(payload.odds()));
         registrar.playToServer(BirthRollRequest.TYPE, BirthRollRequest.STREAM_CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) ProfileService.requestRoll(player, payload.reroll(), payload.expectedRollCount());
         });

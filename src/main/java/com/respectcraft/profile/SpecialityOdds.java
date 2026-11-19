@@ -80,6 +80,14 @@ public final class SpecialityOdds {
 
     public int permille(SpecialityRarity rarity) { return permille[rarity.ordinal()]; }
 
+    /** Copia dos milesimos na ordem de {@link SpecialityRarity} (enviada ao cliente so para exibicao). */
+    public int[] toPermilleArray() { return permille.clone(); }
+
+    /** Distribuicao recebida (ex.: do servidor); a padrao se for invalida. Nunca normaliza. */
+    public static SpecialityOdds ofOrDefault(int[] permille) {
+        return validate(permille) == null ? new SpecialityOdds(permille.clone()) : DEFAULT;
+    }
+
     public double percent(SpecialityRarity rarity) { return permille(rarity) / 10.0; }
 
     /** Raridade de um bilhete de 0 a {@code TOTAL - 1}. */

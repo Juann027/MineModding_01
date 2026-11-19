@@ -5,6 +5,7 @@ import com.respectcraft.needs.NeedEffectDef;
 import com.respectcraft.needs.NeedEffects;
 import com.respectcraft.needs.Needs;
 import com.respectcraft.profile.CharacterProfile;
+import com.respectcraft.profile.SpecialityOdds;
 
 /** Copia local (so exibicao) da ficha e das necessidades do proprio jogador. Limpa no logout. */
 public final class ProfileClientCache {
@@ -16,6 +17,7 @@ public final class ProfileClientCache {
     private static boolean received;
     private static GameplayNetworking.BirthRollReply lastRollReply;
     private static long rollReplyRevision;
+    private static SpecialityOdds odds = SpecialityOdds.DEFAULT;
 
     private ProfileClientCache() {}
 
@@ -31,6 +33,11 @@ public final class ProfileClientCache {
         lastRollReply = reply;
         rollReplyRevision++;
     }
+
+    static void receive(SpecialityOdds value) { odds = value; }
+
+    /** Chances de raridade do servidor (so exibicao; a padrao ate o servidor mandar). */
+    public static SpecialityOdds odds() { return odds; }
 
     /** Ultima resposta do servidor a um pedido de giro (null se nenhuma nesta sessao). */
     public static GameplayNetworking.BirthRollReply lastRollReply() { return lastRollReply; }
@@ -70,5 +77,6 @@ public final class ProfileClientCache {
         received = false;
         lastRollReply = null;
         rollReplyRevision = 0;
+        odds = SpecialityOdds.DEFAULT;
     }
 }

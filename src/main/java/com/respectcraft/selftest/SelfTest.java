@@ -54,10 +54,45 @@ public final class SelfTest {
             sequences(f);
             defeats(f);
             specialities(f);
+            rouletteWheel(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
         return f;
+    }
+
+    /**
+     * Etapa 4.7.1: a roda tem seis fatias iguais (so visual) e sempre para na raridade da ficha; as chances reais
+     * vao do servidor para a tela num pacote que so carrega milesimos validos.
+     */
+    private static void rouletteWheel(List<String> f) {
+        float total = 0;
+        for (SpecialityRarity rarity : SpecialityRarity.values()) {
+            check(f, Math.abs(com.respectcraft.profile.RouletteLayout.sliceStart(rarity) - total) < 1e-3F,
+                    "roda: fatias iguais e em ordem (" + rarity.id() + ")");
+            total += com.respectcraft.profile.RouletteLayout.SLICE;
+            for (int rollCount = 0; rollCount < 64; rollCount++) {
+                float rest = com.respectcraft.profile.RouletteLayout.restingRotation(rarity, rollCount);
+                // Igual a tela: a roda chega ao repouso depois de voltas inteiras a partir de qualquer angulo.
+                float landed = 1234.5F + 720F + net.minecraft.util.Mth.positiveModulo(rest - (1234.5F + 720F), 360F);
+                check(f, com.respectcraft.profile.RouletteLayout.rarityAtPointer(rest) == rarity
+                        && com.respectcraft.profile.RouletteLayout.rarityAtPointer(landed) == rarity,
+                        "roda: para na raridade sorteada (" + rarity.id() + ", rollCount " + rollCount + ")");
+            }
+        }
+        check(f, Math.abs(total - 360F) < 1e-3F, "roda: fatias fecham 360 graus");
+        SpecialityOdds custom = SpecialityOdds.of(500, 200, 150, 100, 40, 10);
+        ByteBuf buf = Unpooled.buffer();
+        com.respectcraft.network.GameplayNetworking.SpecialityOddsSync.STREAM_CODEC.encode(buf,
+                com.respectcraft.network.GameplayNetworking.SpecialityOddsSync.of(custom));
+        check(f, com.respectcraft.network.GameplayNetworking.SpecialityOddsSync.STREAM_CODEC.decode(buf).odds().equals(custom),
+                "roda: chances do servidor chegam iguais ao cliente");
+        check(f, SpecialityOdds.ofOrDefault(new int[]{999, 0, 0, 0, 0, 0}) == SpecialityOdds.DEFAULT
+                && SpecialityOdds.ofOrDefault(new int[]{1000}) == SpecialityOdds.DEFAULT, "roda: chances inválidas caem no padrão");
+        check(f, SpecialityOdds.DEFAULT.permille(SpecialityRarity.COMMON) == 415 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.UNCOMMON) == 250
+                && SpecialityOdds.DEFAULT.permille(SpecialityRarity.RARE) == 200 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.EPIC) == 100
+                && SpecialityOdds.DEFAULT.permille(SpecialityRarity.LEGENDARY) == 30 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.BONER) == 5,
+                "roda: chances padrão aprovadas 41.5/25/20/10/3/0.5");
     }
 
     private static void check(List<String> f, boolean ok, String what) {

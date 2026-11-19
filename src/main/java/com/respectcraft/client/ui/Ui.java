@@ -117,6 +117,17 @@ public final class Ui {
         return (a << 24) | (argb & 0xFFFFFF);
     }
 
+    /** Luminancia relativa aproximada (0 = preto, 1 = branco) de uma cor ARGB. */
+    public static float luminance(int argb) {
+        float r = ((argb >> 16) & 255) / 255F, g = ((argb >> 8) & 255) / 255F, b = (argb & 255) / 255F;
+        return 0.2126F * r * r + 0.7152F * g * g + 0.0722F * b * b; // gama ~2 (suficiente para escolher contraste)
+    }
+
+    /** Texto legivel sobre o fundo: quase preto em fundo claro, branco em fundo escuro. */
+    public static int readableOn(int background) {
+        return luminance(background) > 0.33F ? 0xFF101317 : 0xFFFFFFFF;
+    }
+
     public static int lerpColor(int a, int b, float t) {
         t = Mth.clamp(t, 0F, 1F);
         int ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255, aa = (a >>> 24);

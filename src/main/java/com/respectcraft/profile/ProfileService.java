@@ -49,6 +49,7 @@ public final class ProfileService {
         } else {
             sync(player);
         }
+        syncOdds(player);
         PacketDistributor.sendToPlayer(player, new GameplayNetworking.BirthRollReply(outcome, get(player).rollCount()));
         return outcome;
     }
@@ -121,9 +122,25 @@ public final class ProfileService {
         player.displayClientMessage(Component.translatable("msg.respectcraft.skill_points", gained), true);
     }
 
+    /** Chances de raridade ativas (config do servidor) para a roleta exibir; o cliente nunca as escolhe. */
+    public static void syncOdds(ServerPlayer player) {
+        PacketDistributor.sendToPlayer(player, GameplayNetworking.SpecialityOddsSync.of(SpecialityConfig.odds()));
+    }
+
+    /** Config das Specialities recarregada (arquivo editado com o servidor aberto): reenvia as chances a todos. */
+    public static void onConfigReload(net.neoforged.fml.event.config.ModConfigEvent.Reloading event) {
+        if (event.getConfig().getSpec() != SpecialityConfig.SPEC) return;
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        server.execute(() -> {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) syncOdds(player);
+        });
+    }
+
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             SkillService.refreshModifiers(player);
+            syncOdds(player);
             sync(player);
         }
     }

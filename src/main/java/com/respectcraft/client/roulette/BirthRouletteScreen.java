@@ -12,6 +12,7 @@ import com.respectcraft.profile.BirthRoulette;
 import com.respectcraft.profile.BirthTrait;
 import com.respectcraft.profile.CharacterAttribute;
 import com.respectcraft.profile.CharacterProfile;
+import com.respectcraft.profile.RouletteLayout;
 import com.respectcraft.profile.Speciality;
 import com.respectcraft.profile.SpecialityOdds;
 import com.respectcraft.profile.SpecialityRarity;
@@ -29,9 +30,11 @@ import org.joml.Matrix4f;
 /**
  * Roleta de nascimento. O sorteio e do servidor: a tela gira enquanto espera a resposta e depois desacelera ate
  * parar na raridade sorteada, mostra a Speciality (nome, raridade, descricao) e revela os atributos um a um, com
- * som e VFX. Etapa 4.7: as fatias sao as seis raridades, proporcionais a distribuicao aprovada
- * ({@link SpecialityOdds#DEFAULT}; a config do servidor so muda o sorteio, nao o desenho). Fichas antigas com
- * origem social legada mostram essa origem (com o bonus que ela deu) e param no topo da roda.
+ * som e VFX. Etapa 4.7.1: a roda tem seis fatias <b>iguais</b>, uma por raridade ({@link RouletteLayout}); o
+ * tamanho da fatia nao e a chance. As chances reais sao as do servidor ({@link ProfileClientCache#odds()},
+ * sincronizadas da config) e aparecem em numeros em cada fatia, na dica da roda e no selo do resultado. A roda
+ * so para na raridade que o servidor gravou na ficha. Fichas antigas com origem social legada mostram essa origem
+ * (com o bonus que ela deu) e param no topo da roda.
  *
  * <p>Maquina de estados (Etapa 4.5): {@code IDLE} aguardando sorteio -> {@code WAITING} pedido enviado, girando
  * -> {@code SPINNING} resposta recebida, desacelerando ate a origem -> {@code REVEAL} atributos -> {@code DONE}
@@ -63,6 +66,8 @@ public final class BirthRouletteScreen extends RespectScreen {
     private int cx, cy, radius;
     private RespectButton spinButton, continueButton;
     private boolean continueWarns;
+    /** Ticks desde a revelacao de um resultado BONER (efeito especial so visual; -1 = nenhum). */
+    private int bonerTick = -1;
 
     public BirthRouletteScreen() {
         super(Component.translatable(KEY + "title"));
@@ -166,21 +171,10 @@ public final class BirthRouletteScreen extends RespectScreen {
         revealAfterSpin = reveal;
     }
 
-    /** Angulo em que o centro da fatia da raridade da Speciality fica sob o ponteiro (ficha legada: topo). */
+    /** Rotacao em que a fatia da raridade da Speciality da ficha fica sob o ponteiro (ficha legada: topo). */
     private static float restingAngle(CharacterProfile p) {
         Speciality speciality = p.specialityOrNull();
-        if (speciality == null) return 0;
-        float start = 0;
-        for (SpecialityRarity r : SpecialityRarity.values()) {
-            float size = sliceSize(r);
-            if (r == speciality.rarity()) return -(start + size / 2F);
-            start += size;
-        }
-        return 0;
-    }
-
-    private static float sliceSize(SpecialityRarity rarity) {
-        return 360F * SpecialityOdds.DEFAULT.permille(rarity) / SpecialityOdds.TOTAL;
+        return speciality == null ? 0 : RouletteLayout.restingRotation(speciality.rarity(), p.rollCount());
     }
 
     private static int resultColor(CharacterProfile p) {
@@ -195,6 +189,7 @@ public final class BirthRouletteScreen extends RespectScreen {
         super.tick();
         prevAngle = angle;
         CharacterProfile p = ProfileClientCache.profile();
+        tickBonerReveal();
         switch (phase) {
             case WAITING -> {
                 speed = Math.min(24F, speed + 2.5F);
@@ -230,6 +225,9 @@ public final class BirthRouletteScreen extends RespectScreen {
                         vfx.ring(cx, cy, radius + 30, color, 20);
                         vfx.burst(cx, cy - radius, 50, color, 4F);
                         Ui.playUi(ModSounds.ROULETTE_WIN.get(), 1F, 0.8F);
+                        Speciality won = p.specialityOrNull();
+                        bonerTick = won != null && won.rarity() == SpecialityRarity.BONER ? 0 : -1;
+                        if (bonerTick == 0) Ui.playUi(ModSounds.ROULETTE_WIN.get(), 1.5F, 1F);
                     } else {
                         phase = hasResult(p) ? Phase.DONE : Phase.IDLE;
                         revealTick = 999;
@@ -274,14 +272,27 @@ public final class BirthRouletteScreen extends RespectScreen {
     }
 
     private static int segmentAtPointer(float angle) {
-        float pos = Mth.positiveModulo(-angle, 360F);
-        float start = 0;
-        for (SpecialityRarity r : SpecialityRarity.values()) {
-            float size = sliceSize(r);
-            if (pos < start + size) return r.ordinal();
-            start += size;
+        return RouletteLayout.rarityAtPointer(angle).ordinal();
+    }
+
+    /**
+     * BONER: chuva de faiscas rosa e brilho pulsante por ~2 s depois da revelacao. Puramente visual (particulas da
+     * propria tela, sem texturas novas) e fora da maquina de estados: nao muda fase, botoes nem tempo da revelacao.
+     */
+    private void tickBonerReveal() {
+        if (bonerTick < 0) return;
+        if (++bonerTick > 40) {
+            bonerTick = -1;
+            return;
         }
-        return 0;
+        int pink = SpecialityRarity.BONER.color();
+        if (bonerTick % 4 == 0) {
+            float a = (float) (Math.random() * Math.PI * 2);
+            float d = radius * (0.5F + (float) Math.random() * 0.7F);
+            vfx.burst(cx + Mth.cos(a) * d, cy + Mth.sin(a) * d, 14, bonerTick % 8 == 0 ? pink : Ui.GOLD, 2.6F);
+        }
+        if (bonerTick % 10 == 0) vfx.ring(cx, cy, radius + 22 + bonerTick / 2F, pink, 16);
+        if (bonerTick % 2 == 0) vfx.ember(attrX() + (float) Math.random() * attrW(), top + 40, Ui.alpha(pink, 0.9F));
     }
 
     private int attrX() { return cx + radius + 26; }
@@ -300,10 +311,27 @@ public final class BirthRouletteScreen extends RespectScreen {
         boolean showResult = (phase == Phase.REVEAL || phase == Phase.DONE) && hasResult(p);
         if (showResult && speciality != null) {
             SpecialityRarity rarity = speciality.rarity();
-            Component rarityName = Component.translatable(rarity.translationKey());
-            g.drawString(font, Component.translatable(speciality.translationKey()), x, top + 30, rarity.color(), true);
-            g.drawString(font, rarityName, x + attrW() - font.width(rarityName), top + 30, rarity.color(), false);
-            drawWrapped(g, Component.translatable(speciality.translationKey() + ".desc"), x, top + 42, attrW(), 2);
+            boolean boner = rarity == SpecialityRarity.BONER;
+            // Selo da raridade com a chance real do servidor (o tamanho da fatia nao e a chance).
+            Component badge = Component.translatable(rarity.translationKey()).append(" · "
+                    + SpecialityOdds.formatPercent(ProfileClientCache.odds().permille(rarity)));
+            int bw = font.width(badge) + 8, bx = x + attrW() - bw;
+            int badgeBg = boner ? Ui.lerpColor(rarity.color(), 0xFFFFFFFF, 0.12F + 0.12F * Mth.sin((ticks + partialTick) * 0.35F))
+                    : Ui.lerpColor(rarity.color(), 0xFF000000, 0.15F);
+            g.fill(bx - 1, top + 27, bx + bw + 1, top + 40, 0xFF06080A);
+            g.fill(bx, top + 28, bx + bw, top + 39, badgeBg);
+            g.drawString(font, badge, bx + 4, top + 30, Ui.readableOn(badgeBg), false);
+            int nameColor = boner ? Ui.lerpColor(rarity.color(), 0xFFFFE27A, 0.5F + 0.5F * Mth.sin((ticks + partialTick) * 0.35F))
+                    : Ui.lerpColor(rarity.color(), 0xFFFFFFFF, 0.25F);
+            Component name = Component.translatable(speciality.translationKey());
+            if (font.width(name) > bx - x - 4) {
+                // Nome longo: desce para baixo do selo (cabe em qualquer escala de GUI).
+                g.drawString(font, name, x, top + 42, nameColor, true);
+                drawWrapped(g, Component.translatable(speciality.translationKey() + ".desc"), x, top + 52, attrW(), 1);
+            } else {
+                g.drawString(font, name, x, top + 30, nameColor, true);
+                drawWrapped(g, Component.translatable(speciality.translationKey() + ".desc"), x, top + 42, attrW(), 2);
+            }
         } else if (showResult && origin != null) {
             Ui.icon(g, SkillDef.iconTexture(origin.icon()), x, top + 29, 20);
             g.drawString(font, Component.translatable("origin.respectcraft." + origin.id()), x + 24, top + 30, origin.color(), true);
@@ -373,43 +401,77 @@ public final class BirthRouletteScreen extends RespectScreen {
     }
 
     private void drawWheel(GuiGraphics g, float rotation) {
-        Ui.glow(g, cx, cy, radius + 26, 0x40FFE27A);
+        boolean boner = bonerTick >= 0;
+        int glow = boner ? Ui.alpha(SpecialityRarity.BONER.color(), 0.35F + 0.25F * Mth.sin(ticks * 0.5F)) : 0x40FFE27A;
+        Ui.glow(g, cx, cy, radius + (boner ? 34 : 26), glow);
         // Aro externo
         disc(g, cx, cy, radius + 5, 0xFF06080A);
         disc(g, cx, cy, radius + 3, 0xFFD6B84A);
-        float start = rotation;
         CharacterProfile p = ProfileClientCache.profile();
+        SpecialityOdds odds = ProfileClientCache.odds();
         int highlighted = (phase == Phase.REVEAL || phase == Phase.DONE) && p.specialityOrNull() != null
                 ? segmentAtPointer(rotation) : -1;
+        // Fatias iguais (so visual): a chance real de cada raridade vem escrita na fatia.
         for (SpecialityRarity r : SpecialityRarity.values()) {
-            float size = sliceSize(r);
-            int color = Ui.lerpColor(r.color(), 0xFF000000, 0.2F);
-            if (highlighted == r.ordinal()) color = Ui.lerpColor(r.color(), 0xFFFFFFFF, 0.25F + 0.1F * Mth.sin(ticks * 0.3F));
-            sector(g, cx, cy, radius, start, start + size, color);
-            // nome da raridade no meio da fatia (so nas que cabem)
-            if (size > 30) {
-                float mid = (float) Math.toRadians(start + size / 2F - 90F);
-                String label = Component.translatable(r.translationKey()).getString();
-                float lx = cx + Mth.cos(mid) * radius * 0.62F, ly = cy + Mth.sin(mid) * radius * 0.62F;
-                g.pose().pushPose();
-                g.pose().translate(lx, ly, 0);
-                g.pose().scale(0.75F, 0.75F, 1F);
-                g.drawString(font, label, -font.width(label) / 2, -4, 0xFFFFFFFF, true);
-                g.pose().popPose();
-            }
-            // divisoria
-            float edge = (float) Math.toRadians(start - 90F);
-            Ui.line(g, cx, cy, cx + Mth.cos(edge) * radius, cy + Mth.sin(edge) * radius, 1, 0xC006080A);
-            start += size;
+            float start = rotation + RouletteLayout.sliceStart(r);
+            int color = Ui.lerpColor(r.color(), 0xFF000000, 0.38F);
+            if (highlighted == r.ordinal()) color = Ui.lerpColor(r.color(), 0xFFFFFFFF, 0.15F + 0.1F * Mth.sin(ticks * 0.3F));
+            sector(g, cx, cy, radius, start, start + RouletteLayout.SLICE, color);
+            // miolo de cada fatia mais escuro: da profundidade sem textura
+            sector(g, cx, cy, radius * 0.34F, start, start + RouletteLayout.SLICE, Ui.lerpColor(color, 0xFF000000, 0.35F));
+            float mid = (float) Math.toRadians(start + RouletteLayout.SLICE / 2F - 90F);
+            float lx = cx + Mth.cos(mid) * radius * 0.64F, ly = cy + Mth.sin(mid) * radius * 0.64F;
+            int text = Ui.readableOn(color);
+            boolean shadow = text == 0xFFFFFFFF;
+            String label = Component.translatable(r.translationKey()).getString();
+            String chance = SpecialityOdds.formatPercent(odds.permille(r));
+            float scale = Math.min(0.75F, radius * 0.62F / Math.max(1, font.width(label)));
+            g.pose().pushPose();
+            g.pose().translate(lx, ly, 0);
+            g.pose().scale(scale, scale, 1F);
+            g.drawString(font, label, -font.width(label) / 2, -9, text, shadow);
+            g.drawString(font, chance, -font.width(chance) / 2, 2, shadow ? Ui.lerpColor(text, color, 0.15F) : text, shadow);
+            g.pose().popPose();
+        }
+        // divisorias por cima das fatias
+        for (int i = 0; i < RouletteLayout.SLICES; i++) {
+            float edge = (float) Math.toRadians(rotation + i * RouletteLayout.SLICE - 90F);
+            Ui.line(g, cx, cy, cx + Mth.cos(edge) * radius, cy + Mth.sin(edge) * radius, 1, 0xE006080A);
         }
         // Miolo
         disc(g, cx, cy, 13, 0xFF06080A);
-        disc(g, cx, cy, 11, 0xFF1D5C3A);
+        disc(g, cx, cy, 11, boner ? Ui.lerpColor(0xFF1D5C3A, SpecialityRarity.BONER.color(), 0.7F) : 0xFF1D5C3A);
         disc(g, cx, cy, 5, 0xFFFFE27A);
         // Ponteiro no topo
         int py = cy - radius - 8;
         for (int i = 0; i < 9; i++) g.fill(cx - 8 + i, py + i, cx + 9 - i, py + i + 1, i < 1 ? 0xFF06080A : 0xFFFFE27A);
         g.fill(cx - 1, py, cx + 2, py + 6, 0xFFFFFFFF);
+        // Aviso: fatias iguais nao sao chances iguais.
+        Component note = Component.translatable(KEY + "odds_note");
+        float ns = Math.min(0.75F, (radius * 2F + 16F) / Math.max(1, font.width(note)));
+        g.pose().pushPose();
+        g.pose().translate(cx, cy + radius + 8, 0);
+        g.pose().scale(ns, ns, 1F);
+        g.drawString(font, note, -font.width(note) / 2, 0, Ui.MUTED, false);
+        g.pose().popPose();
+    }
+
+    /** Dica sobre a roda: tabela das chances reais do servidor. */
+    @Override
+    protected void renderOverlay(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderOverlay(g, mouseX, mouseY, partialTick);
+        float dx = mouseX - cx, dy = mouseY - cy;
+        if (dx * dx + dy * dy > (radius + 5) * (radius + 5)) return;
+        SpecialityOdds odds = ProfileClientCache.odds();
+        java.util.List<Component> lines = new java.util.ArrayList<>();
+        lines.add(Component.translatable(KEY + "odds_title"));
+        for (SpecialityRarity r : SpecialityRarity.values()) {
+            lines.add(Component.translatable(r.translationKey()).withColor(r.color() & 0xFFFFFF)
+                    .append(Component.literal("  " + SpecialityOdds.formatPercent(odds.permille(r)))
+                            .withStyle(net.minecraft.ChatFormatting.WHITE)));
+        }
+        lines.add(Component.translatable(KEY + "odds_hint").withStyle(net.minecraft.ChatFormatting.GRAY));
+        g.renderComponentTooltip(font, lines, mouseX, mouseY);
     }
 
     private static void disc(GuiGraphics g, int x, int y, int r, int color) {

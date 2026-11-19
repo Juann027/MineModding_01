@@ -85,6 +85,7 @@ public final class RespectCraft {
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onAnimationTimed);
         // Etapa 3: ficha do personagem (roleta, atributos, habilidades) e necessidades.
         modBus.addListener(GameplayNetworking::register);
+        modBus.addListener(ProfileService::onConfigReload);
         NeoForge.EVENT_BUS.addListener(RespectCraftCommands::register);
         NeoForge.EVENT_BUS.addListener(ProfileService::onLogin);
         NeoForge.EVENT_BUS.addListener(ProfileService::onRespawn);
