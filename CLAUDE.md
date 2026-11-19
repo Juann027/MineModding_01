@@ -22,6 +22,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | Java | 21 (toolchain no `build.gradle`) |
 | GeckoLib | **4.9.3** (`software.bernie.geckolib:geckolib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Não use a 5. |
 | SmartBrainLib | 1.16.11 (`net.tslat.smartbrainlib:SmartBrainLib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor |
+| Rimulib | **1.3.0** NeoForge (Etapa 4.8; sem Maven público: `curse.maven:rimulib-1753907:9676532` pelo CurseMaven) — cliente e servidor, não embutido. Conectado em `RespectCraft.RIMULIB`. Só `cyou.rimuru.rimulib.mc1211.api` no código comum; `...mc1211.client.api` (ex.: `FxApi`) só em `client` |
 | UI Lib / Architectury | **Não são dependências.** As telas usam o framework próprio `client.ui`. Não reintroduza. |
 
 - Versões em `gradle.properties`; `neoforge.mods.toml` é gerado de `src/main/templates/`.
@@ -38,7 +39,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `client.playergeo` | **Rig GeckoLib do jogador.** `PlayerRigLayer` é a primeira camada do `PlayerRenderer` vanilla: lê a pose vanilla, desenha o rig e devolve a pose ao `PlayerModel` (armadura, itens e camadas acompanham). F8 = modo de teste, F9 = aceno. |
 | `client.bodylayer` | **Body Layers**: busto, cabelo, pele, rosto e acessórios como `BodyLayerDefinition` em `BodyLayers`. |
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/respectcraft anim`. |
-| `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/respectcraft test` (e `/stopitstopnow`). |
+| `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/respectcraft test` (e `/stopitstopnow`). |
 | `character`, `client.character` | **Character Creator** (tecla K → `CharacterHubScreen`): aparência (`CharacterAppearance`, `CharacterAppearanceService`). |
 | `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`), **traços de nascimento** (`BirthTrait`) e **Specialities** (`Speciality`, `SpecialityRarity`, `SpecialityOdds`, `SpecialityRoll`, `Specialities`, `SpecialityConfig`). |
 | `skill`, `client.skilltree` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`. |
@@ -96,8 +97,15 @@ sistema em que vai mexer; veja o fim deste arquivo).
   (não crie `RenderLayer` por peça). Pele/rosto do criador são Body Layers sobre a skin da conta; não troque a textura.
 - **Cenas de dois participantes:** um clip `FULL_BODY` por participante, mesmo comprimento, iniciados por
   `playTogether`; posição no mundo é da sessão, keyframes só com deslocamentos que voltam a zero.
+- **Vários rigs (Etapa 4.8):** cada participante resolve o próprio clip (`FinisherParticipants.resolve`): jogador →
+  `PlayerAnimationDef`; mob/chefe → `EntityFinisherClip` (controlador e animação gatilho do **próprio** rig,
+  `triggerAnim` no mesmo tick) ou parado. Nunca um controlador universal nem ossos de jogador em mob. Toda sessão
+  precisa de um jogador (mob × mob é recusado). Mob é segurado sem gravar nada na entidade (sem `NoAI`). Não invente
+  clips de mob: só registre `EntityFinisherClip` quando o asset existir. Chefe = tag `c:bosses`; `BossDefeatEvent`
+  sai no máximo uma vez por chefe e **ninguém concede recompensa** até as regras serem pedidas.
 - **Câmera cinematográfica** segue o estado de animação sincronizado e restaura a perspectiva em qualquer saída.
-- **Contador de derrotas:** +1 para o alvo só em `FinisherTestMechanic.complete` (`abort` nunca conta). A plaqueta
+- **Contador de derrotas:** +1 para o alvo **jogador** só em `FinisherTestMechanic.complete` (`abort` nunca conta;
+  `FinisherRules.countsDefeat`: mob e chefe nunca têm contador, estatística ou plaqueta). A plaqueta
   replica a matemática do `renderNameTag` 1.21.1; ícones são a fonte bitmap `respectcraft:defeat_icons`, não emoji.
 - **Necessidades:** ativas são Coom, Bexiga, Intestino e Emoção (id `humor`) — `Need.ACTIVE`. Hidratação e Energia
   são **dados legados inativos** (`Need.active() == false`): continuam no Codec, mas não mudam, não afetam a Emoção,
@@ -124,6 +132,7 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 |---|---|
 | `respectcraft:character_profile`, `respectcraft:needs`, `respectcraft:need_effects`, `respectcraft:player_animation` | attachments (`ModAttachments`); nomes de campos dos Codecs também são estáveis (incl. `birth_traits`, `birth_speciality`, `current_speciality` e os legados `hidratacao`/`energia`) |
 | `respectcraft_character_appearance_v1`, `respectcraft_special_defeats`, `respectcraft_allow_mob_finishers_test` | `persistentData` do jogador |
+| `respectcraft_boss_finisher_credit`, `respectcraft_boss_defeat_posted` | `persistentData` de entidades chefe (Etapa 4.8) |
 | ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
 | itens, `respectcraft:leao_do_fim` | registries |
 
@@ -186,7 +195,8 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 - Handoffs das etapas em [`docs/handoffs/`](docs/handoffs/README.md): o índice diz etapa, sistema, status e
   limitações. **Abra só o handoff do sistema que a tarefa toca** (nunca todos): rig/Body Layers → Etapa 2; telas,
   criador, roleta, skills, necessidades, finalizações → Etapas 3/3.1; animações e Blockbench → Etapas 4/4.1;
-  contador de derrotas → 4.2; Specialities → 4.7; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
+  contador de derrotas → 4.2; Specialities → 4.7; finalizações com vários rigs, Rimulib e recompensas de chefe
+  (preparação) → 4.8; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
   roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada; traços por corpo
   (universais × só masculinos) e textos em inglês → 4.6; rebrand técnico (mod id/pacote/comandos/configs) e roda da
   roleta com chances do servidor → 4.7.1; layout de texto do Hub e do painel Body & Traits → 4.7.2.

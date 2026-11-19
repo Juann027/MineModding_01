@@ -31,15 +31,18 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
   (laxante, antidiarreico, chás, café extraforte, energético, pílula azul, afrodisíaco) com efeitos temporários.
 - **Animações do jogador com GeckoLib:** o jogador é desenhado por um rig integrado ao `PlayerRenderer` vanilla
   (skins, armaduras e itens preservados), com biblioteca de combate e sequências sincronizadas pelo servidor.
-- **Finalizações cinematográficas** entre dois personagens, com câmera dinâmica.
+- **Finalizações cinematográficas** entre dois personagens, com câmera dinâmica. Desde a Etapa 4.8 o motor aceita
+  participantes com rigs GeckoLib diferentes (jogador × jogador, jogador × mob, mob × jogador, chefe × jogador),
+  cada um no próprio rig.
 - **Contador de derrotas** acima do nick, com ícones próprios 🍆💦.
 - **Leão do Fim:** mob neutro de teste (GeckoLib + SmartBrainLib), com ovo na aba do mod.
 
 ## Instalação
 
 1. NeoForge **21.1.265 ou mais novo (21.1.x)** para Minecraft 1.21.1, com **Java 21**.
-2. Na pasta `mods`: `respectcraft-<versão>.jar`, **GeckoLib 4.9.3** (não a 5) e **SmartBrainLib 1.16.11**.
-3. Multiplayer: os mesmos três jars no servidor dedicado e em cada cliente.
+2. Na pasta `mods`: `respectcraft-<versão>.jar`, **GeckoLib 4.9.3** (não a 5), **SmartBrainLib 1.16.11** e
+   **Rimulib 1.3.0** para NeoForge ([CurseForge](https://www.curseforge.com/minecraft/mc-mods/rimulib/files/9676532)).
+3. Multiplayer: os mesmos quatro jars no servidor dedicado e em cada cliente.
 
 UI Lib e Architectury **não** são mais necessários.
 
@@ -74,7 +77,9 @@ sem `--force`. Guia completo: [`tools/player_anim/README.md`](tools/player_anim/
 ## Estado e limitações
 
 - Pre-release: arte provisória em rostos, mãos e ícones; sons usam eventos vanilla.
-- Finalizações contra mobs só animam quem executa e não contam derrota.
+- Finalizações contra mobs só animam o jogador; o mob fica parado até ganhar clips no próprio rig (Etapa 4.8). Mob
+  nunca recebe contador de derrota.
+- Rimulib 1.3.0 está conectado, mas ainda não há efeito de tela que o use.
 - Pernas sem joelho tornam ajoelhar e quatro apoios aproximações.
 - Testado com renderização por software e até dois clientes simultâneos.
 - `biome`, `dimension` e `npc` são pastas reservadas, ainda sem conteúdo.
