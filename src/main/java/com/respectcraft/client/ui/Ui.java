@@ -136,6 +136,31 @@ public final class Ui {
                 | ((int) (ag + (bg - ag) * t) << 8) | (int) (ab + (bb - ab) * t);
     }
 
+    /** Texto que cabe em {@code width}: inteiro, ou cortado com "..." no fim (quem chama oferece a dica completa). */
+    public static String fit(net.minecraft.client.gui.Font font, String text, int width) {
+        if (font.width(text) <= width) return text;
+        String dots = "...";
+        if (width <= font.width(dots)) return font.plainSubstrByWidth(text, Math.max(0, width));
+        return font.plainSubstrByWidth(text, width - font.width(dots)).stripTrailing() + dots;
+    }
+
+    /**
+     * Quebra {@code text} em ate {@code maxLines} linhas de {@code width}; a ultima termina em "..." se sobrar texto
+     * (quem chama oferece a dica completa). Nunca devolve lista vazia.
+     */
+    public static java.util.List<String> wrap(net.minecraft.client.gui.Font font, String text, int width, int maxLines) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        var lines = font.getSplitter().splitLines(text, Math.max(1, width), net.minecraft.network.chat.Style.EMPTY);
+        for (int i = 0; i < lines.size() && i < maxLines; i++) out.add(lines.get(i).getString().strip());
+        if (lines.size() > maxLines) {
+            StringBuilder rest = new StringBuilder();
+            for (int i = maxLines - 1; i < lines.size(); i++) rest.append(lines.get(i).getString());
+            out.set(maxLines - 1, fit(font, rest.toString().strip(), width));
+        }
+        if (out.isEmpty()) out.add(text);
+        return out;
+    }
+
     /** Barra de progresso com moldura (0..1). */
     public static void bar(GuiGraphics g, int x, int y, int w, int h, float value, int color) {
         g.fill(x, y, x + w, y + h, 0xFF06080A);
