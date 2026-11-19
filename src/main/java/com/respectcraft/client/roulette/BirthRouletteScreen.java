@@ -316,11 +316,13 @@ public final class BirthRouletteScreen extends RespectScreen {
             Component badge = Component.translatable(rarity.translationKey()).append(" · "
                     + SpecialityOdds.formatPercent(ProfileClientCache.odds().permille(rarity)));
             int bw = font.width(badge) + 8, bx = x + attrW() - bw;
-            int badgeBg = boner ? Ui.lerpColor(rarity.color(), 0xFFFFFFFF, 0.12F + 0.12F * Mth.sin((ticks + partialTick) * 0.35F))
-                    : Ui.lerpColor(rarity.color(), 0xFF000000, 0.15F);
-            g.fill(bx - 1, top + 27, bx + bw + 1, top + 40, 0xFF06080A);
+            // Fundo escuro tingido + borda e texto na cor da raridade: contraste alto em todas (inclusive Common).
+            int badgeBg = Ui.lerpColor(rarity.color(), 0xFF000000, 0.72F);
+            int border = boner ? Ui.lerpColor(rarity.color(), 0xFFFFFFFF, 0.2F + 0.2F * Mth.sin((ticks + partialTick) * 0.35F))
+                    : rarity.color();
+            g.fill(bx - 1, top + 27, bx + bw + 1, top + 40, border);
             g.fill(bx, top + 28, bx + bw, top + 39, badgeBg);
-            g.drawString(font, badge, bx + 4, top + 30, Ui.readableOn(badgeBg), false);
+            g.drawString(font, badge, bx + 4, top + 30, Ui.lerpColor(rarity.color(), 0xFFFFFFFF, 0.3F), false);
             int nameColor = boner ? Ui.lerpColor(rarity.color(), 0xFFFFE27A, 0.5F + 0.5F * Mth.sin((ticks + partialTick) * 0.35F))
                     : Ui.lerpColor(rarity.color(), 0xFFFFFFFF, 0.25F);
             Component name = Component.translatable(speciality.translationKey());
@@ -420,12 +422,12 @@ public final class BirthRouletteScreen extends RespectScreen {
             // miolo de cada fatia mais escuro: da profundidade sem textura
             sector(g, cx, cy, radius * 0.34F, start, start + RouletteLayout.SLICE, Ui.lerpColor(color, 0xFF000000, 0.35F));
             float mid = (float) Math.toRadians(start + RouletteLayout.SLICE / 2F - 90F);
-            float lx = cx + Mth.cos(mid) * radius * 0.64F, ly = cy + Mth.sin(mid) * radius * 0.64F;
+            int lx = Math.round(cx + Mth.cos(mid) * radius * 0.64F), ly = Math.round(cy + Mth.sin(mid) * radius * 0.64F);
             int text = Ui.readableOn(color);
             boolean shadow = text == 0xFFFFFFFF;
             String label = Component.translatable(r.translationKey()).getString();
             String chance = SpecialityOdds.formatPercent(odds.permille(r));
-            float scale = Math.min(0.75F, radius * 0.62F / Math.max(1, font.width(label)));
+            float scale = crispScale(Math.min(0.75F, radius * 0.62F / Math.max(1, font.width(label))));
             g.pose().pushPose();
             g.pose().translate(lx, ly, 0);
             g.pose().scale(scale, scale, 1F);
@@ -448,12 +450,22 @@ public final class BirthRouletteScreen extends RespectScreen {
         g.fill(cx - 1, py, cx + 2, py + 6, 0xFFFFFFFF);
         // Aviso: fatias iguais nao sao chances iguais.
         Component note = Component.translatable(KEY + "odds_note");
-        float ns = Math.min(0.75F, (radius * 2F + 16F) / Math.max(1, font.width(note)));
+        float ns = crispScale(Math.min(0.75F, (radius * 2F + 16F) / Math.max(1, font.width(note))));
         g.pose().pushPose();
         g.pose().translate(cx, cy + radius + 8, 0);
         g.pose().scale(ns, ns, 1F);
         g.drawString(font, note, -font.width(note) / 2, 0, Ui.MUTED, false);
         g.pose().popPose();
+    }
+
+    /**
+     * Maior escala ate {@code wanted} em que cada pixel da fonte vira um numero inteiro de pixels da janela: texto
+     * reduzido fica nitido em qualquer escala de GUI (0,5 na escala 2; 0,67 na 3; 0,75 na 4). Nunca menor que 1:1.
+     */
+    private float crispScale(float wanted) {
+        double gui = Math.max(1, minecraft.getWindow().getGuiScale());
+        int pixels = Math.max(1, (int) Math.floor(wanted * gui + 1e-4));
+        return (float) (pixels / gui);
     }
 
     /** Dica sobre a roda: tabela das chances reais do servidor. */
