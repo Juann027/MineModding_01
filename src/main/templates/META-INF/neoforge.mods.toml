@@ -40,6 +40,14 @@ RespectCraft: a comedy RPG with a character creator, birth roulette and birth tr
     ordering="AFTER"
     side="BOTH"
 
+# Rimulib: base dos efeitos visuais futuros (Etapa 4.8). Cliente e servidor; nao vai embutido no jar.
+[[dependencies.${mod_id}]]
+    modId="rimulib"
+    type="required"
+    versionRange="[${rimulib_version},2.0)"
+    ordering="AFTER"
+    side="BOTH"
+
 # Access transformer (camera cinematografica das finalizacoes)
 [[accessTransformers]]
 file="META-INF/accesstransformer.cfg"
