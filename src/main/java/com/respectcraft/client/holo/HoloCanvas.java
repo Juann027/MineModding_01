@@ -393,6 +393,8 @@ final class HoloCanvas {
         if (icon == null && badgeW == 0) text(shown, x + (w - font.width(shown)) / 2F + slide, y + (h - 8) / 2F, textColor, false);
         else text(shown, cx, y + (h - 8) / 2F, textColor, false);
         if (badgeW > 0) pillRight(badge, x + w - 3, y + (h - 11) / 2F, accent);
+        // rotulo cortado ("Comb..."): a dica mostra o texto inteiro
+        if (hot && !shown.equals(label)) tooltip(List.of(Component.literal(label)));
         return hot;
     }
 }

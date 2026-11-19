@@ -152,9 +152,10 @@ public final class HoloCharacterScreen extends RespectScreen {
     @Override
     protected void init() {
         var window = minecraft.getWindow();
-        uiScale = HoloConfig.scale();
         screenW = (float) (window.getWidth() / window.getGuiScale());
         screenH = (float) (window.getHeight() / window.getGuiScale());
+        // "Menu size" acima de 100% nunca deixa o layout menor que a menor GUI (320 x 240)
+        uiScale = Math.min(HoloConfig.scale(), Math.max(0.5F, Math.min(screenW / 320F, screenH / 240F)));
         layoutW = screenW / uiScale;
         layoutH = screenH / uiScale;
         // O menu ocupa no maximo 660 x 370 unidades, centralizado: em telas grandes (GUI 1) continua um

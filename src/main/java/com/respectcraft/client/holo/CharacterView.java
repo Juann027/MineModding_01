@@ -22,7 +22,7 @@ final class CharacterView extends HoloView {
     boolean fitsContent() { return false; }
 
     /** Largura do palco dentro do painel largo (o holograma 3D fica centrado nele). */
-    static float stageWidth(float panelW) { return Math.max(110F, Math.min(200F, panelW * 0.44F)); }
+    static float stageWidth(float panelW) { return Math.max(84F, Math.min(200F, panelW * 0.44F)); }
 
     @Override
     float body(HoloCanvas c, float w, float viewportHeight, float since) {
@@ -57,7 +57,12 @@ final class CharacterView extends HoloView {
             boolean slim = client.getSkin().model() == PlayerSkin.Model.SLIM;
             String model = tr("gui.respectcraft.holo.skin_model." + (slim ? "slim" : "wide"));
             c.caption(tr("gui.respectcraft.holo.skin_model"), ix, iy + 2F, c.muted());
-            c.pillRight(model, ix + iw, iy, HoloStyle.CYAN_SOFT);
+            if (iw < 120F) {
+                iy += 11F;
+                c.pill(model, ix, iy, HoloStyle.CYAN_SOFT);
+            } else {
+                c.pillRight(model, ix + iw, iy, HoloStyle.CYAN_SOFT);
+            }
             iy += 15F;
         }
         c.divider(ix, iy, iw, accent());
@@ -84,8 +89,19 @@ final class CharacterView extends HoloView {
 
     private float row(HoloCanvas c, float since, int index, float x, float y, float w, String label, String value, int swatch) {
         c.stage(since, index);
-        c.text(Ui.fit(c.font, label, (int) (w * 0.45F)), x, y, c.muted(), false);
         float right = x + w;
+        if (w < 120F) {
+            // painel estreito (menor GUI): rotulo em cima, valor embaixo
+            c.text(Ui.fit(c.font, label, (int) w), x, y, c.muted(), false);
+            if (swatch != 0) {
+                c.fill(right - 9F, y + 10F, 9F, 9F, 0xFF000000);
+                c.fill(right - 8F, y + 11F, 7F, 7F, swatch);
+            }
+            c.text(Ui.fit(c.font, value, (int) (w - (swatch != 0 ? 13 : 0))), x, y + 10F, c.text(), false);
+            c.fill(x, y + 21F, w, 1F, 0x18FFFFFF);
+            return y + 24F;
+        }
+        c.text(Ui.fit(c.font, label, (int) (w * 0.45F)), x, y, c.muted(), false);
         if (swatch != 0) {
             c.fill(right - 9F, y - 1F, 9F, 9F, 0xFF000000);
             c.fill(right - 8F, y, 7F, 7F, swatch);
