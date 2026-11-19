@@ -58,6 +58,7 @@ public final class SelfTest {
             multiRig(f);
             bossDefeats(f);
             rimulib(f);
+            holoGeometry(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
@@ -800,6 +801,70 @@ public final class SelfTest {
             }
         }
         check(f, fired == 1, "chefe: derrota anunciada uma única vez");
+    }
+
+    /**
+     * Etapa 4.8.1: menu holografico. O clique volta pelo mesmo caminho do desenho (inversa de projecao * visao *
+     * modelo): o plano de referencia cai pixel a pixel na tela mesmo com o olho deslocado (paralaxe), um painel
+     * inclinado devolve o ponto desenhado, e raios fora do painel, atras do olho ou paralelos a ele sao recusados.
+     */
+    private static void holoGeometry(List<String> f) {
+        float w = 427F, h = 240F;
+        float d = com.respectcraft.ui.HoloGeometry.referenceDistance(h, 40F);
+        org.joml.Matrix4f proj = new org.joml.Matrix4f(), view = new org.joml.Matrix4f();
+        org.joml.Matrix4f layout = com.respectcraft.ui.HoloGeometry.layoutToMenu(new org.joml.Matrix4f(), w, h, 1F);
+        org.joml.Matrix4f flat = com.respectcraft.ui.HoloGeometry.panel(new org.joml.Matrix4f(), 100F, 50F, 200F, 100F,
+                0.5F, 0.5F, 0F, 0F, 0F, 1F, 1F);
+        org.joml.Vector3f out = new org.joml.Vector3f();
+        for (float[] eye : new float[][]{{0F, 0F}, {12F, -7F}}) {
+            com.respectcraft.ui.HoloGeometry.offAxis(proj, w, h, d, eye[0], eye[1], 10F, 4000F);
+            com.respectcraft.ui.HoloGeometry.view(view, d, eye[0], eye[1], 0F, 0F);
+            org.joml.Matrix4f pvm = new org.joml.Matrix4f(proj).mul(view).mul(layout).mul(flat);
+            org.joml.Matrix4f inv = new org.joml.Matrix4f(pvm).invert();
+            boolean ok = com.respectcraft.ui.HoloGeometry.hit(inv, com.respectcraft.ui.HoloGeometry.guiToNdcX(150F, w),
+                    com.respectcraft.ui.HoloGeometry.guiToNdcY(70F, h), 200F, 100F, out);
+            check(f, ok && Math.abs(out.x - 50F) < 0.01F && Math.abs(out.y - 20F) < 0.01F,
+                    "holo: ponto da tela -> painel no plano de referencia (olho " + eye[0] + "," + eye[1] + ") = " + out);
+            ok = com.respectcraft.ui.HoloGeometry.project(pvm, 0F, 0F, 0F, out);
+            check(f, ok && Math.abs(com.respectcraft.ui.HoloGeometry.ndcToGuiX(out.x, w) - 100F) < 0.01F
+                    && Math.abs(com.respectcraft.ui.HoloGeometry.ndcToGuiY(out.y, h) - 50F) < 0.01F,
+                    "holo: canto do painel cai no pixel do layout (olho " + eye[0] + "," + eye[1] + ")");
+        }
+        // Painel inclinado e mais perto, cena girada: desenhar e clicar no mesmo ponto local.
+        com.respectcraft.ui.HoloGeometry.offAxis(proj, w, h, d, 5F, 3F, 10F, 4000F);
+        com.respectcraft.ui.HoloGeometry.view(view, d, 5F, 3F, 7F, -4F);
+        org.joml.Matrix4f tilted = com.respectcraft.ui.HoloGeometry.panel(new org.joml.Matrix4f(), 20F, 30F, 90F, 180F,
+                1F, 0.5F, 14F, 16F, -5F, 1F, 1F);
+        org.joml.Matrix4f pvm = new org.joml.Matrix4f(proj).mul(view).mul(layout).mul(tilted);
+        org.joml.Matrix4f inv = new org.joml.Matrix4f(pvm).invert();
+        boolean drawn = com.respectcraft.ui.HoloGeometry.project(pvm, 30F, 40F, 0F, out);
+        boolean back = drawn && com.respectcraft.ui.HoloGeometry.hit(inv, out.x, out.y, 90F, 180F, out);
+        check(f, back && Math.abs(out.x - 30F) < 0.05F && Math.abs(out.y - 40F) < 0.05F, "holo: painel inclinado ida e volta = " + out);
+        drawn = com.respectcraft.ui.HoloGeometry.project(pvm, 120F, 40F, 0F, out);
+        check(f, drawn && !com.respectcraft.ui.HoloGeometry.hit(inv, out.x, out.y, 90F, 180F, new org.joml.Vector3f())
+                && com.respectcraft.ui.HoloGeometry.intersect(inv, out.x, out.y, new org.joml.Vector3f()),
+                "holo: ponto fora do painel recusado (arrasto ainda acompanha o plano)");
+        // Painel atras do olho e painel de perfil (raio paralelo) nao recebem clique.
+        com.respectcraft.ui.HoloGeometry.offAxis(proj, w, h, d, 0F, 0F, 10F, 4000F);
+        com.respectcraft.ui.HoloGeometry.view(view, d, 0F, 0F, 0F, 0F);
+        org.joml.Matrix4f behind = com.respectcraft.ui.HoloGeometry.panel(new org.joml.Matrix4f(), 113.5F, 70F, 200F, 100F,
+                0.5F, 0.5F, d + 50F, 0F, 0F, 1F, 1F);
+        inv = new org.joml.Matrix4f(proj).mul(view).mul(layout).mul(behind).invert();
+        check(f, !com.respectcraft.ui.HoloGeometry.hit(inv, 0F, 0F, 200F, 100F, out), "holo: painel atras do olho recusado");
+        org.joml.Matrix4f edge = com.respectcraft.ui.HoloGeometry.panel(new org.joml.Matrix4f(), 113.5F, 70F, 200F, 100F,
+                0.5F, 0.5F, 0F, 90F, 0F, 1F, 1F);
+        inv = new org.joml.Matrix4f(proj).mul(view).mul(layout).mul(edge).invert();
+        check(f, !com.respectcraft.ui.HoloGeometry.hit(inv, 0F, 0F, 200F, 100F, out), "holo: painel de perfil (raio paralelo) recusado");
+        // Ordem de profundidade: o painel mais perto tem t menor.
+        org.joml.Matrix4f near = com.respectcraft.ui.HoloGeometry.panel(new org.joml.Matrix4f(), 113.5F, 70F, 200F, 100F,
+                0.5F, 0.5F, 40F, 0F, 0F, 1F, 1F);
+        org.joml.Vector3f a = new org.joml.Vector3f(), b = new org.joml.Vector3f();
+        boolean hitNear = com.respectcraft.ui.HoloGeometry.hit(new org.joml.Matrix4f(proj).mul(view).mul(layout).mul(near).invert(),
+                0F, 0F, 200F, 100F, a);
+        boolean hitFlat = com.respectcraft.ui.HoloGeometry.hit(new org.joml.Matrix4f(proj).mul(view).mul(layout)
+                .mul(com.respectcraft.ui.HoloGeometry.panel(new org.joml.Matrix4f(), 113.5F, 70F, 200F, 100F, 0.5F, 0.5F,
+                        0F, 0F, 0F, 1F, 1F)).invert(), 0F, 0F, 200F, 100F, b);
+        check(f, hitNear && hitFlat && a.z < b.z, "holo: painel mais perto vence a sobreposicao");
     }
 
     /** Etapa 4.8: Rimulib carregado e conectado pela API comum (segura no servidor dedicado). */
