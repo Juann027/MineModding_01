@@ -1,8 +1,8 @@
 {
  "_leia": "Gerado por tools/player_anim/export.py: hash do ultimo conteudo gravado por ele. Arquivo com hash diferente foi editado fora do gerador e nao e sobrescrito sem --force. Nao edite.",
  "arquivos": {
-  "model_sources/player/tupinicraft_combo_scene.bbmodel": "b68e121dcee706c48870127598d0504a819ee89255500d9068a08eba60d8577f",
-  "model_sources/player/tupinicraft_player_combat.bbmodel": "9d30c3d14906dc8036a16a2b1bcc39ad1517876130a714a33ec5005df0e76f17",
-  "src/main/resources/assets/tupinicraft/animations/player/tupinicraft_player_combat.animation.json": "b5cf78184f6b3f9270fa1b6fd9a3422d7aaeca8fb27ebb91cafb728f1dfff352"
+  "model_sources/player/respectcraft_combo_scene.bbmodel": "ef440f799f80c31fa7176ebb0d1283f4ad0c4a834ef4e7ac636b4d5e40a0a602",
+  "model_sources/player/respectcraft_player_combat.bbmodel": "42a0f5a2f988ca6c27a5feccdee8d2724f9909901a4c272fd1f7917051306bba",
+  "src/main/resources/assets/respectcraft/animations/player/respectcraft_player_combat.animation.json": "6f0e832abfcb0c3ad211b4d2ae5c835621b8eaa52bae898d6e154923351a4035"
  }
 }

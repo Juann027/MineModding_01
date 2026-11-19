@@ -136,7 +136,7 @@ dependencies {
     implementation "net.tslat.smartbrainlib:SmartBrainLib-neoforge-${minecraft_version}:${smartbrainlib_version}"
     // UI Lib (DAQEM): componentes de tela usados SÓ pelo cliente (árvore de habilidades). O servidor dedicado
     // não precisa dele (neoforge.mods.toml declara side="CLIENT"). Modrinth: ID da versão 9.0.0 para NeoForge.
-    // Architectury API: exigida pelo UI Lib; o código do TupiniCraft não a usa (só ambiente de execução local).
+    // Architectury API: exigida pelo UI Lib; o código do RespectCraft não a usa (só ambiente de execução local).
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
@@ -213,7 +213,7 @@ idea {
     }
 }
 
-// Não há testes JUnit: as regras puras são conferidas por /tupini selftest no teste de fumaça.
+// Não há testes JUnit: as regras puras são conferidas por /respectcraft selftest no teste de fumaça.
 tasks.named('test', Test) { failOnNoDiscoveredTests = false }
 
 // Permite digitar comandos no console do servidor de desenvolvimento (usado pelo teste de fumaça do CI).

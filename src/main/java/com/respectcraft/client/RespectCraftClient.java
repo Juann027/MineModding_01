@@ -1,0 +1,97 @@
+package com.respectcraft.client;
+
+import com.respectcraft.RespectCraft;
+import com.respectcraft.client.character.CharacterCreatorKeybinds;
+import com.respectcraft.client.animation.ClientPlayerAnimations;
+import com.respectcraft.client.bodylayer.BodyLayers;
+import com.respectcraft.client.bodylayer.BodyLayersRenderLayer;
+import com.respectcraft.client.cinematic.CinematicCamera;
+import com.respectcraft.network.ProfileClientCache;
+import com.respectcraft.client.playergeo.PlayerRigController;
+import com.respectcraft.client.hud.BodyStatusInventoryPanel;
+import com.respectcraft.client.hud.EmotionOrbOverlay;
+import com.respectcraft.client.render.LeaoDoFimRenderer;
+import com.respectcraft.client.testgame.DefeatCounterNameplate;
+import com.respectcraft.network.CharacterAppearanceClientCache;
+import com.respectcraft.network.DefeatCountClientCache;
+import com.respectcraft.network.FinisherVisualClientCache;
+import com.respectcraft.registry.ModEntities;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.client.resources.PlayerSkin;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.common.NeoForge;
+
+/** Renderização GeckoLib isolada do servidor dedicado. */
+@Mod(value = RespectCraft.MOD_ID, dist = Dist.CLIENT)
+public final class RespectCraftClient {
+    public RespectCraftClient(IEventBus modBus) {
+        modBus.addListener(RespectCraftClient::registerRenderers);
+        modBus.addListener(CharacterCreatorKeybinds::register);
+        modBus.addListener(PlayerRigController::registerKeys);
+        modBus.addListener(RespectCraftClient::registerPlayerLayers);
+        modBus.addListener(RespectCraftClient::registerReloadListeners);
+        NeoForge.EVENT_BUS.addListener(CharacterCreatorKeybinds::onTick);
+        NeoForge.EVENT_BUS.addListener(PlayerRigController::onTick);
+        NeoForge.EVENT_BUS.addListener(PlayerRigController::onRenderPre);
+        NeoForge.EVENT_BUS.addListener(PlayerRigController::onRenderPost);
+        NeoForge.EVENT_BUS.addListener(ClientPlayerAnimations::onTick);
+        NeoForge.EVENT_BUS.addListener(ClientPlayerAnimations::onTimedEvent);
+        // Finisher Engine: camera dinamica, tremor e FOV dos participantes.
+        NeoForge.EVENT_BUS.addListener(CinematicCamera::onClientTick);
+        NeoForge.EVENT_BUS.addListener(CinematicCamera::onTimedEvent);
+        NeoForge.EVENT_BUS.addListener(CinematicCamera::onComputeFov);
+        modBus.addListener(RespectCraftClient::registerGuiLayers);
+        NeoForge.EVENT_BUS.addListener(BodyStatusInventoryPanel::onInventoryForeground);
+        // LOWEST: decide depois dos outros mods, respeitando quem escondeu o nick pelo RenderNameTagEvent.
+        NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST, DefeatCounterNameplate::render);
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
+            DefeatCountClientCache.clear();
+            CharacterAppearanceClientCache.clear();
+            FinisherVisualClientCache.clear();
+            PlayerRigController.clear();
+            ClientPlayerAnimations.clear();
+            ProfileClientCache.clear();
+            CinematicCamera.reset();
+        });
+        // Respawn e troca de dimensao recriam o jogador local: a camera nunca fica presa na cena.
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.Clone event) -> CinematicCamera.reset());
+    }
+
+    private static void registerGuiLayers(RegisterGuiLayersEvent event) {
+        event.registerAbove(VanillaGuiLayers.EXPERIENCE_BAR, RespectCraft.id("emotion_orb"),
+                (graphics, deltaTracker) -> EmotionOrbOverlay.render(graphics));
+        // Etapa 3.1: sem grade permanente de necessidades na tela; os medidores ficam no painel Body & Traits.
+        event.registerAboveAll(RespectCraft.id("cinematic_letterbox"),
+                (graphics, deltaTracker) -> CinematicCamera.renderLetterbox(graphics, deltaTracker.getGameTimeDeltaPartialTick(false)));
+    }
+
+    private static void registerPlayerLayers(EntityRenderersEvent.AddLayers event) {
+        BodyLayers.registerDefaults();
+        for (PlayerSkin.Model model : event.getSkins()) {
+            if (event.getSkin(model) instanceof PlayerRenderer renderer) {
+                // O rig entra como primeira camada; as Body Layers (busto, cabelo...) por ultimo.
+                PlayerRigController.addLayer(renderer);
+                renderer.addLayer(new BodyLayersRenderLayer(renderer));
+            }
+        }
+    }
+
+    private static void registerReloadListeners(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((ResourceManagerReloadListener) manager -> {
+            ClientPlayerAnimations.onResourceReload();
+            BodyLayers.onResourceReload();
+        });
+    }
+
+    private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(ModEntities.LEAO_DO_FIM.get(), LeaoDoFimRenderer::new);
+    }
+}

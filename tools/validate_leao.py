@@ -6,7 +6,7 @@ import struct
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = ROOT / 'src/main/resources/assets/tupinicraft'
+ASSETS = ROOT / 'src/main/resources/assets/respectcraft'
 source = json.loads((ROOT / 'model_sources/leao_do_fim.bbmodel').read_text())
 geo = json.loads((ASSETS / 'geo/entity/leao_do_fim.geo.json').read_text())['minecraft:geometry'][0]
 clips = json.loads((ASSETS / 'animations/entity/leao_do_fim.animation.json').read_text())['animations']
@@ -54,5 +54,5 @@ for source_name, dest_name in [('lionxx.png', 'leao_do_fim.png'), ('lionxx_glowm
     assert struct.unpack('>II', exported[16:24]) == (128, 128)
 for lang in ('en_us',):  # en_us e o unico idioma (Etapa 4.6: texto visivel em ingles)
     data = json.loads((ASSETS / 'lang' / (lang + '.json')).read_text())
-    assert data['entity.tupinicraft.leao_do_fim'] and data['item.tupinicraft.leao_do_fim_spawn_egg']
+    assert data['entity.respectcraft.leao_do_fim'] and data['item.respectcraft.leao_do_fim_spawn_egg']
 print(f'PASS: 45 bones, 127 cubes, 14 original animations, {key_count} keyframes, 5 filtered layers, textures and translations')

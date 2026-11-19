@@ -10,8 +10,8 @@ import json
 import pathlib
 
 FILE = pathlib.Path(__file__).resolve().parent.parent / \
-    "src/main/resources/assets/tupinicraft/animations/player/tupinicraft_animated_player.animation.json"
-P = "animation.tupinicraft.player."
+    "src/main/resources/assets/respectcraft/animations/player/respectcraft_animated_player.animation.json"
+P = "animation.respectcraft.player."
 EASE = "easeInOutSine"
 
 

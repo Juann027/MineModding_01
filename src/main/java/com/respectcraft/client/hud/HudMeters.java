@@ -1,0 +1,25 @@
+package com.respectcraft.client.hud;
+
+import com.respectcraft.needs.Need;
+import com.respectcraft.needs.Needs;
+
+/** Instantaneo visual das necessidades (0 a 100), lido da copia sincronizada pelo servidor. */
+public record HudMeters(int hydration, int energy, int bladder, int bowel, int emotion, int coom) {
+    public HudMeters {
+        hydration = clamp(hydration);
+        energy = clamp(energy);
+        bladder = clamp(bladder);
+        bowel = clamp(bowel);
+        emotion = clamp(emotion);
+        coom = clamp(coom);
+    }
+
+    public static HudMeters of(Needs needs) {
+        return new HudMeters(needs.percent(Need.HYDRATION), needs.percent(Need.ENERGY), needs.percent(Need.BLADDER),
+                needs.percent(Need.BOWEL), needs.percent(Need.MOOD), needs.percent(Need.COOM));
+    }
+
+    private static int clamp(int value) {
+        return Math.max(0, Math.min(100, value));
+    }
+}

@@ -9,9 +9,9 @@
   python3 tools/player_anim/export.py --sheets DIR       # tambem gera folhas de quadros (PNG) em DIR
 
 Saidas (caminhos relativos a raiz de saida; padrao = repositorio):
-  src/main/resources/assets/tupinicraft/animations/player/tupinicraft_player_combat.animation.json  (artefato do jogo)
-  model_sources/player/tupinicraft_player_combat.bbmodel   (rig + todos os clips, abre no Blockbench)
-  model_sources/player/tupinicraft_combo_scene.bbmodel     (dois rigs, coreografia lado a lado)
+  src/main/resources/assets/respectcraft/animations/player/respectcraft_player_combat.animation.json  (artefato do jogo)
+  model_sources/player/respectcraft_player_combat.bbmodel   (rig + todos os clips, abre no Blockbench)
+  model_sources/player/respectcraft_combo_scene.bbmodel     (dois rigs, coreografia lado a lado)
 
 Protecao:
   - export_manifest.json guarda o hash do que este script gravou por ultimo. Arquivo existente com hash
@@ -41,7 +41,7 @@ import bbmodel  # noqa: E402
 import bbsync  # noqa: E402
 
 TOOL_DIR = pathlib.Path(__file__).resolve().parent
-ANIM_FILE = REPO / "src/main/resources/assets/tupinicraft/animations/player/tupinicraft_player_combat.animation.json"
+ANIM_FILE = REPO / "src/main/resources/assets/respectcraft/animations/player/respectcraft_player_combat.animation.json"
 TARGETS = {  # chave -> caminho relativo a raiz de saida
     "animation": ANIM_FILE.relative_to(REPO),
     "bbmodel_clips": bbmodel.OUT_CLIPS.relative_to(REPO),
@@ -50,7 +50,7 @@ TARGETS = {  # chave -> caminho relativo a raiz de saida
 MANIFEST_NAME = "export_manifest.json"
 MASTER_FILE = TOOL_DIR / "master.json"
 BACKUP_DIR = TOOL_DIR / ".backup"
-PREFIX = "animation.tupinicraft.player."
+PREFIX = "animation.respectcraft.player."
 STAGE_DISTANCE = 1.15  # blocos entre executor e alvo (palco da Finisher Engine)
 EASINGS = {"linear", "step", "catmullrom"} | {f"ease{m}{f}" for m in ("In", "Out", "InOut")
                                                for f in ("Sine", "Quad", "Cubic", "Quart", "Quint", "Circ")}
