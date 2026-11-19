@@ -5,6 +5,7 @@ import com.respectcraft.animation.PlayerAnimationService;
 import com.respectcraft.animation.PlayerAnimations;
 import com.respectcraft.command.LeaoDoFimCommands;
 import com.respectcraft.command.RespectCraftCommands;
+import com.respectcraft.finisher.BossDefeats;
 import com.respectcraft.finisher.Finishers;
 import com.respectcraft.needs.NeedsService;
 import com.respectcraft.network.GameplayNetworking;
@@ -20,7 +21,10 @@ import com.respectcraft.registry.ModAttachments;
 import com.respectcraft.registry.ModCreativeTabs;
 import com.respectcraft.registry.ModEntities;
 import com.respectcraft.registry.ModItems;
+import cyou.rimuru.rimulib.mc1211.RimuMod;
+import cyou.rimuru.rimulib.mc1211.api.RimulibApi;
 import net.minecraft.resources.ResourceLocation;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -32,12 +36,22 @@ import org.slf4j.Logger;
 public final class RespectCraft {
     public static final String MOD_ID = "respectcraft";
     public static final Logger LOGGER = LogUtils.getLogger();
+    /** Versao minima do Rimulib aceita em tempo de execucao (igual ao neoforge.mods.toml). */
+    public static final String RIMULIB_MINIMUM = "1.3.0";
+    /**
+     * Conexao com o Rimulib (Etapa 4.8), feita uma vez na classe principal como pede a documentacao oficial. So usa a
+     * API comum ({@code cyou.rimuru.rimulib.mc1211.api}), segura no servidor dedicado. Efeitos de tela
+     * ({@code mc1211.client.api.FxApi}) ficam so em {@code client}. Recusa Rimulib mais antigo que o minimo.
+     */
+    public static final RimuMod RIMULIB = RimulibApi.connect(MOD_ID, RespectCraft.class, RIMULIB_MINIMUM);
 
     public RespectCraft(IEventBus modBus, ModContainer container) {
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, com.respectcraft.needs.NeedsConfig.SPEC,
                 "respectcraft-needs-server.toml");
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER,
                 com.respectcraft.profile.SpecialityConfig.SPEC, "respectcraft-speciality-server.toml");
+        LOGGER.info("RespectCraft connected to Rimulib {} (API {}, loader {})",
+                RimulibApi.version(), RimulibApi.apiVersion(), RimulibApi.loader());
         ModItems.ITEMS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
         ModEntities.ENTITY_TYPES.register(modBus);
@@ -83,6 +97,9 @@ public final class RespectCraft {
         NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onDamage);
         NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onLogout);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onAnimationTimed);
+        // Etapa 4.8: caminho preparado para recompensas de chefe (so anuncia BossDefeatEvent; nada e concedido).
+        NeoForge.EVENT_BUS.addListener(BossDefeats::onFinisherCompleted);
+        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, BossDefeats::onDeath);
         // Etapa 3: ficha do personagem (roleta, atributos, habilidades) e necessidades.
         modBus.addListener(GameplayNetworking::register);
         modBus.addListener(ProfileService::onConfigReload);

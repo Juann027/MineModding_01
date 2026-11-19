@@ -55,6 +55,9 @@ public final class SelfTest {
             defeats(f);
             specialities(f);
             rouletteWheel(f);
+            multiRig(f);
+            bossDefeats(f);
+            rimulib(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
@@ -643,6 +646,192 @@ public final class SelfTest {
     }
 
     /** Etapa 4.1: sequencias de animacao (queda -> quatro apoios -> levantar) sem buraco entre os segmentos. */
+    /**
+     * Etapa 4.8: participantes com rigs diferentes. Cada lado resolve o proprio clip (rig do jogador, rig GeckoLib da
+     * entidade ou parado); jogador x jogador fica igual; participante invalido e recusado; cancelamento por morte,
+     * despawn, saida, dimensao e distancia; contador so de jogador.
+     */
+    private static void multiRig(List<String> f) {
+        using(f, () -> {
+            var P = com.respectcraft.finisher.FinisherParticipants.Kind.PLAYER;
+            var M = com.respectcraft.finisher.FinisherParticipants.Kind.MOB;
+            var B = com.respectcraft.finisher.FinisherParticipants.Kind.BOSS;
+            var I = com.respectcraft.finisher.FinisherParticipants.Interaction.class;
+            check(f, interaction(P, P).equals("PLAYER_VS_PLAYER") && interaction(P, M).equals("PLAYER_VS_MOB")
+                    && interaction(P, B).equals("PLAYER_VS_BOSS") && interaction(M, P).equals("MOB_VS_PLAYER")
+                    && interaction(B, P).equals("BOSS_VS_PLAYER"), "rigs: tipos de interação");
+            check(f, interaction(M, M).isEmpty() && interaction(B, M).isEmpty() && interaction(M, B).isEmpty()
+                    && interaction(B, B).isEmpty(), "rigs: sem jogador não há sessão (nada fica preso)");
+            check(f, I.getEnumConstants().length == 5, "rigs: catálogo de interações");
+
+            var ATT = com.respectcraft.finisher.FinisherRole.ATTACKER;
+            var VIC = com.respectcraft.finisher.FinisherRole.VICTIM;
+            net.minecraft.resources.ResourceLocation leao = com.respectcraft.RespectCraft.id("leao_do_fim");
+            // Finalizacoes atuais: jogador toca o mesmo clip de antes; mob sem clip fica parado; nenhuma tem clip de mob.
+            for (FinisherDef def : Finishers.all()) {
+                var a = com.respectcraft.finisher.FinisherParticipants.resolve(def, ATT, P, null, false);
+                var v = com.respectcraft.finisher.FinisherParticipants.resolve(def, VIC, P, null, false);
+                check(f, a.valid() && a.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.PlayerClip pa
+                        && pa.def() == def.attacker(), "rigs: executor jogador mantém o clip " + def.id());
+                check(f, v.valid() && v.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.PlayerClip pv
+                        && pv.def() == def.victim(), "rigs: vítima jogador mantém o clip " + def.id());
+                var mob = com.respectcraft.finisher.FinisherParticipants.resolve(def, VIC, M, leao, true);
+                check(f, mob.valid() && mob.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.Hold h
+                        && h.durationTicks() == def.durationTicks(), "rigs: mob sem clip fica parado " + def.id());
+                check(f, def.entityClips().isEmpty(), "rigs: nenhuma finalizacao inventa clip de mob " + def.id());
+            }
+            var auto = com.respectcraft.finisher.EntityFinisherClip.Alignment.AUTO;
+            check(f, Math.abs(com.respectcraft.finisher.FinisherParticipants.stageDistance(auto, 0.6, 0.6) - 1.15) < 1e-9,
+                    "rigs: palco jogador x jogador continua em 1,15");
+            check(f, Math.abs(com.respectcraft.finisher.FinisherParticipants.stageDistance(auto, 0.6, 1.4) - 1.25) < 1e-9,
+                    "rigs: rig largo afasta a vítima pelas caixas de colisão");
+            var fixed = new com.respectcraft.finisher.EntityFinisherClip.Alignment(2.0, 0.5, 90F);
+            check(f, com.respectcraft.finisher.FinisherParticipants.stageDistance(fixed, 0.6, 1.4) == 2.0,
+                    "rigs: alinhamento do rig define a distância");
+            net.minecraft.world.phys.Vec3 front = com.respectcraft.finisher.FinisherParticipants.stage(
+                    net.minecraft.world.phys.Vec3.ZERO, 0F, 1.0, 0.0);
+            net.minecraft.world.phys.Vec3 right = com.respectcraft.finisher.FinisherParticipants.stage(
+                    net.minecraft.world.phys.Vec3.ZERO, 0F, 1.0, 1.0);
+            check(f, Math.abs(front.z - 1) < 1e-6 && Math.abs(front.x) < 1e-6, "rigs: vítima à frente do executor");
+            check(f, Math.abs(right.x + 1) < 1e-6 && Math.abs(right.z - 1) < 1e-6, "rigs: deslocamento lateral à direita");
+
+            // Clip de entidade de teste (NAO registrado, nunca tocado): so valida a resolucao por tipo e papel.
+            FinisherDef base = Finishers.TAKEDOWN;
+            var clip = new com.respectcraft.finisher.EntityFinisherClip(leao, ATT, "body", "selftest_only",
+                    base.durationTicks(), fixed);
+            FinisherDef withMob = base.withEntityClip(clip);
+            check(f, Finishers.get(base.id()) == base && base.entityClips().isEmpty(), "rigs: cópia não altera o catálogo");
+            var geo = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, M, leao, true);
+            check(f, geo.valid() && geo.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.EntityClip ec
+                    && ec.clip() == clip, "rigs: entidade GeckoLib recebe o clip do próprio rig");
+            var boss = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, B, leao, true);
+            check(f, boss.valid() && boss.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.EntityClip,
+                    "rigs: chefe usa o mesmo caminho de clip por tipo");
+            var noRig = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, M, leao, false);
+            check(f, !noRig.valid() && noRig.problem() != null, "rigs: clip sem GeoEntity é recusado");
+            var otherRole = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, VIC, M, leao, true);
+            check(f, otherRole.valid() && otherRole.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.Hold,
+                    "rigs: clip vale só no próprio papel");
+            var otherType = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, M,
+                    net.minecraft.resources.ResourceLocation.withDefaultNamespace("zombie"), true);
+            check(f, otherType.clip().orElse(null) instanceof com.respectcraft.finisher.FinisherParticipants.Hold,
+                    "rigs: clip vale só no próprio tipo de entidade");
+            var hold = new com.respectcraft.finisher.FinisherParticipants.Hold(1);
+            var playerClip = a0(base);
+            net.minecraft.resources.ResourceLocation zombie = net.minecraft.resources.ResourceLocation.withDefaultNamespace("zombie");
+            check(f, com.respectcraft.finisher.FinisherParticipants.yawOffset(geo.clip().get()) == 90F
+                    && com.respectcraft.finisher.FinisherParticipants.alignment(geo.clip().get(), leao, hold, zombie) == fixed,
+                    "rigs: alinhamento do clip do executor vence");
+            // Palco por tipo (mob sem clip): Leao do Fim a 1,9 (cabeca alem da caixa); mob sem palco = automatico.
+            check(f, com.respectcraft.finisher.FinisherParticipants.staging(leao).orElse(null) == Finishers.LEAO_DO_FIM_STAGING
+                    && com.respectcraft.finisher.FinisherParticipants.alignment(playerClip, null, hold, leao) == Finishers.LEAO_DO_FIM_STAGING
+                    && com.respectcraft.finisher.FinisherParticipants.alignment(hold, leao, playerClip, null) == Finishers.LEAO_DO_FIM_STAGING,
+                    "rigs: palco do Leão do Fim nos dois papéis");
+            check(f, com.respectcraft.finisher.FinisherParticipants.stageDistance(Finishers.LEAO_DO_FIM_STAGING, 0.6, 1.4) == 1.9,
+                    "rigs: Leão do Fim a 1,9 blocos");
+            check(f, com.respectcraft.finisher.FinisherParticipants.alignment(playerClip, null, hold, zombie)
+                    == com.respectcraft.finisher.EntityFinisherClip.Alignment.AUTO
+                    && com.respectcraft.finisher.FinisherParticipants.alignment(playerClip, null, playerClip, null)
+                    == com.respectcraft.finisher.EntityFinisherClip.Alignment.AUTO, "rigs: sem palco próprio é automático");
+            check(f, throwsIae(() -> base.withEntityClip(new com.respectcraft.finisher.EntityFinisherClip(leao, VIC, "body",
+                    "x", base.durationTicks() + 1))), "rigs: clip com duração diferente da cena é recusado");
+            check(f, throwsIae(() -> withMob.withEntityClip(clip)), "rigs: clip repetido é recusado");
+            check(f, throwsIae(() -> new com.respectcraft.finisher.EntityFinisherClip(leao, ATT, " ", "x", 10)),
+                    "rigs: controlador vazio é recusado");
+            check(f, throwsIae(() -> new com.respectcraft.finisher.EntityFinisherClip.Alignment(9.0, 0, 0)),
+                    "rigs: distância de palco absurda é recusada");
+            // Animacao de jogador ausente do catalogo: a resolucao recusa (a cena nao comeca).
+            PlayerAnimationDef ghost = PlayerAnimationDef.builder(com.respectcraft.RespectCraft.id("selftest/unregistered"),
+                    PlayerAnimations.PLAYER_FILE, "animation.selftest.unregistered", base.durationTicks()).build();
+            FinisherDef missing = new FinisherDef(com.respectcraft.RespectCraft.id("selftest/missing"), ghost, base.victim(),
+                    base.camera(), null, 1);
+            var miss = com.respectcraft.finisher.FinisherParticipants.resolve(missing, ATT, P, null, false);
+            check(f, !miss.valid() && miss.problem() != null, "rigs: clip de jogador ausente é recusado");
+            check(f, Finishers.get(missing.id()) == null, "rigs: finalização de teste não registrada");
+
+            // Contador de derrotas: so jogador.
+            check(f, com.respectcraft.testgame.FinisherRules.countsDefeat(P)
+                    && !com.respectcraft.testgame.FinisherRules.countsDefeat(M)
+                    && !com.respectcraft.testgame.FinisherRules.countsDefeat(B), "rigs: contador só para jogador");
+            // Cancelamento e limpeza: morte/despawn/saida (ausente), dimensao e distancia cancelam; o resto segue.
+            check(f, com.respectcraft.testgame.FinisherRules.abortReason(true, true, true, 1.3) == null, "rigs: cena normal segue");
+            check(f, com.respectcraft.testgame.FinisherRules.abortReason(false, true, true, 1.3) != null, "rigs: executor ausente cancela");
+            check(f, com.respectcraft.testgame.FinisherRules.abortReason(true, false, true, 1.3) != null, "rigs: vítima ausente cancela");
+            check(f, com.respectcraft.testgame.FinisherRules.abortReason(true, true, false, 1.3) != null, "rigs: troca de dimensão cancela");
+            check(f, com.respectcraft.testgame.FinisherRules.abortReason(true, true, true, 16.5) != null, "rigs: distância cancela");
+        });
+    }
+
+    private static com.respectcraft.finisher.FinisherParticipants.Clip a0(FinisherDef def) {
+        return new com.respectcraft.finisher.FinisherParticipants.PlayerClip(def.attacker());
+    }
+
+    private static String interaction(com.respectcraft.finisher.FinisherParticipants.Kind a,
+                                      com.respectcraft.finisher.FinisherParticipants.Kind b) {
+        return com.respectcraft.finisher.FinisherParticipants.interaction(a, b).map(Enum::name).orElse("");
+    }
+
+    /** Etapa 4.8: derrota de chefe anunciada no maximo uma vez; finalizacao qualificante x derrota comum. */
+    private static void bossDefeats(List<String> f) {
+        java.util.UUID finisherPlayer = new java.util.UUID(1, 1);
+        java.util.UUID killer = new java.util.UUID(2, 2);
+        var credit = Optional.of(new com.respectcraft.finisher.BossDefeats.Credit(finisherPlayer, Finishers.TAKEDOWN_ID, 1000));
+        var window = com.respectcraft.finisher.BossDefeats.FINISHER_CREDIT_TICKS;
+        var inWindow = com.respectcraft.finisher.BossDefeats.decide(false, credit, 1000 + window, Optional.of(killer));
+        check(f, inWindow.isPresent() && inWindow.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.FINISHER
+                && inWindow.get().credited().equals(Optional.of(finisherPlayer))
+                && inWindow.get().finisher().equals(Optional.of(Finishers.TAKEDOWN_ID)), "chefe: finalização qualificante credita o executor");
+        var late = com.respectcraft.finisher.BossDefeats.decide(false, credit, 1001 + window, Optional.of(killer));
+        check(f, late.isPresent() && late.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.NORMAL
+                && late.get().credited().equals(Optional.of(killer)) && late.get().finisher().isEmpty(), "chefe: fora da janela é derrota comum");
+        var normal = com.respectcraft.finisher.BossDefeats.decide(false, Optional.empty(), 5, Optional.empty());
+        check(f, normal.isPresent() && normal.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.NORMAL
+                && normal.get().credited().isEmpty(), "chefe: morte sem jogador não credita ninguém");
+        var future = com.respectcraft.finisher.BossDefeats.decide(false, credit, 999, Optional.empty());
+        check(f, future.isPresent() && future.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.NORMAL,
+                "chefe: crédito com tempo inválido não conta");
+        // Sem disparo duplo: depois de anunciado, nenhuma outra decisao (nem por finalizacao, nem comum).
+        boolean posted = false;
+        int fired = 0;
+        for (int i = 0; i < 3; i++) {
+            if (com.respectcraft.finisher.BossDefeats.decide(posted, credit, 1010, Optional.of(killer)).isPresent()) {
+                fired++;
+                posted = true;
+            }
+        }
+        check(f, fired == 1, "chefe: derrota anunciada uma única vez");
+    }
+
+    /** Etapa 4.8: Rimulib carregado e conectado pela API comum (segura no servidor dedicado). */
+    private static void rimulib(List<String> f) {
+        using(f, () -> {
+            check(f, cyou.rimuru.rimulib.mc1211.api.RimulibApi.isLoaded("rimulib"), "rimulib: mod não carregado");
+            check(f, versionAtLeast(cyou.rimuru.rimulib.mc1211.api.RimulibApi.version(), com.respectcraft.RespectCraft.RIMULIB_MINIMUM),
+                    "rimulib: versão abaixo de " + com.respectcraft.RespectCraft.RIMULIB_MINIMUM);
+            check(f, com.respectcraft.RespectCraft.RIMULIB != null
+                    && com.respectcraft.RespectCraft.MOD_ID.equals(com.respectcraft.RespectCraft.RIMULIB.id())
+                    && "respectcraft:x".equals(com.respectcraft.RespectCraft.RIMULIB.id("x")), "rimulib: conexão do RespectCraft");
+        });
+    }
+
+    static boolean versionAtLeast(String version, String minimum) {
+        String[] a = version.split("[^0-9]+"), b = minimum.split("[^0-9]+");
+        for (int i = 0; i < b.length; i++) {
+            int x = i < a.length && !a[i].isEmpty() ? Integer.parseInt(a[i]) : 0;
+            int y = b[i].isEmpty() ? 0 : Integer.parseInt(b[i]);
+            if (x != y) return x > y;
+        }
+        return true;
+    }
+
+    private static void using(List<String> f, Runnable body) {
+        try {
+            body.run();
+        } catch (RuntimeException | LinkageError e) {
+            f.add("exceção: " + e);
+        }
+    }
+
     private static void defeats(List<String> f) {
         check(f, com.respectcraft.testgame.DefeatCounter.next(0) == 1, "derrotas: 0 -> 1");
         check(f, com.respectcraft.testgame.DefeatCounter.next(12) == 13, "derrotas: 12 -> 13");

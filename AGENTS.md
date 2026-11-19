@@ -5,7 +5,8 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
 - **Marca:** **RespectCraft** em tudo (Etapa 4.7.1): mod id e namespace `respectcraft`, pacote `com.respectcraft`,
   comando único `/respectcraft` (ramos `anim` e `test`), configs `respectcraft-*-server.toml`. O nome antigo só fica em
   handoffs históricos; não o reintroduza nem como alias. Mundos anteriores à 4.7.1 não são compatíveis.
-- **Stack:** Minecraft 1.21.1, NeoForge 21.1.x (só APIs 21.1), Java 21, GeckoLib 4.9.3, SmartBrainLib 1.16.11.
+- **Stack:** Minecraft 1.21.1, NeoForge 21.1.x (só APIs 21.1), Java 21, GeckoLib 4.9.3, SmartBrainLib 1.16.11,
+  Rimulib 1.3.0 (Etapa 4.8; CurseMaven, não embutido; `mc1211.client.api` só em `client`).
   Sem UI Lib/Architectury e sem dependências novas sem pedido.
 - **Comece por** `README.md`, `CLAUDE.md` e só os arquivos do pedido. Não faça auditorias gerais. Handoffs em
   `docs/handoffs/` (índice no `README.md` de lá): leia só o do sistema que a tarefa toca.
@@ -23,6 +24,8 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   docs e ids continuam como estão.
 - **Tema:** eleições, política, partidos, mandatos, urna, economia e símbolos nacionais foram removidos; não
   reintroduza sem pedido explícito.
+- **Finalizações (Etapa 4.8):** cada participante usa o próprio rig (`FinisherParticipants`, `EntityFinisherClip`);
+  sessão sempre com um jogador; contador só de jogador; `BossDefeatEvent` é só preparação (nada concedido).
 - **Animações:** dados em `PlayerAnimations`; `.bbmodel` em `model_sources/player/`; respeite
   `tools/player_anim/master.json` e nunca use `export.py --force` sobre edições do Blockbench.
 - **Validação:** `./gradlew build` e `bash .github/scripts/server-smoke-test.sh`; regras puras novas no `SelfTest`.

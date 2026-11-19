@@ -32,7 +32,8 @@ if [ "$ready" != 1 ]; then
   exec 3>&-; kill "$pid" 2>/dev/null; wait "$pid"
 else
   # O ultimo comando usa a raiz antiga de proposito: ela nao pode existir mais (Etapa 4.7.1).
-  for cmd in "summon respectcraft:leao_do_fim 0 -60 0" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "tupini selftest"; do
+  # Etapa 4.8: dois Leoes do Fim marcados; uma finalizacao mob x mob precisa ser recusada (sem jogador nao ha sessao).
+  for cmd in "summon respectcraft:leao_do_fim 0 -60 0" "summon respectcraft:leao_do_fim 0 -60 0 {Tags:[\"rc_a\"]}" "summon respectcraft:leao_do_fim 2 -60 0 {Tags:[\"rc_b\"]}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "tupini selftest"; do
     echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
@@ -55,6 +56,20 @@ grep -q 'boner = 0.5% (specialities: 1)' "$log" || fail "chances das Specialitie
 [ -f run/config/respectcraft-speciality-server.toml ] || fail "config respectcraft-speciality-server.toml não foi gerada"
 if ls run/config run/world/serverconfig 2>/dev/null | grep -i tupini; then fail "config com o prefixo antigo foi gerada"; fi
 grep -q 'Unknown or incomplete command' "$log" || fail "a raiz de comando antiga /tupini ainda responde"
+# Etapa 4.8: Rimulib 1.3.0 carregado no servidor dedicado e conectado pela API comum.
+grep -q 'RespectCraft connected to Rimulib 1\.3\.' "$log" || fail "Rimulib não foi carregado/conectado no servidor dedicado"
+# Etapa 4.8: finalizacao sem jogador recusada antes de comecar (nenhum mob fica preso numa sessao).
+grep -q 'has no player participant' "$log" || fail "finalização mob x mob não foi recusada"
+grep -q 'Could not start' "$log" || fail "comando de finalização mob x mob não respondeu com recusa"
+# Etapa 4.8: o jar do RespectCraft nao embute o Rimulib (o jogador instala ao lado).
+jar=$(ls build/libs/respectcraft-*.jar 2>/dev/null | grep -v -- '-sources' | head -1)
+if [ -z "$jar" ]; then fail "jar do RespectCraft não encontrado em build/libs"
+elif unzip -l "$jar" | grep -E 'cyou/rimuru|META-INF/jarjar'; then fail "o jar embute classes do Rimulib"; fi
+# Etapa 4.8: nada fora de client importa classes exclusivas do cliente (Minecraft ou client.api do Rimulib).
+if grep -rlE 'import (net\.minecraft\.client\.|cyou\.rimuru\.rimulib\.mc1211\.client\.)' src/main/java --include=*.java \
+    | grep -v '^src/main/java/com/respectcraft/client/'; then
+  fail "classe comum importando código exclusivo do cliente"
+fi
 if grep -E 'NoClassDefFoundError|ClassNotFoundException|invalid dist|RuntimeDistCleaner' "$log"; then
   fail "erro de classe exclusiva do cliente no servidor dedicado"
 fi

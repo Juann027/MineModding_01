@@ -249,7 +249,7 @@ public final class RespectCraftCommands {
             return 0;
         }
         if (!com.respectcraft.testgame.FinisherTestMechanic.forceStart(attacker, target, def)) {
-            c.getSource().sendFailure(Component.literal("Could not start (distance, active session or mount)."));
+            c.getSource().sendFailure(Component.literal("Could not start (needs a player participant; distance, active session, mount or invalid rig)."));
             return 0;
         }
         c.getSource().sendSuccess(() -> Component.literal("Finisher started."), true);
