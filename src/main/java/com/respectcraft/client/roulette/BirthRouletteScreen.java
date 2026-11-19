@@ -1,7 +1,7 @@
 package com.respectcraft.client.roulette;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.respectcraft.client.character.CharacterHubScreen;
+import com.respectcraft.client.holo.HoloCharacterScreen;
 import com.respectcraft.client.ui.RespectButton;
 import com.respectcraft.client.ui.RespectScreen;
 import com.respectcraft.client.ui.Ui;
@@ -147,7 +147,7 @@ public final class BirthRouletteScreen extends RespectScreen {
         CharacterProfile p = ProfileClientCache.profile();
         if (phase != Phase.DONE || !hasResult(p)) return;
         if (!p.birthConfirmed()) PacketDistributor.sendToServer(new GameplayNetworking.BirthConfirmRequest(p.rollCount()));
-        minecraft.setScreen(new CharacterHubScreen());
+        minecraft.setScreen(new HoloCharacterScreen());
     }
 
     /** Desacelera ate a origem da ficha atual (com revelacao quando e um resultado novo). */

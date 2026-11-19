@@ -6,6 +6,7 @@ import com.respectcraft.client.animation.ClientPlayerAnimations;
 import com.respectcraft.client.bodylayer.BodyLayers;
 import com.respectcraft.client.bodylayer.BodyLayersRenderLayer;
 import com.respectcraft.client.cinematic.CinematicCamera;
+import com.respectcraft.client.holo.HoloClient;
 import com.respectcraft.network.ProfileClientCache;
 import com.respectcraft.client.playergeo.PlayerRigController;
 import com.respectcraft.client.hud.BodyStatusInventoryPanel;
@@ -21,6 +22,7 @@ import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
@@ -32,8 +34,10 @@ import net.neoforged.neoforge.common.NeoForge;
 /** Renderização GeckoLib isolada do servidor dedicado. */
 @Mod(value = RespectCraft.MOD_ID, dist = Dist.CLIENT)
 public final class RespectCraftClient {
-    public RespectCraftClient(IEventBus modBus) {
+    public RespectCraftClient(IEventBus modBus, ModContainer container) {
         modBus.addListener(RespectCraftClient::registerRenderers);
+        // Etapa 4.8.1: menu holografico da tecla K (config de cliente, fundo do Rimulib, limpeza no logout).
+        HoloClient.register(modBus, container);
         modBus.addListener(CharacterCreatorKeybinds::register);
         modBus.addListener(PlayerRigController::registerKeys);
         modBus.addListener(RespectCraftClient::registerPlayerLayers);

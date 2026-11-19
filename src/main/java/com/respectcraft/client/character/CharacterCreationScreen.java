@@ -1,6 +1,7 @@
 package com.respectcraft.client.character;
 
 import com.respectcraft.character.CharacterAppearance;
+import com.respectcraft.client.holo.HoloCharacterScreen;
 import com.respectcraft.client.roulette.BirthRouletteScreen;
 import com.respectcraft.client.ui.CycleSelector;
 import com.respectcraft.client.ui.EntityPreview;
@@ -151,7 +152,8 @@ public final class CharacterCreationScreen extends RespectScreen {
             if (confirmed.created() && confirmed.pack() == requestedAppearance) {
                 CharacterAppearanceClientCache.clearPreview();
                 // Personagem novo ainda sem nascimento: segue para a roleta.
-                mc.setScreen(ProfileClientCache.profile().born() ? new CharacterHubScreen() : new BirthRouletteScreen());
+                mc.setScreen(ProfileClientCache.profile().born()
+                        ? new HoloCharacterScreen(HoloCharacterScreen.Section.CHARACTER) : new BirthRouletteScreen());
                 return;
             }
         }
@@ -173,7 +175,7 @@ public final class CharacterCreationScreen extends RespectScreen {
         Minecraft mc = Minecraft.getInstance();
         CharacterAppearanceClientCache.clearPreview();
         if (mc.player != null && CharacterAppearanceClientCache.confirmed(mc.player.getUUID()).created()) {
-            mc.setScreen(new CharacterHubScreen());
+            mc.setScreen(new HoloCharacterScreen(HoloCharacterScreen.Section.CHARACTER));
         } else {
             super.onClose();
         }
