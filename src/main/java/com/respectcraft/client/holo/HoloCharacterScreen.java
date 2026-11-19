@@ -5,7 +5,6 @@ import com.respectcraft.client.character.CharacterCreatorKeybinds;
 import com.respectcraft.client.roulette.BirthRouletteScreen;
 import com.respectcraft.client.ui.RespectScreen;
 import com.respectcraft.client.ui.Ui;
-import com.respectcraft.network.ProfileClientCache;
 import com.respectcraft.registry.ModSounds;
 import com.respectcraft.skill.SkillDef;
 import com.respectcraft.ui.HoloGeometry;
@@ -22,23 +21,25 @@ import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Menu do personagem da tecla K (Etapa 4.8.1): interface holografica com paineis projetados em perspectiva real.
+ * Menu do personagem da tecla K (Etapa 4.8.1): placas holograficas soltas no espaco em volta do ponto de vista.
  *
- * <p><b>Arquitetura.</b> Cada painel ({@link HoloPanel}) desenha o conteudo numa superficie propria
- * ({@link HoloSurface}, um framebuffer reaproveitado) com {@code GuiGraphics}; depois a passada {@link Holo3D}
- * projeta as superficies como quads 3D com a projecao fora do eixo de {@link HoloGeometry}, junto com o proprio
- * jogador (rig GeckoLib), contornos, feixes e particulas. O clique faz o caminho inverso com as mesmas matrizes do
- * quadro: raio do cursor -> plano do painel -> coordenada local -> regiao registrada durante o desenho.
+ * <p><b>Composicao espacial.</b> Cada secao e uma placa propria num <b>arco</b> (cilindro) centrado no olho: a
+ * secao escolhida fica na frente, no plano de referencia (texto pixel a pixel), e as vizinhas ficam giradas para o
+ * olho, mais fundas e mais apagadas nas laterais, com o mundo visivel entre elas. Navegar gira o arco com uma mola:
+ * a placa nova vem para a frente, a antiga recua para o lado. Acima flutua a fita de identidade (inclinada para
+ * baixo), abaixo uma fileira curva de chips de navegacao (inclinada para cima), e o holograma 3D do proprio jogador
+ * fica de pe na frente, num pedestal; na secao Character ele sobe no palco da propria placa e acompanha o arco.
  *
- * <p><b>Dados.</b> So exibe as caches do cliente ({@link ProfileClientCache}, aparencia); compras de habilidade vao
- * como pedido ao servidor, que continua dono de tudo. Nenhuma transicao visual muda dados de jogo.
+ * <p><b>Arquitetura.</b> Cada placa desenha o conteudo numa superficie propria ({@link HoloSurface}, framebuffer
+ * reaproveitado) e a passada {@link Holo3D} projeta tudo com a perspectiva fora do eixo de {@link HoloGeometry},
+ * junto com o jogador, feixes de luz entre as placas e particulas. O clique faz o caminho inverso com as matrizes do
+ * mesmo quadro (raio do cursor -> plano da placa -> coordenada local -> regiao registrada no desenho).
  *
- * <p><b>Ciclo de vida.</b> K ou Esc tocam o fechamento (~0,25 s) e devolvem o controle ao jogo; qualquer outra
- * troca de tela (morte, troca de dimensao, desconexao, outra tela) chama {@link #removed()}, que libera as
- * superficies, o efeito do Rimulib, os arrastos e as particulas.
+ * <p><b>Dados.</b> So exibe as caches do cliente; compras de habilidade vao como pedido ao servidor. Nenhuma
+ * transicao visual muda dados de jogo. Nada e criado no mundo: o menu e privado deste cliente.
  */
 public final class HoloCharacterScreen extends RespectScreen {
-    /** Secoes do menu, na ordem da barra lateral. */
+    /** Secoes do menu, na ordem do arco. */
     public enum Section {
         OVERVIEW("overview", "carteira_trabalho", HoloStyle.CYAN, false),
         CHARACTER("character", "identidade_dinheiro", HoloStyle.CYAN_SOFT, true),
@@ -49,14 +50,14 @@ public final class HoloCharacterScreen extends RespectScreen {
         final String id;
         final ResourceLocation icon;
         final int accent;
-        /** Usa o painel largo (sem a coluna do holograma do jogador). */
-        final boolean wide;
+        /** Usa a altura inteira (palco/arvore) em vez de encolher ate o conteudo. */
+        final boolean tall;
 
-        Section(String id, String icon, int accent, boolean wide) {
+        Section(String id, String icon, int accent, boolean tall) {
             this.id = id;
             this.icon = SkillDef.iconTexture(icon);
             this.accent = accent;
-            this.wide = wide;
+            this.tall = tall;
         }
 
         String key() { return "gui.respectcraft.holo.section." + id; }
@@ -64,13 +65,14 @@ public final class HoloCharacterScreen extends RespectScreen {
 
     /** Campo de visao vertical da camera virtual do menu (independente do FOV do jogo, para a leitura nao mudar). */
     static final float FOV = 42F;
-    /** Ultima altura de conteudo de cada secao (cache so visual): o painel ja abre no tamanho certo. */
+    /** Passo angular entre placas vizinhas no arco (graus). */
+    static final float ARC_STEP = 31F;
+    /** Ultima altura de conteudo de cada secao (cache so visual): a placa ja abre no tamanho certo. */
     private static final float[] FIT_CACHE = new float[Section.values().length];
-    private static final float CLOSE_TIME = 0.26F;
+    private static final float CLOSE_TIME = 0.3F;
 
     // ---------------------------------------------------------------- estado
     private Section section;
-    private Section previous;
     private float sectionStart = -10F;
     private boolean closing;
     private float closeStart;
@@ -82,16 +84,18 @@ public final class HoloCharacterScreen extends RespectScreen {
     private boolean opened;
 
     // layout (unidades de layout)
-    private float uiScale = 1F, screenW, screenH, layoutW, layoutH;
-    final Rect navRect = new Rect(), narrow = new Rect(), wide = new Rect(), plateRect = new Rect(), modalRect = new Rect();
+    private float uiScale = 1F, screenW, screenH, layoutW, layoutH, eyeZ;
+    private float centerX, plateW, plateTop, plateMaxH, headerY, headerW, headerH, chipsY, chipW, chipH;
     private boolean dockAvailable;
 
-    // paineis
-    final HoloPanel nav = new HoloPanel("nav", true);
-    final HoloPanel plate = new HoloPanel("plate", true);
+    // arco (posicao continua em "indices de secao") e placas
+    private float carousel;
+    private final float[] carouselVel = new float[1];
+    private final HoloPanel[] plates = new HoloPanel[Section.values().length];
+    private final HoloPanel[] chips = new HoloPanel[Section.values().length];
+    final HoloPanel header = new HoloPanel("header", true);
     final HoloPanel modal = new HoloPanel("modal", true);
-    private HoloPanel incoming = new HoloPanel("main_a", true);
-    private HoloPanel outgoing = new HoloPanel("main_b", true);
+    private final List<HoloPanel> all = new ArrayList<>();
     private final List<HoloPanel> drawOrder = new ArrayList<>();
 
     // camera
@@ -108,11 +112,12 @@ public final class HoloCharacterScreen extends RespectScreen {
 
     // holograma do jogador
     private float playerYaw = -24F;
-    private float stageAmt, dockAmt;
+    private float stageAmt;
     private boolean rotatingPlayer;
     private boolean playerTouched;
     private float playerBoxX0, playerBoxY0, playerBoxX1, playerBoxY1;
     private boolean playerBoxValid;
+    private final float[] placement = new float[4];
 
     // entrada
     private final Vector3f hit = new Vector3f();
@@ -130,6 +135,7 @@ public final class HoloCharacterScreen extends RespectScreen {
     private final Holo3D r3d = new Holo3D();
     private final HoloCanvas canvas = new HoloCanvas();
     private float moteClock;
+    private final Vector3f va = new Vector3f(), vb = new Vector3f();
 
     // conteudo
     private final HoloView[] views;
@@ -143,8 +149,17 @@ public final class HoloCharacterScreen extends RespectScreen {
     public HoloCharacterScreen(Section initial) {
         super(Component.translatable("gui.respectcraft.holo.title"));
         this.section = initial == null ? Section.OVERVIEW : initial;
+        this.carousel = section.ordinal();
         this.views = new HoloView[]{new OverviewView(this), new CharacterView(this), new BodyView(this),
                 new SpecialityView(this), new SkillsView(this)};
+        for (Section s : Section.values()) {
+            plates[s.ordinal()] = new HoloPanel("plate_" + s.id, true);
+            chips[s.ordinal()] = new HoloPanel("chip_" + s.id, true);
+        }
+        all.add(header);
+        for (HoloPanel p : plates) all.add(p);
+        for (HoloPanel p : chips) all.add(p);
+        all.add(modal);
     }
 
     // ================================================================ layout
@@ -158,66 +173,48 @@ public final class HoloCharacterScreen extends RespectScreen {
         uiScale = Math.min(HoloConfig.scale(), Math.max(0.5F, Math.min(screenW / 320F, screenH / 240F)));
         layoutW = screenW / uiScale;
         layoutH = screenH / uiScale;
-        // O menu ocupa no maximo 660 x 370 unidades, centralizado: em telas grandes (GUI 1) continua um
-        // conjunto compacto com o mundo em volta; na menor GUI (320 x 240) usa a tela toda.
-        float effW = Math.min(layoutW, 660F), effH = Math.min(layoutH, 370F);
-        float ox = (layoutW - effW) / 2F, oy = (layoutH - effH) / 2F;
-        float m = 8F, gap = 8F;
-        float navW = effW < 360 ? 90F : 108F;
-        navRect.set(ox + m + 6, oy + m, navW, effH - 2 * m);
-        float mainX = navRect.x + navW + gap;
-        float right = ox + effW - m - 6;
-        float dockW = effW >= 400 ? Mth.clamp(effW * 0.24F, 96F, 150F) : 0F;
-        dockAvailable = dockW > 0 && effH >= 200;
-        wide.set(mainX, oy + m, right - mainX, effH - 2 * m);
-        if (dockAvailable) {
-            narrow.set(mainX, oy + m, wide.w - dockW - gap, wide.h);
-            plateRect.set(right - dockW + 4, oy + effH - m - 66, dockW - 8, 62);
-        } else {
-            narrow.set(wide.x, wide.y, wide.w, wide.h);
-            plateRect.set(0, 0, 0, 0);
-        }
-        float mw = Math.min(236F, effW - 40F), mh = Math.min(196F, effH - 24F);
-        modalRect.set((layoutW - mw) / 2F, (layoutH - mh) / 2F, mw, mh);
-        nav.rect(navRect.x, navRect.y, navRect.w, navRect.h);
-        plate.rect(plateRect.x, plateRect.y, plateRect.w, plateRect.h);
-        modal.rect(modalRect.x, modalRect.y, modalRect.w, modalRect.h);
-        Rect r = rectFor(section);
-        incoming.rect(r.x, r.y, r.w, r.h);
-        incoming.h = 0F; // fitHeight escolhe a altura no proximo quadro, sem animar
+        distance = HoloGeometry.referenceDistance(screenH, FOV);
+        eyeZ = distance / uiScale;
+        // Em telas grandes (GUI 1) o conjunto continua compacto no meio, com o mundo em volta.
+        float effH = Math.min(layoutH, 390F);
+        float oy = (layoutH - effH) / 2F;
+        centerX = layoutW / 2F;
+        boolean small = layoutW < 420F;
+        plateW = small ? Math.min(layoutW - 52F, 290F) : Mth.clamp(layoutW * 0.46F, 290F, 350F);
+        headerH = small ? 26F : 30F;
+        headerY = oy + 6F;
+        headerW = Math.min(plateW + 80F, layoutW - 20F);
+        chipH = small ? 16F : 18F;
+        chipsY = oy + effH - chipH - (small ? 7F : 16F);
+        chipW = Math.min(74F, (Math.min(layoutW - 30F, plateW + 70F)) / Section.values().length - 5F);
+        plateTop = headerY + headerH + (small ? 8F : 12F);
+        plateMaxH = chipsY - (small ? 8F : 14F) - plateTop;
+        dockAvailable = layoutW >= 420F && effH >= 220F;
+        float mw = Math.min(236F, layoutW - 40F), mh = Math.min(196F, effH - 24F);
+        modal.rect((layoutW - mw) / 2F, (layoutH - mh) / 2F, mw, mh);
+        for (HoloPanel p : plates) p.h = 0F; // fitHeight escolhe a altura no proximo quadro, sem animar
     }
-
-    Rect rectFor(Section s) { return s.wide ? wide : narrow; }
 
     // ================================================================ secoes
 
     Section section() { return section; }
     HoloView view(Section s) { return views[s.ordinal()]; }
     float time() { return time; }
-    float sectionSince() { return time - sectionStart; }
     boolean dockAvailable() { return dockAvailable; }
 
     void select(Section next) {
         if (next == null || next == section || closing) return;
-        // painel que entra vira o que sai (troca de superficies, sem realocar)
-        HoloPanel swap = outgoing;
-        outgoing = incoming;
-        incoming = swap;
-        previous = section;
         section = next;
         sectionStart = time;
-        Rect r = rectFor(next);
-        incoming.rect(r.x, r.y, r.w, r.h);
-        incoming.h = 0F;
-        incoming.resetZones();
         view(next).onEnter();
-        Ui.playClick(1.15F);
-        if (HoloConfig.motion() > 0) particles.alongEdges(incoming, 14, next.accent, 30F);
+        Ui.playUi(ModSounds.UI_HOVER.get(), 1.15F, 0.45F);
+        if (HoloConfig.motion() > 0) particles.alongEdges(plates[next.ordinal()], 16, next.accent, 30F);
     }
 
     void cycle(int dir) {
-        Section[] all = Section.values();
-        select(all[Math.floorMod(section.ordinal() + dir, all.length)]);
+        Section[] s = Section.values();
+        int i = section.ordinal() + dir;
+        if (i >= 0 && i < s.length) select(s[i]);
     }
 
     void openCreator() { minecraft.setScreen(new CharacterCreationScreen()); }
@@ -269,7 +266,7 @@ public final class HoloCharacterScreen extends RespectScreen {
 
     private float closeDuration() { return HoloConfig.reducedMotion() ? 0.1F : CLOSE_TIME; }
 
-    /** Esc, K ou "Back to game": toca a dissolucao e so entao devolve o jogo. */
+    /** Esc, K ou o botao de fechar: as placas se dobram e so entao o jogo volta. */
     @Override
     public void onClose() {
         if (closing) return;
@@ -282,8 +279,8 @@ public final class HoloCharacterScreen extends RespectScreen {
         releaseDrags();
         Ui.playUi(ModSounds.UI_HOVER.get(), 0.48F, 0.6F);
         if (HoloConfig.motion() > 0) {
-            particles.alongEdges(incoming, 26, view(section).accent(), 46F);
-            particles.alongEdges(nav, 18, HoloStyle.CYAN, 40F);
+            for (HoloPanel p : plates) if (p.visible && p.alpha > 0.2F) particles.alongEdges(p, 14, p.accent, 46F);
+            particles.alongEdges(header, 10, HoloStyle.CYAN, 40F);
         }
     }
 
@@ -298,11 +295,7 @@ public final class HoloCharacterScreen extends RespectScreen {
         settingsDirty = false;
         HoloBackdrop.clear();
         particles.clear();
-        nav.close();
-        plate.close();
-        modal.close();
-        incoming.close();
-        outgoing.close();
+        for (HoloPanel p : all) p.close();
         super.removed();
     }
 
@@ -340,10 +333,15 @@ public final class HoloCharacterScreen extends RespectScreen {
 
         updateCamera();
         animate();
-        freezePanels();
+        for (HoloPanel p : all) if (p.visible) p.freeze(viewLayout, projViewLayout);
         pickHot();
         tooltip = null;
         drawSurfaces(g);
+        if (hotPanel != null && isPlate(hotPanel) && sectionOf(hotPanel) != section) {
+            Section s = sectionOf(hotPanel);
+            tooltip = List.of(Component.translatable(s.key()).withStyle(net.minecraft.ChatFormatting.BOLD),
+                    Component.translatable("gui.respectcraft.holo.bring_forward").withStyle(net.minecraft.ChatFormatting.GRAY));
+        }
 
         g.flush();
         r3d.begin(projection);
@@ -371,23 +369,19 @@ public final class HoloCharacterScreen extends RespectScreen {
         return open * (1F - HoloAnim.smooth(HoloAnim.window(time - closeStart, 0F, closeDuration())));
     }
 
-    /** Escurecimento leve do mundo com vinheta azul (alem do efeito do Rimulib), sem desfoque. */
+    /** Escurecimento leve do mundo com vinheta (alem da passada do Rimulib), sem desfoque. */
     private void backdrop2D(GuiGraphics g, float k) {
-        int top = Ui.alpha(0xFF020812, 0.50F * k), mid = Ui.alpha(0xFF04101C, 0.30F * k), bottom = Ui.alpha(0xFF02060C, 0.62F * k);
+        int top = Ui.alpha(0xFF020812, 0.42F * k), mid = Ui.alpha(0xFF04101C, 0.18F * k), bottom = Ui.alpha(0xFF02060C, 0.5F * k);
         g.fillGradient(0, 0, width, height / 2, top, mid);
         g.fillGradient(0, height / 2, width, height, mid, bottom);
     }
 
     private void updateCamera() {
-        var window = minecraft.getWindow();
-        float ndcX = (float) (minecraft.mouseHandler.xpos() / Math.max(1, window.getScreenWidth()) * 2.0 - 1.0);
-        float ndcY = (float) (1.0 - minecraft.mouseHandler.ypos() / Math.max(1, window.getScreenHeight()) * 2.0);
-        ndcX = Mth.clamp(ndcX, -1F, 1F);
-        ndcY = Mth.clamp(ndcY, -1F, 1F);
+        float ndcX = Mth.clamp(ndcX(), -1F, 1F), ndcY = Mth.clamp(ndcY(), -1F, 1F);
         float motion = HoloConfig.motion();
         float weight = motion * HoloAnim.outCubic(HoloAnim.window(time, 0.42F, 0.45F));
-        eyeX = HoloAnim.approach(eyeX, ndcX * 38F * weight, 5F, dt);
-        eyeY = HoloAnim.approach(eyeY, ndcY * 22F * weight, 5F, dt);
+        eyeX = HoloAnim.approach(eyeX, ndcX * 44F * weight, 5F, dt);
+        eyeY = HoloAnim.approach(eyeY, ndcY * 26F * weight, 5F, dt);
 
         // Ancora hibrida: a cena acompanha um pouco a camera real (empurroes, giro do servidor) e se recentraliza.
         Camera camera = minecraft.gameRenderer.getMainCamera();
@@ -413,6 +407,7 @@ public final class HoloCharacterScreen extends RespectScreen {
             }
         }
         distance = HoloGeometry.referenceDistance(screenH, FOV);
+        eyeZ = distance / uiScale;
         HoloGeometry.offAxis(projection, screenW, screenH, distance, eyeX, eyeY, 8F, distance * 6F);
         HoloGeometry.view(view, distance, eyeX, eyeY, orbitYaw + worldYaw, orbitPitch + worldPitch);
         HoloGeometry.layoutToMenu(layout, screenW, screenH, uiScale);
@@ -420,85 +415,96 @@ public final class HoloCharacterScreen extends RespectScreen {
         projection.mul(viewLayout, projViewLayout);
     }
 
-    /** Estado animado de cada painel neste quadro: abertura, troca de secao, painel Display e fechamento. */
+    // ================================================================ composicao espacial
+
+    /**
+     * Posiciona um painel no cilindro em volta do olho: angulo {@code deg} (0 = em frente), raio {@code radius} (o
+     * plano de referencia tem raio {@code eyeZ}), virado para o olho. {@code y} e o topo do painel.
+     */
+    private void onArc(HoloPanel p, float deg, float radius, float y, float w, float h) {
+        double a = Math.toRadians(deg);
+        float cx = centerX + radius * (float) Math.sin(a);
+        float cz = eyeZ - radius * (float) Math.cos(a);
+        p.rect(cx - w / 2F, y, w, h);
+        p.pivotX = 0.5F;
+        p.dz = cz;
+        p.yaw = -deg;
+    }
+
+    /** Estado animado de cada painel neste quadro: arco, abertura, troca de secao, Display e fechamento. */
     private void animate() {
         boolean reduced = HoloConfig.reducedMotion();
         modalAmt = HoloAnim.approach(modalAmt, modalOpen ? 1F : 0F, reduced ? 40F : 14F, dt);
-        boolean docked = dockAvailable && !section.wide;
-        dockAmt = HoloAnim.approach(dockAmt, docked ? 1F : 0F, reduced ? 40F : 9F, dt);
-        stageAmt = HoloAnim.approach(stageAmt, section == Section.CHARACTER ? 1F : 0F, reduced ? 40F : 8F, dt);
-
-        // barra lateral
-        // barra lateral e placa giram pela borda de fora: a borda de dentro recua (cabine), nada sai da tela
-        nav.rest();
-        nav.pivotX = 0F;
-        nav.yaw = 16F;
-        nav.dz = 10F;
-        nav.accent = HoloStyle.CYAN;
-        assemble(nav, 0.05F, 0.03F);
-
-        // painel principal (entra) e o anterior (sai); secoes estreitas encolhem ate o conteudo
-        float since = time - sectionStart;
-        fitHeight(incoming, section, reduced);
-        incoming.rest();
-        incoming.accent = view(section).accent();
-        assemble(incoming, 0.11F, 0F);
-        incoming.sweep = -1F;
-        if (previous != null && since < 0.45F) {
-            if (reduced) {
-                incoming.alpha *= HoloAnim.window(since, 0F, 0.12F);
-                incoming.contentAlpha *= HoloAnim.window(since, 0F, 0.12F);
-            } else {
-                float k = HoloAnim.outCubic(HoloAnim.window(since, 0F, 0.30F));
-                incoming.dz += HoloAnim.lerp(k, 70F, 0F);
-                incoming.scaleX *= HoloAnim.lerp(k, 0.96F, 1F);
-                incoming.alpha *= HoloAnim.window(since, 0F, 0.16F);
-                incoming.contentAlpha *= HoloAnim.window(since, 0.05F, 0.2F);
-                incoming.outline *= HoloAnim.window(since, 0F, 0.3F);
-                incoming.sweep = HoloAnim.window(since, 0.02F, 0.34F);
-                if (incoming.sweep >= 1F) incoming.sweep = -1F;
-            }
-            outgoing.rest();
-            outgoing.accent = view(previous).accent();
-            float k = reduced ? HoloAnim.window(since, 0F, 0.12F) : HoloAnim.inCubic(HoloAnim.window(since, 0F, 0.26F));
-            if (!reduced) {
-                outgoing.dz = HoloAnim.lerp(k, 0F, -130F);
-                outgoing.yaw = -7F * k;
-                outgoing.scaleX = outgoing.scaleY = HoloAnim.lerp(k, 1F, 0.94F);
-            }
-            outgoing.alpha = 1F - k;
-            outgoing.contentAlpha = 1F - Math.min(1F, k * 1.6F);
-            outgoing.outline = 1F - k;
-            outgoing.visible = k < 1F;
-            outgoing.interactive = false;
-            if (closing) closeOut(outgoing, 0F);
+        stageAmt = HoloAnim.approach(stageAmt, section == Section.CHARACTER ? 1F : 0F, reduced ? 40F : 7F, dt);
+        float target = section.ordinal();
+        if (reduced) {
+            carousel = target;
+            carouselVel[0] = 0F;
         } else {
-            outgoing.visible = false;
+            // mola um pouco subamortecida: o arco passa levemente do ponto e assenta
+            carousel = HoloAnim.spring(carousel, target, carouselVel, 42F, 9.5F, dt);
         }
 
-        // placa de identidade sob o holograma
-        plate.rest();
-        plate.pivotX = 1F;
-        plate.pivotY = 1F;
-        plate.yaw = -16F;
-        plate.pitch = 14F;
-        plate.dz = 14F;
-        plate.accent = HoloStyle.VIOLET;
-        assemble(plate, 0.2F, 0.06F);
-        float d = HoloAnim.outCubic(dockAmt);
-        plate.alpha *= d;
-        plate.contentAlpha *= d;
-        plate.outline *= d;
-        plate.dz -= (1F - d) * 90F;
-        plate.scaleY *= HoloAnim.lerp(d, 0.3F, 1F);
-        plate.visible = dockAvailable && plate.alpha > 0.01F;
-        plate.interactive = plate.visible && d > 0.6F;
+        // ---- placas das secoes no arco
+        for (Section s : Section.values()) {
+            HoloPanel p = plates[s.ordinal()];
+            fitHeight(p, s, reduced);
+            float a = s.ordinal() - carousel;
+            float abs = Math.abs(a);
+            p.rest();
+            p.pivotY = 0.5F;
+            p.accent = view(s).accent();
+            float hover = p == hotPanel && s != section && !closing ? 1F : 0F;
+            float lift = HoloAnim.clamp01(hover);
+            float radius = eyeZ * (1F + 0.24F * Math.min(1F, abs) + 0.12F * Math.max(0F, abs - 1F)) - lift * eyeZ * 0.05F;
+            onArc(p, a * ARC_STEP, radius, plateTop + 12F * Math.min(1F, abs), plateW, p.h);
+            // leve inclinacao das placas de lado: parecem penduradas no arco, nao alinhadas a tela
+            p.pitch = 3F * Math.min(1F, abs);
+            float side = abs <= 1F ? HoloAnim.lerp(abs, 1F, 0.62F) : 0.62F * HoloAnim.clamp01(2.05F - abs);
+            int delay = Math.min(3, Math.round(abs));
+            assemble(p, 0.08F + delay * 0.07F, a < 0 ? -1F : 1F, 0.02F * delay);
+            p.alpha *= Math.min(1F, side + 0.2F * lift);
+            p.contentAlpha *= side;
+            p.outline *= Math.min(1F, side + 0.3F * lift);
+            p.visible = p.visible && abs < 2.05F && p.alpha > 0.01F;
+            p.interactive = p.interactive && abs < 1.6F;
+            p.sweep = -1F;
+            if (s == section && !reduced) {
+                float since = time - sectionStart;
+                if (since < 0.5F) p.sweep = HoloAnim.window(since, 0.06F, 0.4F);
+                if (p.sweep >= 1F) p.sweep = -1F;
+            }
+        }
 
-        // painel Display (modal): na frente, empurra o resto para tras
+        // ---- fita de identidade acima (inclinada para baixo, de frente para o olho)
+        header.rest();
+        header.pivotY = 1F;
+        onArc(header, 0F, eyeZ * 1.06F, headerY, headerW, headerH);
+        header.pitch = -15F;
+        header.accent = HoloStyle.CYAN;
+        assemble(header, 0.03F, 1F, 0.08F);
+        header.yaw += 0F;
+
+        // ---- chips de navegacao abaixo, numa fileira curva inclinada para cima
+        float chipRadius = eyeZ * 1.01F;
+        float stepDeg = (float) Math.toDegrees(Math.atan((chipW + 6F) / chipRadius));
+        for (Section s : Section.values()) {
+            HoloPanel p = chips[s.ordinal()];
+            p.rest();
+            p.pivotY = 0F;
+            boolean active = s == section;
+            float k = p == hotPanel ? 1F : 0F;
+            onArc(p, (s.ordinal() - 2) * stepDeg, chipRadius - (active ? eyeZ * 0.03F : 0F) - k * eyeZ * 0.012F, chipsY, chipW, chipH);
+            p.pitch = 16F;
+            p.accent = s.accent;
+            assemble(p, 0.2F + s.ordinal() * 0.035F, 1F, 0.04F);
+        }
+
+        // ---- painel Display (modal): na frente, empurra o resto para tras
         modal.rest();
         modal.accent = HoloStyle.VIOLET;
         float mk = HoloAnim.outCubic(modalAmt);
-        modal.dz = HoloAnim.lerp(mk, -40F, 34F);
+        modal.dz = HoloAnim.lerp(mk, -40F, 40F);
         modal.scaleX = modal.scaleY = HoloAnim.lerp(mk, 0.9F, 1F);
         modal.alpha = mk;
         modal.contentAlpha = HoloAnim.window(modalAmt, 0.4F, 0.6F);
@@ -506,33 +512,35 @@ public final class HoloCharacterScreen extends RespectScreen {
         modal.visible = modalAmt > 0.01F;
         modal.interactive = modalOpen && modalAmt > 0.5F;
         if (modal.visible) {
-            for (HoloPanel p : new HoloPanel[]{nav, incoming, plate}) {
-                p.dz -= 28F * mk;
+            for (HoloPanel p : all) {
+                if (p == modal) continue;
+                p.dz -= 40F * mk;
                 p.alpha *= 1F - 0.45F * mk;
                 p.contentAlpha *= 1F - 0.55F * mk;
                 p.interactive = false;
             }
         }
-        if (closing) closeOut(modal, 0F);
+        if (closing) closeOut(modal, 0F, 1F);
     }
 
-    /** Altura do painel principal: o retangulo inteiro, ou so o necessario para o conteudo (ultima medida). */
+    /** Altura de uma placa: a inteira, ou so o necessario para o conteudo (ultima medida). */
     private void fitHeight(HoloPanel p, Section s, boolean reduced) {
-        Rect r = rectFor(s);
         HoloView v = view(s);
-        float target = r.h;
-        if (v.fitsContent()) {
+        float target = plateMaxH;
+        if (!s.tall && v.fitsContent()) {
             float desired = v.desiredHeight();
             if (desired <= 0F) desired = FIT_CACHE[s.ordinal()];
-            if (desired > 0F) target = Mth.clamp(desired, Math.min(r.h, 120F), r.h);
+            if (desired > 0F) target = Mth.clamp(desired, Math.min(plateMaxH, 120F), plateMaxH);
             FIT_CACHE[s.ordinal()] = desired;
         }
-        p.y = r.y;
         p.h = reduced || p.h <= 1F || Math.abs(p.h - target) < 0.5F ? target : HoloAnim.approach(p.h, target, 12F, dt);
     }
 
-    /** Abertura de um painel: risco horizontal que desdobra, vindo do fundo, com contorno desenhado. */
-    private void assemble(HoloPanel p, float delay, float closeDelay) {
+    /**
+     * Abertura de um painel no ar: chega de lado (girado quase de perfil, {@code side} = sentido do giro), vindo do
+     * fundo, e desdobra com uma mola curta; o contorno se desenha a partir do canto.
+     */
+    private void assemble(HoloPanel p, float delay, float side, float closeDelay) {
         p.visible = true;
         p.interactive = true;
         if (HoloConfig.reducedMotion()) {
@@ -541,21 +549,22 @@ public final class HoloCharacterScreen extends RespectScreen {
             p.contentAlpha = k;
             p.outline = k;
         } else {
-            float form = HoloAnim.outCubic(HoloAnim.window(time, delay, 0.24F));
-            float unfold = HoloAnim.outBack(HoloAnim.window(time, delay + 0.07F, 0.22F), 1.05F);
-            p.scaleX *= HoloAnim.lerp(form, 0.55F, 1F);
-            p.scaleY *= HoloAnim.lerp(unfold, 0.025F, 1F);
-            p.dz += HoloAnim.lerp(form, -170F, 0F);
-            p.alpha = HoloAnim.window(time, delay + 0.03F, 0.18F);
-            p.outline = HoloAnim.outCubic(HoloAnim.window(time, delay, 0.28F));
-            p.contentAlpha = HoloAnim.window(time, delay + 0.17F, 0.2F);
+            float turn = HoloAnim.outBack(HoloAnim.window(time, delay, 0.34F), 1.15F);
+            float form = HoloAnim.outCubic(HoloAnim.window(time, delay, 0.3F));
+            p.yaw += (1F - turn) * 78F * side;
+            p.scaleX *= HoloAnim.lerp(form, 0.6F, 1F);
+            p.scaleY *= HoloAnim.lerp(HoloAnim.outBack(HoloAnim.window(time, delay + 0.05F, 0.26F), 1.05F), 0.05F, 1F);
+            p.dz += HoloAnim.lerp(form, -160F, 0F);
+            p.alpha = HoloAnim.window(time, delay + 0.02F, 0.18F);
+            p.outline = HoloAnim.outCubic(HoloAnim.window(time, delay, 0.3F));
+            p.contentAlpha = HoloAnim.window(time, delay + 0.2F, 0.2F);
         }
         p.interactive = p.alpha > 0.35F;
-        if (closing) closeOut(p, closeDelay);
+        if (closing) closeOut(p, closeDelay, side);
     }
 
-    /** Dissolucao: conteudo some primeiro, o painel recolhe numa linha e recua. */
-    private void closeOut(HoloPanel p, float delay) {
+    /** Dissolucao: conteudo some primeiro, a placa gira de perfil, encolhe e recua. */
+    private void closeOut(HoloPanel p, float delay, float side) {
         float tc = time - closeStart;
         p.interactive = false;
         if (HoloConfig.reducedMotion()) {
@@ -565,19 +574,14 @@ public final class HoloCharacterScreen extends RespectScreen {
             p.outline *= 1F - k;
             return;
         }
-        float k = HoloAnim.inCubic(HoloAnim.window(tc, delay + 0.05F, 0.18F));
+        float k = HoloAnim.inCubic(HoloAnim.window(tc, delay + 0.04F, 0.2F));
         p.contentAlpha *= 1F - HoloAnim.window(tc, 0F, 0.09F);
-        p.scaleY *= HoloAnim.lerp(k, 1F, 0.02F);
-        p.dz += HoloAnim.lerp(k, 0F, -90F);
-        p.alpha *= 1F - HoloAnim.window(tc, delay + 0.12F, 0.12F);
+        p.yaw += k * 70F * side;
+        p.scaleY *= HoloAnim.lerp(k, 1F, 0.3F);
+        p.dz += HoloAnim.lerp(k, 0F, -110F);
+        p.alpha *= 1F - HoloAnim.window(tc, delay + 0.12F, 0.14F);
         p.outline *= 1F - k;
     }
-
-    private void freezePanels() {
-        for (HoloPanel p : panels()) if (p.visible) p.freeze(viewLayout, projViewLayout);
-    }
-
-    private HoloPanel[] panels() { return new HoloPanel[]{nav, outgoing, incoming, plate, modal}; }
 
     // ================================================================ cursor
 
@@ -589,14 +593,24 @@ public final class HoloCharacterScreen extends RespectScreen {
         return (float) (1.0 - minecraft.mouseHandler.ypos() / Math.max(1, minecraft.getWindow().getScreenHeight()) * 2.0);
     }
 
+    private boolean isPlate(HoloPanel p) {
+        for (HoloPanel q : plates) if (q == p) return true;
+        return false;
+    }
+
+    private Section sectionOf(HoloPanel p) {
+        for (Section s : Section.values()) if (plates[s.ordinal()] == p || chips[s.ordinal()] == p) return s;
+        return null;
+    }
+
     /** Painel interativo mais perto sob o cursor (o modal, quando aberto, captura tudo). */
     private HoloPanel pick(float nx, float ny, Vector3f out) {
         if (closing) return null;
         if (modalOpen) return modal.interactive && modal.hit(nx, ny, out) ? modal : null;
         HoloPanel best = null;
         float bestT = Float.MAX_VALUE, bx = 0, by = 0;
-        for (HoloPanel p : new HoloPanel[]{nav, incoming, plate}) {
-            if (!p.visible || !p.interactive) continue;
+        for (HoloPanel p : all) {
+            if (p == modal || !p.visible || !p.interactive) continue;
             if (p.hit(nx, ny, out) && out.z < bestT) {
                 bestT = out.z;
                 best = p;
@@ -609,7 +623,7 @@ public final class HoloCharacterScreen extends RespectScreen {
     }
 
     private void pickHot() {
-        for (HoloPanel p : panels()) {
+        for (HoloPanel p : all) {
             p.hot = false;
             p.cursorX = p.cursorY = -9999F;
         }
@@ -650,15 +664,19 @@ public final class HoloCharacterScreen extends RespectScreen {
 
     private void drawSurfaces(GuiGraphics g) {
         float guiScale = (float) minecraft.getWindow().getGuiScale();
-        HoloView current = view(section);
-        // As duas superficies do painel principal tem o tamanho do retangulo largo: trocar de secao nao realoca.
-        drawPanel(g, nav, guiScale, nav.w, nav.h, () -> navView.drawNav(canvas, nav.w, nav.h));
-        if (outgoing.visible && previous != null) {
-            HoloView old = view(previous);
-            drawPanel(g, outgoing, guiScale, wide.w, wide.h, () -> old.draw(canvas, outgoing.w, outgoing.h, 10F));
+        drawPanel(g, header, guiScale, headerW, headerH, () -> navView.drawHeader(canvas, header.w, header.h));
+        for (Section s : Section.values()) {
+            HoloPanel p = plates[s.ordinal()];
+            HoloView v = view(s);
+            boolean active = s == section;
+            // placas de lado mostram o conteudo de verdade, mas sem hover: um clique nelas so traz a placa para a frente
+            boolean hot = p.hot;
+            if (!active) p.hot = false;
+            drawPanel(g, p, guiScale, plateW, plateMaxH, () -> v.draw(canvas, p.w, p.h, time - 0.16F));
+            p.hot = hot;
+            HoloPanel chip = chips[s.ordinal()];
+            drawPanel(g, chip, guiScale, chipW, chipH, () -> navView.drawChip(canvas, s, chip.w, chip.h, active));
         }
-        drawPanel(g, incoming, guiScale, wide.w, wide.h, () -> current.draw(canvas, incoming.w, incoming.h, time - Math.max(sectionStart, 0.16F)));
-        if (plate.visible) drawPanel(g, plate, guiScale, plate.w, plate.h, () -> navView.drawPlate(canvas, plate.w, plate.h));
         if (modal.visible) drawPanel(g, modal, guiScale, modal.w, modal.h, () -> settings.draw(canvas, modal.w, modal.h));
     }
 
@@ -687,18 +705,18 @@ public final class HoloCharacterScreen extends RespectScreen {
         drawPlayer(env);
 
         drawOrder.clear();
-        for (HoloPanel p : panels()) if (p.visible && p.alpha > 0.003F) drawOrder.add(p);
+        for (HoloPanel p : all) if (p.visible && p.alpha > 0.003F) drawOrder.add(p);
         drawOrder.sort(Comparator.comparingDouble(p -> p.depth));
         for (HoloPanel p : drawOrder) {
             float u = p.surface.u(p.w), v0 = p.surface.vBottom(p.h);
             r3d.texturedPanel(p.modelView, p.w, p.h, p.surface.textureId(), u, v0, p.alpha);
         }
 
-        // contornos, varreduras, feixes de montagem, pedestal e mira
+        // contornos, varreduras, feixes, pedestal e mira
         r3d.beginLines();
         for (HoloPanel p : drawOrder) {
             float glow = 0.55F + 0.45F * motion;
-            if (p.hot) glow += 0.25F;
+            if (p.hot) glow += 0.35F;
             r3d.outline(p.modelView, p.w, p.h, p.outline * Math.min(1F, p.alpha * 1.5F), p.accent, glow * p.alpha);
             if (p.sweep >= 0F && p.sweep < 1F) {
                 float y = p.h * p.sweep;
@@ -707,6 +725,7 @@ public final class HoloCharacterScreen extends RespectScreen {
                 r3d.rect(p.modelView, 0F, Math.max(0F, y - 16F), p.w, Math.min(16F, y), Ui.alpha(p.accent, 0F), Ui.alpha(p.accent, 0.12F));
             }
         }
+        lightTrails(env, false);
         assemblyBeams(env);
         pedestalLines();
         if (hotPanel != null && motion > 0F && !closing) {
@@ -723,18 +742,18 @@ public final class HoloCharacterScreen extends RespectScreen {
         invocationGlow();
         for (HoloPanel p : drawOrder) {
             float a = p.alpha * (0.35F + 0.4F * motion);
-            if (a <= 0.01F) continue;
+            if (a <= 0.01F || p.w < 90F) continue;
             float pulse = 0.85F + 0.15F * Mth.sin(time * 2.4F + p.depth);
             glowCorner(p, 0F, 0F, a * pulse);
             glowCorner(p, p.w, 0F, a * 0.7F);
             glowCorner(p, 0F, p.h, a * 0.7F);
             glowCorner(p, p.w, p.h, a * pulse);
         }
+        lightTrails(env, true);
         pedestalGlow(env);
         particles.render(r3d, viewLayout, uiScale, env);
         if (hotPanel != null && motion > 0F && !closing) {
-            hotPanel.toLayout(hotPanel.cursorX, hotPanel.cursorY, r3d.scratch());
-            Vector3f c = r3d.scratch();
+            Vector3f c = hotPanel.toLayout(hotPanel.cursorX, hotPanel.cursorY, r3d.scratch());
             r3d.glowAt(viewLayout, c.x, c.y, c.z + 0.5F, 4.5F * uiScale, Ui.alpha(hotPanel.accent, 0.5F));
         }
         r3d.endGlow();
@@ -745,13 +764,53 @@ public final class HoloCharacterScreen extends RespectScreen {
         r3d.glowAt(viewLayout, v.x, v.y, v.z + 0.3F, 7F * uiScale, Ui.alpha(p.accent, 0.5F * a));
     }
 
-    /** Anel e arcos de fundo, bem atras dos paineis: dao a profundidade e a paralaxe do cenario. */
+    /**
+     * Rastros de luz ligando as regioes no espaco: fita -> placa ativa, placa ativa -> chip ativo e placa ativa ->
+     * placas vizinhas. {@code pulses = false} desenha os fios (lote de linhas); {@code true} os pulsos que correm por
+     * eles (lote de brilho).
+     */
+    private void lightTrails(float env, boolean pulses) {
+        HoloPanel active = plates[section.ordinal()];
+        if (!active.visible || closing || env < 0.05F) return;
+        float k = env * HoloAnim.window(time, 0.45F, 0.3F);
+        if (k <= 0.01F) return;
+        float motion = HoloConfig.motion();
+        int idx = 0;
+        if (header.visible) trail(header, header.w / 2F, header.h, active, active.w / 2F, 0F, HoloStyle.CYAN, k, pulses, idx++, motion);
+        HoloPanel chip = chips[section.ordinal()];
+        if (chip.visible) trail(active, active.w / 2F, active.h, chip, chip.w / 2F, 0F, section.accent, k, pulses, idx++, motion);
+        int i = section.ordinal();
+        if (i > 0 && plates[i - 1].visible) trail(active, 0F, active.h * 0.35F, plates[i - 1], plates[i - 1].w, plates[i - 1].h * 0.35F,
+                plates[i - 1].accent, k * 0.8F, pulses, idx++, motion);
+        if (i < plates.length - 1 && plates[i + 1].visible) trail(active, active.w, active.h * 0.35F, plates[i + 1], 0F,
+                plates[i + 1].h * 0.35F, plates[i + 1].accent, k * 0.8F, pulses, idx, motion);
+    }
+
+    private void trail(HoloPanel from, float fx, float fy, HoloPanel to, float tx, float ty, int color, float k, boolean pulses,
+                       int index, float motion) {
+        Vector3f a = from.toLayout(fx, fy, va);
+        Vector3f b = to.toLayout(tx, ty, vb);
+        if (!pulses) {
+            Vector3f ea = viewLayout.transformPosition(r3d.scratchB().set(a));
+            Vector3f eb = viewLayout.transformPosition(r3d.scratchC().set(b));
+            r3d.beam(ea, eb, 0.9F * uiScale, Ui.alpha(color, 0.30F * k), Ui.alpha(color, 0.12F * k));
+            return;
+        }
+        if (motion <= 0F) return;
+        float f = (time * 0.7F + index * 0.27F) % 1F;
+        float x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f, z = a.z + (b.z - a.z) * f;
+        float fade = Mth.sin(f * Mth.PI);
+        r3d.glowAt(viewLayout, x, y, z, 5F * uiScale, Ui.alpha(color, 0.8F * fade * k));
+        r3d.glowAt(viewLayout, x, y, z, 1.6F * uiScale, Ui.alpha(0xFFFFFFFF, 0.9F * fade * k));
+    }
+
+    /** Anel e arcos de fundo, bem atras das placas, e grade de chao: profundidade e paralaxe do cenario. */
     private void backDecor(float env, float motion) {
         r3d.beginLines();
-        Matrix4f m = scratchA.set(viewLayout).translate(layoutW * 0.52F, layoutH * 0.5F, -320F);
+        Matrix4f m = scratchA.set(viewLayout).translate(centerX, layoutH * 0.5F, -360F);
         float spin = time * 0.12F * (0.3F + motion);
-        float r = layoutH * 0.62F;
-        int c1 = Ui.alpha(HoloStyle.CYAN, 0.16F * env), c2 = Ui.alpha(HoloStyle.VIOLET, 0.12F * env);
+        float r = layoutH * 0.66F;
+        int c1 = Ui.alpha(HoloStyle.CYAN, 0.15F * env), c2 = Ui.alpha(HoloStyle.VIOLET, 0.11F * env);
         float grow = HoloAnim.outCubic(HoloAnim.window(time, 0F, 0.5F));
         r3d.arc(m, 0F, 0F, r * grow, 1.6F, spin, spin + 4.2F, c1, 48);
         r3d.arc(m, 0F, 0F, r * 0.82F * grow, 1F, -spin * 1.4F + 1F, -spin * 1.4F + 3.2F, c2, 36);
@@ -762,75 +821,80 @@ public final class HoloCharacterScreen extends RespectScreen {
             r3d.segment(m, cos * r * 0.94F * grow, sin * r * 0.94F * grow, cos * r * 0.99F * grow, sin * r * 0.99F * grow, 1.2F,
                     Ui.alpha(HoloStyle.CYAN, 0.18F * env), Ui.alpha(HoloStyle.CYAN, 0.04F * env));
         }
-        // chao de grade sumindo na profundidade (perspectiva real)
-        Matrix4f floor = scratchB.set(viewLayout).translate(0F, layoutH + 6F, 0F).rotateX(-Mth.HALF_PI);
-        for (int i = -6; i <= 14; i++) {
-            float x = layoutW * 0.5F + i * 48F - 4 * 48F;
-            r3d.segment(floor, x, -40F, x, 520F, 1F, Ui.alpha(HoloStyle.CYAN, 0.10F * env), Ui.alpha(HoloStyle.CYAN, 0F));
-        }
-        for (int i = 0; i < 9; i++) {
-            float z = -40F + i * 64F;
-            float a = 0.10F * (1F - i / 9F) * env;
-            r3d.segment(floor, -layoutW * 0.5F, z, layoutW * 1.5F, z, 1F, Ui.alpha(HoloStyle.CYAN, a), Ui.alpha(HoloStyle.CYAN, a));
+        // anel de chao em volta do ponto de vista e grade sumindo na profundidade (perspectiva real)
+        Matrix4f floor = scratchB.set(viewLayout).translate(centerX, layoutH + 10F, eyeZ).rotateX(-Mth.HALF_PI);
+        r3d.arc(floor, 0F, 0F, eyeZ * 1.05F * grow, 1.2F, Mth.PI * 0.15F, Mth.PI * 0.85F, Ui.alpha(HoloStyle.CYAN, 0.16F * env), 48);
+        r3d.arc(floor, 0F, 0F, eyeZ * 1.3F * grow, 0.9F, Mth.PI * 0.2F + spin * 0.2F, Mth.PI * 0.8F + spin * 0.2F,
+                Ui.alpha(HoloStyle.VIOLET, 0.12F * env), 48);
+        for (int i = -7; i <= 7; i++) {
+            float a = Mth.HALF_PI + i * 0.11F;
+            r3d.segment(floor, Mth.cos(a) * eyeZ * 0.7F, Mth.sin(a) * eyeZ * 0.7F, Mth.cos(a) * eyeZ * 1.9F, Mth.sin(a) * eyeZ * 1.9F,
+                    0.9F, Ui.alpha(HoloStyle.CYAN, 0.10F * env), Ui.alpha(HoloStyle.CYAN, 0F));
         }
         r3d.endLines();
     }
 
-    /** Feixes do ponto de invocacao ate cada painel durante a montagem. */
+    /** Feixes do ponto de invocacao ate cada placa durante a montagem. */
     private void assemblyBeams(float env) {
         if (HoloConfig.reducedMotion() || closing) return;
-        float k = 1F - HoloAnim.window(time, 0.12F, 0.32F);
+        float k = 1F - HoloAnim.window(time, 0.16F, 0.36F);
         if (k <= 0F) return;
         Vector3f core = r3d.scratchC();
-        viewLayout.transformPosition(core.set(layoutW / 2F, layoutH / 2F, 60F));
-        for (HoloPanel p : new HoloPanel[]{nav, incoming, plate}) {
-            if (!p.visible) continue;
-            Vector3f target = p.toLayout(p.w * p.pivotX, p.h * 0.5F, r3d.scratchB());
+        viewLayout.transformPosition(core.set(centerX, layoutH / 2F, 80F));
+        for (HoloPanel p : all) {
+            if (!p.visible || p == modal || p.w < 60F) continue;
+            Vector3f target = p.toLayout(p.w * 0.5F, p.h * 0.5F, r3d.scratchB());
             viewLayout.transformPosition(target);
             float a = k * HoloAnim.window(time, 0.04F, 0.08F);
             r3d.beam(core, target, 1.4F, Ui.alpha(0xFFFFFFFF, 0.7F * a), Ui.alpha(p.accent, 0.35F * a));
         }
     }
 
-    /** Fase A da abertura: ponto de luz e anel que se forma antes dos paineis. */
+    /** Fase A da abertura: ponto de luz que se forma antes das placas. */
     private void invocationGlow() {
         if (closing) return;
         float t = time;
-        float k = HoloAnim.window(t, 0F, 0.09F) * (1F - HoloAnim.window(t, 0.18F, 0.3F));
+        float k = HoloAnim.window(t, 0F, 0.09F) * (1F - HoloAnim.window(t, 0.2F, 0.3F));
         if (k <= 0F) return;
         float r = (HoloConfig.reducedMotion() ? 18F : 6F + 70F * HoloAnim.outCubic(HoloAnim.window(t, 0F, 0.3F))) * uiScale;
-        r3d.glowAt(viewLayout, layoutW / 2F, layoutH / 2F, 60F, r, Ui.alpha(HoloStyle.CYAN, 0.8F * k));
-        r3d.glowAt(viewLayout, layoutW / 2F, layoutH / 2F, 60F, r * 0.25F, Ui.alpha(0xFFFFFFFF, k));
+        r3d.glowAt(viewLayout, centerX, layoutH / 2F, 80F, r, Ui.alpha(HoloStyle.CYAN, 0.8F * k));
+        r3d.glowAt(viewLayout, centerX, layoutH / 2F, 80F, r * 0.25F, Ui.alpha(0xFFFFFFFF, k));
     }
 
     // ================================================================ holograma do jogador
 
     private float playerScale(float env) {
-        float vis = Math.max(dockAvailable ? HoloAnim.outCubic(dockAmt) : 0F, HoloAnim.outCubic(stageAmt));
+        float vis = Math.max(dockAvailable ? 1F : 0F, HoloAnim.outCubic(stageAmt));
         float appear = HoloConfig.reducedMotion() ? HoloAnim.window(time, 0F, 0.15F)
-                : HoloAnim.outBack(HoloAnim.window(time, 0.22F, 0.3F), 1.2F);
+                : HoloAnim.outBack(HoloAnim.window(time, 0.3F, 0.32F), 1.2F);
         float closeK = closing ? 1F - HoloAnim.inCubic(HoloAnim.window(time - closeStart, 0F, closeDuration())) : 1F;
         return vis * appear * closeK * (modalOpen ? 1F - 0.3F * modalAmt : 1F);
     }
 
-    /** Pes (layout) e altura do holograma: encaixado sobre a placa ou no palco da secao Character. */
+    /**
+     * Pes (layout) e altura do holograma: de pe na frente, a esquerda da placa ativa, ou no palco da placa Character
+     * (preso a ela: acompanha o arco quando ela gira).
+     */
     private float[] playerPlacement() {
-        float s = HoloAnim.inOutCubic(stageAmt);
-        float dockX = plateRect.x + plateRect.w / 2F, dockY = plateRect.y - 6F, dockZ = 36F;
-        float dockH = Math.min(plateRect.y - 22F, 122F);
-        Rect r = wide;
-        float stageX = r.x + 10F + CharacterView.stageWidth(r.w) / 2F;
-        float stageY = r.y + r.h - 34F;
-        float stageZ = 30F;
-        float stageH = Math.min(r.h - 96F, 160F);
+        float dockH = Math.min(plateMaxH * 0.5F, 112F);
+        float dockX = centerX - plateW / 2F - 44F, dockY = plateTop + plateMaxH - 8F, dockZ = 56F;
+        HoloPanel ch = plates[Section.CHARACTER.ordinal()];
+        float sx = 10F + CharacterView.stageWidth(ch.w) / 2F;
+        Vector3f stage = ch.toLayout(sx, ch.h - 34F, va);
+        float stageZ = stage.z + 30F;
+        float stageH = Math.min(ch.h - 96F, 160F);
         if (!dockAvailable) {
-            dockX = stageX;
-            dockY = stageY;
+            dockX = stage.x;
+            dockY = stage.y;
             dockZ = stageZ;
             dockH = stageH;
         }
-        return new float[]{HoloAnim.lerp(s, dockX, stageX), HoloAnim.lerp(s, dockY, stageY), HoloAnim.lerp(s, dockZ, stageZ),
-                HoloAnim.lerp(s, dockH, stageH)};
+        float s = HoloAnim.inOutCubic(stageAmt);
+        placement[0] = HoloAnim.lerp(s, dockX, stage.x);
+        placement[1] = HoloAnim.lerp(s, dockY, stage.y);
+        placement[2] = HoloAnim.lerp(s, dockZ, stageZ);
+        placement[3] = HoloAnim.lerp(s, dockH, Math.max(40F, stageH));
+        return placement;
     }
 
     private void drawPlayer(float env) {
@@ -898,11 +962,12 @@ public final class HoloCharacterScreen extends RespectScreen {
     private void spawnAmbient() {
         float motion = HoloConfig.motion();
         if (motion <= 0F || closing || HoloConfig.highContrast()) return;
-        moteClock += dt * 9F * motion;
+        moteClock += dt * 11F * motion;
         while (moteClock >= 1F) {
             moteClock -= 1F;
             int color = Math.random() < 0.7 ? HoloStyle.CYAN : HoloStyle.VIOLET;
-            particles.mote(-20F, layoutW + 20F, layoutH * 0.25F, layoutH + 10F, -260F, 70F, color);
+            // espalhadas em volume, inclusive entre as placas e na frente delas
+            particles.mote(centerX - layoutW * 0.7F, centerX + layoutW * 0.7F, layoutH * 0.2F, layoutH + 10F, -300F, 140F, color);
         }
         if (playerScale(1F) > 0.5F && Math.random() < dt * 6F * motion) {
             float[] at = playerPlacement();
@@ -932,6 +997,11 @@ public final class HoloCharacterScreen extends RespectScreen {
         HoloPanel p = pick(nx, ny, hit);
         if (p == null) {
             if (modalOpen) closeSettings();
+            return true;
+        }
+        // placa de lado: o clique traz a secao para a frente (navegacao espacial)
+        if (isPlate(p) && sectionOf(p) != section) {
+            select(sectionOf(p));
             return true;
         }
         HoloZone z = p.zoneAt(hit.x, hit.y);
@@ -1008,11 +1078,9 @@ public final class HoloCharacterScreen extends RespectScreen {
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (closing || modalOpen) return true;
         HoloPanel p = pick(ndcX(), ndcY(), hit);
-        if (p == nav) {
-            if (scrollY != 0) cycle(scrollY > 0 ? -1 : 1);
-        } else if (p == incoming) {
-            view(section).scrollBy(scrollY);
-        }
+        // sobre a placa da frente rola o conteudo; em qualquer outro lugar gira o arco
+        boolean scrolled = p == plates[section.ordinal()] && view(section).scrollBy(scrollY);
+        if (!scrolled && scrollY != 0) cycle(scrollY > 0 ? -1 : 1);
         // sempre consumido: com o menu aberto a roda nunca chega na hotbar
         return true;
     }
@@ -1033,12 +1101,12 @@ public final class HoloCharacterScreen extends RespectScreen {
         if (modalOpen) return true;
         switch (keyCode) {
             case GLFW.GLFW_KEY_TAB -> cycle((modifiers & GLFW.GLFW_MOD_SHIFT) != 0 ? -1 : 1);
-            case GLFW.GLFW_KEY_UP -> cycle(-1);
-            case GLFW.GLFW_KEY_DOWN -> cycle(1);
-            case GLFW.GLFW_KEY_PAGE_UP -> view(section).scrollBy(4);
-            case GLFW.GLFW_KEY_PAGE_DOWN -> view(section).scrollBy(-4);
-            case GLFW.GLFW_KEY_LEFT -> view(section).arrow(-1);
-            case GLFW.GLFW_KEY_RIGHT -> view(section).arrow(1);
+            case GLFW.GLFW_KEY_LEFT -> cycle(-1);
+            case GLFW.GLFW_KEY_RIGHT -> cycle(1);
+            case GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_PAGE_UP -> view(section).scrollBy(keyCode == GLFW.GLFW_KEY_UP ? 1 : 4);
+            case GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_PAGE_DOWN -> view(section).scrollBy(keyCode == GLFW.GLFW_KEY_DOWN ? -1 : -4);
+            case GLFW.GLFW_KEY_LEFT_BRACKET -> view(section).arrow(-1);
+            case GLFW.GLFW_KEY_RIGHT_BRACKET -> view(section).arrow(1);
             case GLFW.GLFW_KEY_R -> recenter();
             default -> {
                 if (keyCode >= GLFW.GLFW_KEY_1 && keyCode <= GLFW.GLFW_KEY_5) {
@@ -1061,7 +1129,7 @@ public final class HoloCharacterScreen extends RespectScreen {
         Ui.playClick(1.3F);
     }
 
-    /** Toca o som de hover quando o cursor entra num item novo da barra lateral. */
+    /** Toca o som de hover quando o cursor entra num chip novo. */
     void hoverSound(String key, boolean hot) {
         if (hot && !key.equals(lastHoverKey)) {
             lastHoverKey = key;
@@ -1073,26 +1141,14 @@ public final class HoloCharacterScreen extends RespectScreen {
 
     // ================================================================ utilidades para as secoes
 
-    /** Faiscas que nascem de um ponto local do painel principal (ex.: no de habilidade comprado). */
+    /** Faiscas que nascem de um ponto local da placa da frente (ex.: no de habilidade comprado). */
     void burstOnMain(float lx, float ly, int color, int count, float speed) {
         if (HoloConfig.motion() <= 0F) return;
-        Vector3f at = incoming.toLayout(lx, ly, new Vector3f());
+        Vector3f at = plates[section.ordinal()].toLayout(lx, ly, new Vector3f());
         particles.burst(at.x, at.y, at.z + 2F, count, color, speed);
     }
 
-    HoloPanel mainPanel() { return incoming; }
+    HoloPanel mainPanel() { return plates[section.ordinal()]; }
 
     float playerYaw() { return playerYaw; }
-
-    /** Retangulo simples em unidades de layout. */
-    static final class Rect {
-        float x, y, w, h;
-
-        void set(float x, float y, float w, float h) {
-            this.x = x;
-            this.y = y;
-            this.w = Math.max(1F, w);
-            this.h = Math.max(1F, h);
-        }
-    }
 }

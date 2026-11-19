@@ -12,117 +12,124 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
 /**
- * Barra lateral (secoes e acoes existentes: aparencia, roleta, Display, fechar) e placa de identidade sob o
- * holograma do jogador. So exibicao das caches e atalhos para telas que ja existiam.
+ * Elementos de navegacao que flutuam no espaco: a fita de identidade acima do arco (nome, Speciality, traco,
+ * pontos e as acoes que o menu antigo tinha: aparencia, roleta, Display, fechar) e os chips de secao numa fileira
+ * curva abaixo dele. So exibicao das caches e atalhos para telas que ja existiam.
  */
 final class HoloNav {
     private final HoloCharacterScreen screen;
-    private float indicatorY = -1F;
-    private final float[] indicatorVel = new float[1];
 
     HoloNav(HoloCharacterScreen screen) { this.screen = screen; }
 
-    void drawNav(HoloCanvas c, float w, float h) {
+    /** Fita de identidade: marca e nome a esquerda, Speciality e traco no meio, pontos e acoes a direita. */
+    void drawHeader(HoloCanvas c, float w, float h) {
         c.glass(w, h, HoloStyle.CYAN);
         CharacterProfile p = ProfileClientCache.profile();
-        float since = screen.time() - 0.14F;
+        float since = screen.time() - 0.12F;
         c.stage(since, 0);
-        c.type(HoloCanvas.Type.LABEL, "RESPECTCRAFT", 9F, 7F, 1.1F, HoloStyle.CYAN);
-        c.caption(HoloView.tr("gui.respectcraft.holo.title"), 9F, 17F, c.muted());
+        boolean small = h < 28F;
+        float mid = h / 2F;
+        c.type(HoloCanvas.Type.LABEL, "RESPECTCRAFT", 8F, mid - 9F, 0.95F, HoloStyle.CYAN);
         String name = c.mc.player == null ? "" : c.mc.player.getGameProfile().getName();
-        c.text(Ui.fit(c.font, name, (int) (w - 18)), 9F, 27F, c.text(), false);
-        c.alpha = c.panel.contentAlpha;
-        c.divider(7F, 39F, w - 14F, HoloStyle.CYAN);
+        c.text(Ui.fit(c.font, name, 70), 8F, mid + 1F, c.text(), false);
 
-        // abas das secoes: altura se ajusta a tela (menor GUI = 320x240)
-        HoloCharacterScreen.Section[] sections = HoloCharacterScreen.Section.values();
-        float actionsH = 4 * 15F + 8F;
-        float tabH = Math.max(14F, Math.min(21F, (h - 44F - actionsH - 8F) / sections.length));
-        float y = 44F;
-        float target = y + screen.section().ordinal() * tabH;
-        if (indicatorY < 0F || HoloConfig.reducedMotion()) indicatorY = target;
-        else indicatorY = HoloAnim.spring(indicatorY, target, indicatorVel, 220F, 22F, c.dt);
-        // marcador que desliza ate a aba ativa (por baixo dos botoes)
-        int accent = screen.section().accent;
-        c.alpha = c.panel.contentAlpha;
-        c.fill(3F, indicatorY + 2F, 2F, tabH - 6F, accent);
-        c.glow(4F, indicatorY + tabH / 2F - 1F, tabH * 0.8F, Ui.alpha(accent, 0.6F));
-        for (int i = 0; i < sections.length; i++) {
-            HoloCharacterScreen.Section s = sections[i];
-            c.stage(since, i + 1);
-            String badge = s == HoloCharacterScreen.Section.SKILLS && p.skillPoints() > 0 ? String.valueOf(p.skillPoints()) : "";
-            String key = "nav." + s.id;
-            boolean hot = c.button(key, HoloView.tr(s.key()), 7F, y, w - 13F, tabH - 2F, s.icon, s.accent, true,
-                    s == screen.section(), badge, () -> screen.select(s));
-            screen.hoverSound(key, hot);
-            if (hot) c.tooltip(List.of(Component.translatable(s.key()).withStyle(ChatFormatting.BOLD),
-                    Component.translatable("gui.respectcraft.holo.key_hint", i + 1).withStyle(ChatFormatting.GRAY)));
-            y += tabH;
-        }
-
-        // acoes que ja existiam no menu K
-        float ay = h - actionsH;
-        c.alpha = c.panel.contentAlpha;
-        c.divider(7F, ay - 4F, w - 14F, HoloStyle.VIOLET);
-        c.stage(since, 7);
+        // acoes a direita (icones com dica)
+        float bs = h - 8F;
+        float bx = w - 6F - 4 * (bs + 3F);
         boolean born = p.born();
-        c.button("act.edit", HoloView.tr("gui.respectcraft.hub.edit"), 7F, ay, w - 13F, 13F,
-                SkillDef.iconTexture("identidade_dinheiro"), HoloStyle.CYAN_SOFT, true, false, "", screen::openCreator);
-        c.stage(since, 8);
-        c.button("act.birth", HoloView.tr(born ? "gui.respectcraft.hub.birth_done" : "gui.respectcraft.hub.birth"), 7F, ay + 15F,
-                w - 13F, 13F, SkillDef.iconTexture("trevo"), born ? HoloStyle.GOLD : HoloStyle.GREEN, true, false,
-                born ? "" : "!", screen::openRoulette);
-        c.stage(since, 9);
-        c.button("act.display", HoloView.tr("gui.respectcraft.holo.display"), 7F, ay + 30F, w - 13F, 13F, null,
-                HoloStyle.VIOLET, true, false, "", screen::openSettings);
-        c.stage(since, 10);
-        c.button("act.close", HoloView.tr("gui.respectcraft.hub.close"), 7F, ay + 45F, w - 13F, 13F, null,
-                HoloStyle.RED, true, false, "", screen::onClose);
-    }
+        action(c, "act.edit", bx, 4F, bs, SkillDef.iconTexture("identidade_dinheiro"), null, HoloStyle.CYAN_SOFT,
+                "gui.respectcraft.hub.edit", "", screen::openCreator);
+        action(c, "act.birth", bx + (bs + 3F), 4F, bs, SkillDef.iconTexture("trevo"), null, born ? HoloStyle.GOLD : HoloStyle.GREEN,
+                born ? "gui.respectcraft.hub.birth_done" : "gui.respectcraft.hub.birth", born ? "" : "!", screen::openRoulette);
+        action(c, "act.display", bx + 2 * (bs + 3F), 4F, bs, null, "⚙", HoloStyle.VIOLET, "gui.respectcraft.holo.display", "",
+                screen::openSettings);
+        action(c, "act.close", bx + 3 * (bs + 3F), 4F, bs, null, "✕", HoloStyle.RED, "gui.respectcraft.hub.close", "",
+                screen::onClose);
 
-    /** Placa sob o holograma: nome, Speciality com a cor da raridade, traco e pontos. */
-    void drawPlate(HoloCanvas c, float w, float h) {
-        c.glass(w, h, HoloStyle.VIOLET);
-        CharacterProfile p = ProfileClientCache.profile();
-        float since = screen.time() - 0.3F;
-        c.stage(since, 0);
-        String name = c.mc.player == null ? "" : c.mc.player.getGameProfile().getName();
-        c.text(Ui.fit(c.font, name, (int) (w - 12)), 6F, 5F, c.text(), true);
+        // pontos
+        String pts = String.valueOf(p.skillPoints());
+        float ptsW = c.measure(HoloCanvas.Type.MONO, pts, 1.2F);
+        float px = bx - 10F - ptsW;
+        c.type(HoloCanvas.Type.MONO, pts, px, mid - 3.5F, 1.2F, p.skillPoints() > 0 ? HoloStyle.GOLD : c.dim());
+        if (!small) c.caption(HoloView.tr("gui.respectcraft.holo.points_short"), px - c.measure(HoloCanvas.Type.LABEL,
+                HoloView.tr("gui.respectcraft.holo.points_short").toUpperCase(), 1F) - 4F, mid - 3F, c.dim());
+        if (c.over(px - 30F, 0, ptsW + 34F, h)) c.tooltip(List.of(Component.translatable("gui.respectcraft.hub.points", p.skillPoints())));
+
+        // Speciality e traco no meio
+        float sx = 86F, sw = px - 40F - sx;
         c.stage(since, 1);
         Speciality sp = p.specialityOrNull();
         BirthOrigin origin = p.originOrNull();
-        float y = 17F;
-        if (sp != null) {
-            int col = sp.rarity().color();
-            String spName = HoloView.tr(sp.translationKey());
-            String rarity = HoloView.tr(sp.rarity().translationKey());
-            c.text(Ui.fit(c.font, spName, (int) (w - 12)), 6F, y, col, false);
-            if (c.over(0, y - 2, w, 12)) c.tooltip(List.of(Component.literal(spName).withStyle(s -> s.withColor(col & 0xFFFFFF).withBold(true)),
-                    Component.literal(rarity).withStyle(ChatFormatting.GRAY),
-                    Component.translatable(sp.translationKey() + ".desc").withStyle(ChatFormatting.GRAY)));
-            y += 11F;
-            c.pill(Ui.fit(c.font, rarity, (int) (w - 20)), 6F, y, col);
-        } else if (p.born() && origin != null) {
-            c.text(Ui.fit(c.font, HoloView.tr("origin.respectcraft." + origin.id()), (int) (w - 12)), 6F, y, origin.color(), false);
-            y += 11F;
-            c.text(Ui.fit(c.font, HoloView.tr("gui.respectcraft.origin"), (int) (w - 12)), 6F, y + 1, c.dim(), false);
-        } else {
-            c.text(Ui.fit(c.font, HoloView.tr("gui.respectcraft.hub.unborn"), (int) (w - 12)), 6F, y, c.muted(), false);
-            y += 11F;
+        if (sw > 30F) {
+            if (sp != null) {
+                int col = sp.rarity().color();
+                String spName = HoloView.tr(sp.translationKey());
+                String rarity = HoloView.tr(sp.rarity().translationKey());
+                c.text(Ui.fit(c.font, spName, (int) sw), sx, mid - 9F, col, true);
+                c.text(Ui.fit(c.font, rarity, (int) sw), sx, mid + 1F, Ui.lerpColor(col, c.muted(), 0.3F), false);
+                if (c.over(sx, 0, sw, h)) c.tooltip(List.of(Component.literal(spName).withStyle(s -> s.withColor(col & 0xFFFFFF).withBold(true)),
+                        Component.literal(rarity).withStyle(ChatFormatting.GRAY),
+                        Component.translatable(sp.translationKey() + ".desc").withStyle(ChatFormatting.GRAY)));
+            } else if (p.born() && origin != null) {
+                c.text(Ui.fit(c.font, HoloView.tr("origin.respectcraft." + origin.id()), (int) sw), sx, mid - 9F, origin.color(), true);
+                c.text(Ui.fit(c.font, HoloView.tr("gui.respectcraft.origin"), (int) sw), sx, mid + 1F, c.dim(), false);
+            } else {
+                c.text(Ui.fit(c.font, HoloView.tr("gui.respectcraft.hub.unborn"), (int) sw), sx, mid - 4F, HoloStyle.GOLD, false);
+            }
+            List<BirthTrait> traits = p.birthTraits();
+            if (!traits.isEmpty() && sp != null) {
+                BirthTrait t = traits.get(0);
+                String tName = HoloView.tr(t.translationKey());
+                float rw = c.font.width(HoloView.tr(sp.rarity().translationKey())) + 8F;
+                if (sw - rw > 40F) c.text(Ui.fit(c.font, "· " + tName, (int) (sw - rw)), sx + rw, mid + 1F, t.polarity().color(), false);
+            }
         }
-        y += 14F;
-        c.stage(since, 2);
-        List<BirthTrait> traits = p.birthTraits();
-        if (!traits.isEmpty()) {
-            BirthTrait t = traits.get(0);
-            String tName = HoloView.tr(t.translationKey());
-            c.text(Ui.fit(c.font, tName, (int) (w - 34)), 6F, y, t.polarity().color(), false);
-        } else {
-            c.text(HoloView.tr("gui.respectcraft.trait.none_short"), 6F, y, c.dim(), false);
+    }
+
+    private void action(HoloCanvas c, String key, float x, float y, float s, net.minecraft.resources.ResourceLocation icon,
+                        String glyph, int accent, String labelKey, String badge, Runnable run) {
+        HoloZone z = c.zone(x, y, s, s);
+        z.click = run;
+        boolean hot = c.over(x, y, s, s);
+        float k = c.hoverAnim(key, hot);
+        c.fill(x, y, s, s, Ui.alpha(accent, 0.08F + 0.2F * k));
+        c.frame(x, y, s, s, Ui.alpha(accent, 0.35F + 0.5F * k));
+        if (k > 0.01F) c.glow(x + s / 2F, y + s / 2F, s, Ui.alpha(accent, 0.4F * k));
+        if (icon != null) c.icon(icon, x + (s - 12F) / 2F, y + (s - 12F) / 2F, 12F, 1F);
+        if (glyph != null) c.textCentered(glyph, x + s / 2F + 0.5F, y + (s - 8F) / 2F, Ui.lerpColor(accent, 0xFFFFFFFF, 0.3F + 0.5F * k), false);
+        if (!badge.isEmpty()) {
+            c.fill(x + s - 5F, y - 1F, 6F, 6F, accent);
+            c.text(badge, x + s - 3.5F, y - 1F, 0xFF101317, false);
         }
-        String pts = String.valueOf(p.skillPoints());
-        c.type(HoloCanvas.Type.MONO, pts, w - 8F - c.measure(HoloCanvas.Type.MONO, pts, 1.2F), y, 1.2F,
-                p.skillPoints() > 0 ? HoloStyle.GOLD : c.dim());
-        if (c.over(w - 30, y - 3, 30, 12)) c.tooltip(List.of(Component.translatable("gui.respectcraft.hub.points", p.skillPoints())));
+        screen.hoverSound(key, hot);
+        if (hot) c.tooltip(List.of(Component.translatable(labelKey)));
+    }
+
+    /** Chip de secao na fileira curva: icone e nome; o ativo acende na cor da secao. */
+    void drawChip(HoloCanvas c, HoloCharacterScreen.Section s, float w, float h, boolean active) {
+        float since = screen.time() - 0.3F;
+        c.alpha = 1F;
+        boolean hot = c.over(0, 0, w, h);
+        float k = c.hoverAnim("chip." + s.id, hot);
+        float on = c.hoverAnim("chip.on." + s.id, active);
+        float o = c.hc ? 1F : c.opacity;
+        c.fill(0, 0, w, h, Ui.alpha(c.hc ? HoloStyle.GLASS_HC : HoloStyle.GLASS_TOP, 0.82F * o));
+        c.fill(0, 0, w, h, Ui.alpha(s.accent, 0.06F + 0.14F * k + 0.22F * on));
+        c.frame(0, 0, w, h, Ui.alpha(s.accent, 0.3F + 0.35F * k + 0.35F * on));
+        if (on > 0.01F) {
+            c.fill(0, h - 2F, w, 2F, Ui.alpha(s.accent, on));
+            c.glow(w / 2F, h, w * 0.5F, Ui.alpha(s.accent, 0.5F * on));
+        }
+        c.stage(since, s.ordinal());
+        float size = Math.min(12F, h - 4F);
+        c.icon(s.icon, 4F, (h - size) / 2F, size, 1F);
+        String label = HoloView.tr(s.key());
+        String shown = Ui.fit(c.font, label, (int) (w - size - 10F));
+        c.text(shown, 6F + size, (h - 8F) / 2F, active ? 0xFFFFFFFF : Ui.lerpColor(c.muted(), c.text(), k), false);
+        HoloZone z = c.zone(0, 0, w, h);
+        z.click = () -> screen.select(s);
+        screen.hoverSound("chip." + s.id, hot);
+        if (hot) c.tooltip(List.of(Component.translatable(s.key()).withStyle(ChatFormatting.BOLD),
+                Component.translatable("gui.respectcraft.holo.key_hint", s.ordinal() + 1).withStyle(ChatFormatting.GRAY)));
     }
 }
