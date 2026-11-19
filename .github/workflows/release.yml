@@ -61,7 +61,7 @@ jobs:
             PRERELEASE="--prerelease"
           fi
           # Só o jar do mod (sem -sources/-javadoc, caso venham a existir).
-          JAR=$(ls build/libs/tupinicraft-*.jar | grep -v -E -- '-(sources|javadoc|dev)\.jar$')
+          JAR=$(ls build/libs/respectcraft-*.jar | grep -v -E -- '-(sources|javadoc|dev)\.jar$')
           if [ "$(echo "$JAR" | wc -l)" -ne 1 ] || [ ! -s "$JAR" ]; then
             echo "::error::Esperado exatamente um jar do mod em build/libs: $JAR"
             exit 1

@@ -9,7 +9,7 @@ import random
 
 from PIL import Image, ImageDraw
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent / "src/main/resources/assets/tupinicraft/textures"
+ROOT = pathlib.Path(__file__).resolve().parent.parent / "src/main/resources/assets/respectcraft/textures"
 GUI = ROOT / "gui"
 ITEM = ROOT / "item"
 

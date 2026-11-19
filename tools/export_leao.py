@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'model_sources'
-ASSETS = ROOT / 'src/main/resources/assets/tupinicraft'
+ASSETS = ROOT / 'src/main/resources/assets/respectcraft'
 
 
 def write(path, data):

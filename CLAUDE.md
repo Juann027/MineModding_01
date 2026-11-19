@@ -4,9 +4,11 @@ RPG de humor para **Minecraft Java 1.21.1 / NeoForge 21.1.x / Java 21**: criador
 nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas,
 finalizações cinematográficas, contador de derrotas e o mob Leão do Fim. Versão atual: `0.5.7` (`gradle.properties`).
 
-**Nome público: RespectCraft** (`mod_name`, lang, descrição). O mod se chamava TupiniCraft e **todos os
-identificadores internos continuam `tupinicraft`**: mod id, pacote `com.tupinicraft`, classes `TupiniCraft*`,
-namespace de recursos, ids de registro/saves e comandos `/tupini*`. Não renomeie identificadores para a marca nova.
+**Nome: RespectCraft**, público e interno (Etapa 4.7.1): mod id `respectcraft`, pacote `com.respectcraft`, classes
+`RespectCraft*`, namespace de recursos `respectcraft`, comando `/respectcraft`, configs `respectcraft-*-server.toml` e
+jar `respectcraft-<versão>.jar`. O nome antigo do projeto só aparece em handoffs históricos e no histórico do Git; não o
+reintroduza em código, recursos, comandos, configs ou documentos ativos (nem como alias). Mundos criados antes da
+Etapa 4.7.1 não são compatíveis (decisão do dono).
 
 Leia este arquivo, o `README.md` e só os arquivos do pedido. Handoffs ficam em `docs/handoffs/` (consulte só os do
 sistema em que vai mexer; veja o fim deste arquivo).
@@ -15,7 +17,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 
 | Item | Valor |
 |---|---|
-| Nome público / mod id / pacote | RespectCraft / `tupinicraft` (`TupiniCraft.MOD_ID`, `TupiniCraft.id("caminho")`) / `com.tupinicraft` |
+| Nome público / mod id / pacote | RespectCraft / `respectcraft` (`RespectCraft.MOD_ID`, `RespectCraft.id("caminho")`) / `com.respectcraft` |
 | Minecraft / NeoForge | 1.21.1 / 21.1.265 (ModDevGradle, Parchment 2024.11.17), Gradle wrapper 9.2.1 |
 | Java | 21 (toolchain no `build.gradle`) |
 | GeckoLib | **4.9.3** (`software.bernie.geckolib:geckolib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Não use a 5. |
@@ -31,19 +33,19 @@ sistema em que vai mexer; veja o fim deste arquivo).
 
 | Pacote | O que é |
 |---|---|
-| `TupiniCraft`, `registry` | Entrada comum: `ModItems`, `ModEntities`, `ModAttachments`, `ModSounds`, `ModCreativeTabs`; config SERVER `tupinicraft-needs-server.toml`. |
-| `client` | Tudo que importa `net.minecraft.client.*`. Entrada `client.TupiniCraftClient` (`@Mod(dist = CLIENT)`). |
+| `RespectCraft`, `registry` | Entrada comum: `ModItems`, `ModEntities`, `ModAttachments`, `ModSounds`, `ModCreativeTabs`; config SERVER `respectcraft-needs-server.toml`. |
+| `client` | Tudo que importa `net.minecraft.client.*`. Entrada `client.RespectCraftClient` (`@Mod(dist = CLIENT)`). |
 | `client.playergeo` | **Rig GeckoLib do jogador.** `PlayerRigLayer` é a primeira camada do `PlayerRenderer` vanilla: lê a pose vanilla, desenha o rig e devolve a pose ao `PlayerModel` (armadura, itens e camadas acompanham). F8 = modo de teste, F9 = aceno. |
 | `client.bodylayer` | **Body Layers**: busto, cabelo, pele, rosto e acessórios como `BodyLayerDefinition` em `BodyLayers`. |
-| `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/tupinianim`. |
-| `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/tupinitest`. |
+| `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/respectcraft anim`. |
+| `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/respectcraft test` (e `/stopitstopnow`). |
 | `character`, `client.character` | **Character Creator** (tecla K → `CharacterHubScreen`): aparência (`CharacterAppearance`, `CharacterAppearanceService`). |
 | `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`), **traços de nascimento** (`BirthTrait`) e **Specialities** (`Speciality`, `SpecialityRarity`, `SpecialityOdds`, `SpecialityRoll`, `Specialities`, `SpecialityConfig`). |
 | `skill`, `client.skilltree` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`. |
 | `needs`, `client.hud` | **Necessidades** (`Needs`, `NeedsRules`, `NeedsService`) e **consumíveis** (`NeedEffects`/`NeedEffectDef`, `ConsumableItem`, `ChamberPotItem`). Orbe de Emoção na tela; painel Body & Traits no inventário. |
 | `network` | Payloads (`GameplayNetworking`, `TestGameNetworking`) e caches de cliente. |
-| `entity`, `client.render`, `command` | Mob **Leão do Fim** (GeckoLib + SmartBrainLib), renderer e `/leaodofim`. `TupiniCommands` = `/tupini`. |
-| `selftest` | `SelfTest`: regras puras, rodado por `/tupini selftest` (teste de fumaça). |
+| `entity`, `client.render`, `command` | Mob **Leão do Fim** (GeckoLib + SmartBrainLib), renderer e `/leaodofim`. `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim` e `test`). |
+| `selftest` | `SelfTest`: regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
 | `biome`, `dimension`, `npc` | Só `LEIA-ME.md`: espaço reservado, sem código. |
 
 ## Regras importantes
@@ -58,7 +60,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 - **Sem estado de mundo em `static`.** Estáticos só para caches visuais do cliente, limpos no logout.
 - **Sincronização multiplayer:** login, respawn, troca de dimensão, `StartTracking` e quando o valor muda. Nunca a
   cada tick. Animações trocam pelo relógio do servidor (`PlayerAnimationState.at`); não mande um pacote por clip.
-- **Modificadores de atributo** do mod são transitórios (`tupinicraft:stat/...`) e recolocados por
+- **Modificadores de atributo** do mod são transitórios (`respectcraft:stat/...`) e recolocados por
   `SkillService.refreshModifiers`; nunca grave no save.
 - **Roleta:** sorteia Speciality, atributos e traços no servidor (as 8 origens com bônus de `BirthOrigin` são
   legadas); no máximo **1** novo giro (`CharacterProfile.canReroll`), que zera habilidades, devolve os pontos e
@@ -79,12 +81,16 @@ sistema em que vai mexer; veja o fim deste arquivo).
 - **Specialities (Etapa 4.7):** a roleta sorteia uma das **15** `Speciality` no lugar das origens sociais. Raridade
   primeiro (`SpecialityRarity`: Common 41,5 · Uncommon 25 · Rare 20 · Epic 10 · Legendary 3 · BONER 0,5%; BONER é a
   mais alta), depois uma Speciality elegível dela (`SpecialityRoll`); chances exatas em milésimos (`SpecialityOdds`,
-  config SERVER `tupinicraft-speciality-server.toml`); raridade sem Speciality dá `NO_SPECIALITY_IN_RARITY`, **nunca
+  config SERVER `respectcraft-speciality-server.toml`); raridade sem Speciality dá `NO_SPECIALITY_IN_RARITY`, **nunca
   redistribui**. Ficha grava `birth_speciality` e `current_speciality` (hoje iguais; a troca no fim de jogo não existe
   ainda). Specialities **não têm perks, modificadores nem efeitos** (virão nas Skill Trees) e não dão bônus de atributo.
   Fichas antigas mantêm a origem social (`BirthOrigin`, só exibição/legado) e **nunca** recebem Speciality ao carregar;
-  só um novo giro troca a origem por uma Speciality. Raridade forçada só por `/tupini admin roleta <jogador> <raridade>`.
+  só um novo giro troca a origem por uma Speciality. Raridade forçada só por `/respectcraft admin roulette <player> <rarity>`.
   Não invente Specialities, não mude nomes/raridades e não implemente Rage Mode nem gravidez.
+- **Roda da roleta (Etapa 4.7.1):** seis fatias **iguais** (`RouletteLayout`, só visual; o tamanho não é a chance).
+  As chances reais vão do servidor ao cliente (`GameplayNetworking.SpecialityOddsSync`: login, antes de cada
+  `BirthRollReply` e quando a config recarrega) e a tela as escreve em cada fatia, na dica da roda e no selo do
+  resultado (`ProfileClientCache.odds()`). O cliente nunca envia chances. A roda sempre para na raridade da ficha.
 - **Rig/render:** não cancele `RenderPlayerEvent.Pre` nem desenhe o jogador fora do renderer vanilla. Em
   `PlayerRigModel.compose` mantenha o `GeoBone::resetStateChanges` no fim. Peça de corpo nova = `BodyLayerDefinition`
   (não crie `RenderLayer` por peça). Pele/rosto do criador são Body Layers sobre a skin da conta; não troque a textura.
@@ -92,29 +98,32 @@ sistema em que vai mexer; veja o fim deste arquivo).
   `playTogether`; posição no mundo é da sessão, keyframes só com deslocamentos que voltam a zero.
 - **Câmera cinematográfica** segue o estado de animação sincronizado e restaura a perspectiva em qualquer saída.
 - **Contador de derrotas:** +1 para o alvo só em `FinisherTestMechanic.complete` (`abort` nunca conta). A plaqueta
-  replica a matemática do `renderNameTag` 1.21.1; ícones são a fonte bitmap `tupinicraft:defeat_icons`, não emoji.
+  replica a matemática do `renderNameTag` 1.21.1; ícones são a fonte bitmap `respectcraft:defeat_icons`, não emoji.
 - **Necessidades:** ativas são Coom, Bexiga, Intestino e Emoção (id `humor`) — `Need.ACTIVE`. Hidratação e Energia
   são **dados legados inativos** (`Need.active() == false`): continuam no Codec, mas não mudam, não afetam a Emoção,
   não penalizam e não aparecem. Não as reative sem pedido. Medidores detalhados só no painel do inventário e no
   menu K; na tela de jogo, só o orbe de Emoção. Consumível novo = entrada em `NeedEffects`.
-- **Telas** herdam `client.ui.TupiScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
+- **Telas** herdam `client.ui.RespectScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
 - **Textos visíveis ao jogador em inglês** (Etapa 4.6) via `Component`/lang: `en_us.json` é o único arquivo de idioma
   (não recrie `pt_br.json`; outros idiomas caem no inglês). Mensagens de comando/chat também em inglês. Código,
   comentários, docs e ids internos seguem como estão.
 - **Mobs:** recursos `geo/entity/<nome>.geo.json`, `animations/entity/<nome>.animation.json`,
   `textures/entity/<nome>.png`; GeckoLib só anima, dano/alvo/IA no servidor. Registre em `ModEntities` + atributos,
-  renderer em `client.render` registrado em `TupiniCraftClient`.
+  renderer em `client.render` registrado em `RespectCraftClient`.
 - **Tema:** o mod não tem mais eleições, política, partidos, mandatos, urna, economia ou símbolos nacionais. Não
   reintroduza (nem a partir do histórico do Git) sem pedido explícito.
 
 ## IDs persistentes e compatibilidade de saves (não renomear)
 
+Válidos desde a Etapa 4.7.1, que trocou o namespace inteiro para `respectcraft` e quebrou de propósito a
+compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids voltam a ser estáveis.
+
 | Dado | Onde fica |
 |---|---|
-| `tupinicraft:character_profile`, `tupinicraft:needs`, `tupinicraft:need_effects`, `tupinicraft:player_animation` | attachments (`ModAttachments`); nomes de campos dos Codecs também são estáveis (incl. `birth_traits`, `birth_speciality`, `current_speciality` e os legados `hidratacao`/`energia`) |
-| `tupinicraft_character_appearance_v1`, `tupinicraft_special_defeats`, `tupinicraft_allow_mob_finishers_test` | `persistentData` do jogador |
+| `respectcraft:character_profile`, `respectcraft:needs`, `respectcraft:need_effects`, `respectcraft:player_animation` | attachments (`ModAttachments`); nomes de campos dos Codecs também são estáveis (incl. `birth_traits`, `birth_speciality`, `current_speciality` e os legados `hidratacao`/`energia`) |
+| `respectcraft_character_appearance_v1`, `respectcraft_special_defeats`, `respectcraft_allow_mob_finishers_test` | `persistentData` do jogador |
 | ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
-| itens, `tupinicraft:leao_do_fim` | registries |
+| itens, `respectcraft:leao_do_fim` | registries |
 
 - Id de origem aposentado: adicione o alias em `profile.LegacyOriginIds` (lido pelo Codec da ficha e regravado com o
   id novo) e um caso no `SelfTest`. Nunca converta um perfil inválido em "personagem não criado".
@@ -123,11 +132,11 @@ sistema em que vai mexer; veja o fim deste arquivo).
 
 ## Blockbench e animações do jogador
 
-- Projetos `.bbmodel` do jogador em `model_sources/player/` (`tupinicraft_animated_player`, `tupinicraft_player_combat`,
-  `tupinicraft_combo_scene` — este só para ajustar o tempo da cena). Leão do Fim: `model_sources/leao_do_fim.bbmodel`
+- Projetos `.bbmodel` do jogador em `model_sources/player/` (`respectcraft_animated_player`, `respectcraft_player_combat`,
+  `respectcraft_combo_scene` — este só para ajustar o tempo da cena). Leão do Fim: `model_sources/leao_do_fim.bbmodel`
   (`tools/export_leao.py`, `tools/validate_leao.py`).
-- `tools/player_anim/export.py` gera a biblioteca de combate (`assets/tupinicraft/animations/player/
-  tupinicraft_player_combat.animation.json`, `PlayerAnimations.COMBAT_FILE`) e os `.bbmodel` a partir de
+- `tools/player_anim/export.py` gera a biblioteca de combate (`assets/respectcraft/animations/player/
+  respectcraft_player_combat.animation.json`, `PlayerAnimations.COMBAT_FILE`) e os `.bbmodel` a partir de
   `poses.py`/`clips.py`.
 - `tools/player_anim/master.json` escolhe a fonte de verdade: `gerador` (scripts) ou `blockbench` (edição manual).
   Editou keyframes no Blockbench? Mude para `blockbench`. O exportador recusa sobrescrever arquivo editado fora dele
@@ -140,8 +149,8 @@ sistema em que vai mexer; veja o fim deste arquivo).
 ## Build e testes
 
 ```bash
-./gradlew build                          # compila e empacota (build/libs/tupinicraft-<versão>.jar)
-bash .github/scripts/server-smoke-test.sh # servidor dedicado: Leão do Fim, /tupini selftest, catálogos
+./gradlew build                          # compila e empacota (build/libs/respectcraft-<versão>.jar)
+bash .github/scripts/server-smoke-test.sh # servidor dedicado: Leão do Fim, /respectcraft selftest, catálogos
 python3 tools/player_anim/bbsync.py      # .bbmodel x .animation.json
 python3 tools/player_anim/test_export.py # proteção do exportador
 ./gradlew runClient                      # cliente de desenvolvimento
@@ -177,5 +186,6 @@ python3 tools/player_anim/test_export.py # proteção do exportador
   criador, roleta, skills, necessidades, finalizações → Etapas 3/3.1; animações e Blockbench → Etapas 4/4.1;
   contador de derrotas → 4.2; Specialities → 4.7; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
   roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada; traços por corpo
-  (universais × só masculinos) e textos em inglês → 4.6.
+  (universais × só masculinos) e textos em inglês → 4.6; rebrand técnico (mod id/pacote/comandos/configs) e roda da
+  roleta com chances do servidor → 4.7.1.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

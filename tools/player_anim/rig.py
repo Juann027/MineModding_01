@@ -18,7 +18,7 @@ import pathlib
 import numpy as np
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-GEO = REPO / "src/main/resources/assets/tupinicraft/geo/player/tupinicraft_animated_player.geo.json"
+GEO = REPO / "src/main/resources/assets/respectcraft/geo/player/respectcraft_animated_player.geo.json"
 RENDER_SCALE = 15.0 / 16.0
 
 # Bones que nunca aparecem no rig em jogo (Body Layers desenham busto e cabelo por conta propria).

@@ -1,6 +1,6 @@
-import com.tupinicraft.testgame.FinisherRules;
+import com.respectcraft.testgame.FinisherRules;
 
-/** java -cp /tmp/tupini-test FinisherRulesTest */
+/** java -cp /tmp/respectcraft-test FinisherRulesTest */
 public final class FinisherRulesTest {
     private static void check(boolean value) { if (!value) throw new AssertionError("Rule check failed"); }
     public static void main(String[] args) {

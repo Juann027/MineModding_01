@@ -1,8 +1,8 @@
 """Monta os .bbmodel (formato 5.0 do Blockbench, plugin GeckoLib) a partir do rig existente; quem grava e o export.py.
 
-- tupinicraft_player_combat.bbmodel: copia do rig do jogador com todos os clips da Etapa 4 (editavel e
+- respectcraft_player_combat.bbmodel: copia do rig do jogador com todos os clips da Etapa 4 (editavel e
   exportavel com "Export Animations" do plugin GeckoLib; os nomes dos clips ja sao os usados pelo jogo).
-- tupinicraft_combo_scene.bbmodel: dois rigs no palco (executor na origem, alvo a 1 bloco olhando para ele) e
+- respectcraft_combo_scene.bbmodel: dois rigs no palco (executor na origem, alvo a 1 bloco olhando para ele) e
   uma animacao "combo_scene" com a coreografia inteira. Serve so para editar o tempo entre os dois; NAO exporte
   o geo desse arquivo (bones duplicados com prefixo Alvo_). Depois de mexer, copie os keyframes de cada rig para
   o clip correspondente no arquivo de clips (ou ajuste clips.py e rode export.py).
@@ -17,10 +17,10 @@ import json
 from bbsync import flip
 from rig import REPO
 
-SRC = REPO / "model_sources/player/tupinicraft_animated_player.bbmodel"
-OUT_CLIPS = REPO / "model_sources/player/tupinicraft_player_combat.bbmodel"
-OUT_SCENE = REPO / "model_sources/player/tupinicraft_combo_scene.bbmodel"
-PREFIX = "animation.tupinicraft.player."
+SRC = REPO / "model_sources/player/respectcraft_animated_player.bbmodel"
+OUT_CLIPS = REPO / "model_sources/player/respectcraft_player_combat.bbmodel"
+OUT_SCENE = REPO / "model_sources/player/respectcraft_combo_scene.bbmodel"
+PREFIX = "animation.respectcraft.player."
 SCENE_DISTANCE_PX = 16 * 16 / 15  # 1 bloco no mundo = 17,07 px do rig (o PlayerRenderer escala 15/16)
 
 
@@ -72,20 +72,20 @@ def build_clips(clips):
     """Modelo (dict) com o rig e todos os clips; quem grava e o export.py."""
     model = json.loads(SRC.read_text(encoding="utf-8"))
     groups = _groups_by_name(model)
-    model["name"] = "tupinicraft_player_combat"
+    model["name"] = "respectcraft_player_combat"
     model["animations"] = []
     for name, clip in clips.items():
         js = clip.to_json()
         model["animations"].append(_animation(PREFIX + name, js["animation_length"], clip.loop,
                                               _animators(groups, js, name)))
-    model["geckolib_filepath_cache"] = {"animation": "tupinicraft_player_combat.animation.json"}
+    model["geckolib_filepath_cache"] = {"animation": "respectcraft_player_combat.animation.json"}
     return model
 
 
 def build_scene(clips, distance_px=SCENE_DISTANCE_PX):
     """Modelo (dict) com os dois rigs no palco e a animacao combo_scene."""
     model = json.loads(SRC.read_text(encoding="utf-8"))
-    model["name"] = "tupinicraft_combo_scene"
+    model["name"] = "respectcraft_combo_scene"
     groups = copy.deepcopy(model["groups"])
     elements = copy.deepcopy(model["elements"])
     remap = {}

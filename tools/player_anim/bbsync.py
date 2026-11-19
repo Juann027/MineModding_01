@@ -19,12 +19,12 @@ import pathlib
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-ANIM_FILE = REPO / "src/main/resources/assets/tupinicraft/animations/player/tupinicraft_player_combat.animation.json"
-COMBAT_BBMODEL = REPO / "model_sources/player/tupinicraft_player_combat.bbmodel"
-SCENE_BBMODEL = REPO / "model_sources/player/tupinicraft_combo_scene.bbmodel"
+ANIM_FILE = REPO / "src/main/resources/assets/respectcraft/animations/player/respectcraft_player_combat.animation.json"
+COMBAT_BBMODEL = REPO / "model_sources/player/respectcraft_player_combat.bbmodel"
+SCENE_BBMODEL = REPO / "model_sources/player/respectcraft_combo_scene.bbmodel"
 SCENE_TARGET_PREFIX = "Alvo_"
-SCENE_CLIPS = {"": "animation.tupinicraft.player.finisher.combo_attacker",
-               SCENE_TARGET_PREFIX: "animation.tupinicraft.player.finisher.combo_victim"}
+SCENE_CLIPS = {"": "animation.respectcraft.player.finisher.combo_attacker",
+               SCENE_TARGET_PREFIX: "animation.respectcraft.player.finisher.combo_victim"}
 
 
 class Unsupported(Exception):
