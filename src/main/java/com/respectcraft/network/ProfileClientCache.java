@@ -18,6 +18,8 @@ public final class ProfileClientCache {
     private static GameplayNetworking.BirthRollReply lastRollReply;
     private static long rollReplyRevision;
     private static SpecialityOdds odds = SpecialityOdds.DEFAULT;
+    /** Contador dos pedidos de giro desta sessao do cliente (so identificacao nos logs; nao e zerado no logout). */
+    private static int rollRequestCounter;
 
     private ProfileClientCache() {}
 
@@ -41,6 +43,8 @@ public final class ProfileClientCache {
 
     /** Ultima resposta do servidor a um pedido de giro (null se nenhuma nesta sessao). */
     public static GameplayNetworking.BirthRollReply lastRollReply() { return lastRollReply; }
+    /** Id novo para um pedido de giro (casa a resposta e as linhas de log do cliente e do servidor). */
+    public static int nextRollRequestId() { return ++rollRequestCounter & 0x7FFFFFFF; }
     /** Muda a cada resposta de giro recebida (a roleta detecta a resposta ao seu pedido). */
     public static long rollReplyRevision() { return rollReplyRevision; }
 

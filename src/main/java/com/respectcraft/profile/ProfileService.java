@@ -18,6 +18,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class ProfileService {
     /** Chave do antigo cooldown da roleta (ate 0.5.7); so e apagada do persistentData. */
     private static final String LEGACY_LAST_ROLL_KEY = "respectcraft_last_roll";
+    /** Falha de teste armada pelo admin para o proximo pedido de giro (consumida no uso; Etapa 4.8.2). */
+    private static final String DEBUG_FAIL_NEXT_ROLL_KEY = "respectcraft_debug_fail_next_roll";
 
     private ProfileService() {}
 
@@ -37,21 +39,76 @@ public final class ProfileService {
 
     /**
      * Pedido do cliente: primeiro giro, ou o novo giro enquanto houver. O resultado vem so do servidor e todo
-     * pedido recebe resposta ({@link GameplayNetworking.BirthRollReply}), aceito ou recusado: a ficha atual vai
-     * antes, entao a tela sempre volta ao estado real. Pedidos repetidos ou atrasados sao recusados pelo
+     * pedido recebe resposta ({@link GameplayNetworking.BirthRollReply}), aceito, recusado ou com erro: a ficha atual
+     * vai antes, entao a tela sempre volta ao estado real. Pedidos repetidos ou atrasados sao recusados pelo
      * {@code expectedRollCount} (ver {@link BirthRoulette#validate}).
+     *
+     * <p>Etapa 4.8.2: uma excecao aqui era engolida pelo NeoForge (so um log generico) e o cliente ficava sem
+     * resposta ate o timeout. Agora ela e registrada com o {@code requestId} do pedido e vira uma resposta
+     * {@link BirthRoulette.Outcome#ERROR} (ou {@code ROLLED}, se o giro ja tinha sido gravado:
+     * {@link BirthRoulette#afterFailure}). O log so leva os campos do pedido e da roleta, nunca a ficha inteira.
      */
-    public static BirthRoulette.Outcome requestRoll(ServerPlayer player, boolean reroll, int expectedRollCount) {
-        CharacterProfile profile = get(player);
-        BirthRoulette.Outcome outcome = BirthRoulette.validate(profile, reroll, expectedRollCount);
-        if (outcome == BirthRoulette.Outcome.ROLLED) {
-            roll(player, BirthRoulette.rerollsAfter(profile));
-        } else {
-            sync(player);
+    public static BirthRoulette.Outcome requestRoll(ServerPlayer player, boolean reroll, int expectedRollCount, int requestId) {
+        int before = -1;
+        BirthRoulette.Outcome outcome;
+        try {
+            CharacterProfile profile = get(player);
+            before = profile.rollCount();
+            if (consumeInjectedFailure(player)) {
+                throw new IllegalStateException("injected test failure (/respectcraft admin roulette_fail)");
+            }
+            outcome = BirthRoulette.validate(profile, reroll, expectedRollCount);
+            if (outcome == BirthRoulette.Outcome.ROLLED) roll(player, BirthRoulette.rerollsAfter(profile));
+        } catch (VirtualMachineError fatal) {
+            throw fatal;
+        } catch (Throwable e) {
+            // Inclui LinkageError e afins (falhas de ambiente), nao so RuntimeException.
+            int now = safeRollCount(player);
+            outcome = BirthRoulette.afterFailure(before, now);
+            RespectCraft.LOGGER.error("Birth roulette request #{} from {} failed on the server (reroll={}, expectedRollCount={},"
+                    + " rollCount {} -> {}); replying {}", requestId, player.getGameProfile().getName(), reroll,
+                    expectedRollCount, before, now, outcome, e);
         }
-        syncOdds(player);
-        PacketDistributor.sendToPlayer(player, new GameplayNetworking.BirthRollReply(outcome, get(player).rollCount()));
+        reply(player, outcome, requestId);
         return outcome;
+    }
+
+    /** Ficha atual, as chances e a resposta; uma falha aqui fica no log com o {@code requestId} (nada a mais a fazer). */
+    private static void reply(ServerPlayer player, BirthRoulette.Outcome outcome, int requestId) {
+        try {
+            sync(player);
+            syncOdds(player);
+            PacketDistributor.sendToPlayer(player, new GameplayNetworking.BirthRollReply(outcome, get(player).rollCount(), requestId));
+        } catch (VirtualMachineError fatal) {
+            throw fatal;
+        } catch (Throwable e) {
+            RespectCraft.LOGGER.error("Birth roulette request #{} from {}: could not send the reply ({})", requestId,
+                    player.getGameProfile().getName(), outcome, e);
+        }
+    }
+
+    private static int safeRollCount(ServerPlayer player) {
+        try {
+            return get(player).rollCount();
+        } catch (VirtualMachineError fatal) {
+            throw fatal;
+        } catch (Throwable e) {
+            return -1;
+        }
+    }
+
+    /**
+     * Teste de diagnostico (Etapa 4.8.2): {@code /respectcraft admin roulette_fail <player>} arma uma falha para o
+     * proximo pedido de giro desse jogador, que lanca uma excecao antes de qualquer sorteio. Consumida no uso.
+     */
+    public static void armInjectedFailure(ServerPlayer player) {
+        player.getPersistentData().putBoolean(DEBUG_FAIL_NEXT_ROLL_KEY, true);
+    }
+
+    private static boolean consumeInjectedFailure(ServerPlayer player) {
+        if (!player.getPersistentData().getBoolean(DEBUG_FAIL_NEXT_ROLL_KEY)) return false;
+        player.getPersistentData().remove(DEBUG_FAIL_NEXT_ROLL_KEY);
+        return true;
     }
 
     /**
