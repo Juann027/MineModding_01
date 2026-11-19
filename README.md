@@ -3,9 +3,10 @@
 RPG de humor para **Minecraft Java 1.21.1** com **NeoForge 21.1.x**. Versão atual: **0.5.7 — RPG & Animation
 Preview** (pre-release: vários recursos ainda têm arte provisória).
 
-> O mod se chamava **TupiniCraft**. Só o nome público mudou: o mod id, o jar (`tupinicraft-<versão>.jar`), o pacote
-> Java, o namespace de recursos, os comandos (`/tupini`, `/tupinianim`, `/tupinitest`, `/leaodofim`) e os dados
-> salvos continuam `tupinicraft`. Mundos e fichas existentes seguem funcionando.
+> **Etapa 4.7.1 — migração de identidade (quebra compatibilidade).** O mod é RespectCraft também por dentro: mod id e
+> namespace `respectcraft`, pacote `com.respectcraft`, jar `respectcraft-<versão>.jar`, comando `/respectcraft` e configs
+> `respectcraft-*-server.toml`. Mundos, fichas e configs criados com o nome antigo **não** são carregados: itens,
+> o Leão do Fim e os dados do personagem desses mundos somem. Comece um mundo novo (e faça backup dos antigos).
 
 ## Funcionalidades
 
@@ -13,7 +14,8 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 - **Roleta de nascimento:** sorteio no servidor de uma **Speciality** (15, em seis raridades: Common 41,5%,
   Uncommon 25%, Rare 20%, Epic 10%, Legendary 3%, BONER 0,5% — a raridade sai primeiro, depois a Speciality dela), dos
   6 atributos (Força, Agilidade, Vigor, Inteligência, Carisma, Sorte) e de um **traço de nascimento** (buff, debuff ou
-  neutro), com **um** novo giro opcional. Continuar confirma o resultado. Specialities ainda não têm perks nem efeitos.
+  neutro), com **um** novo giro opcional. Continuar confirma o resultado. A roda tem seis fatias iguais (o tamanho
+  não é a chance) e mostra em números as chances reais configuradas no servidor. Specialities ainda não têm perks nem efeitos.
   Personagens criados antes da 4.7 mantêm a origem social antiga (Favela, Sertão etc.) até usarem o novo giro.
 - **Traços de nascimento:** características individuais separadas da Speciality e dos atributos. O sorteio usa o corpo
   escolhido no criador. **Universais** (masculino e feminino): High Endurance (buff), Limp (debuff), Fertile (buff),
@@ -36,27 +38,31 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 ## Instalação
 
 1. NeoForge **21.1.265 ou mais novo (21.1.x)** para Minecraft 1.21.1, com **Java 21**.
-2. Na pasta `mods`: `tupinicraft-<versão>.jar`, **GeckoLib 4.9.3** (não a 5) e **SmartBrainLib 1.16.11**.
+2. Na pasta `mods`: `respectcraft-<versão>.jar`, **GeckoLib 4.9.3** (não a 5) e **SmartBrainLib 1.16.11**.
 3. Multiplayer: os mesmos três jars no servidor dedicado e em cada cliente.
 
 UI Lib e Architectury **não** são mais necessários.
 
-**Faça backup dos mundos antes de atualizar.** A partir da limpeza da Etapa 4.4, o mob de teste Cabo Eleitoral e o
-seu ovo deixaram de existir: em mundos antigos eles somem ao carregar. Fichas com a antiga origem política são
-convertidas automaticamente para Família Artística (mesmos atributos e habilidades).
+**Faça backup dos mundos antes de atualizar.** Desde a Etapa 4.7.1 o namespace mudou para `respectcraft`: mundos
+anteriores perdem os itens, entidades e dados do mod. As chances da roleta ficam em
+`config/respectcraft-speciality-server.toml` (gerado com os padrões aprovados; uma cópia em
+`<mundo>/serverconfig/` vale só para aquele mundo) e as necessidades em `config/respectcraft-needs-server.toml`.
 
 ## Compilar e testar
 
 ```bash
 ./gradlew build                           # jar em build/libs/
-bash .github/scripts/server-smoke-test.sh # sobe o servidor dedicado e roda /tupini selftest
+bash .github/scripts/server-smoke-test.sh # sobe o servidor dedicado e roda /respectcraft selftest
 python3 tools/player_anim/bbsync.py       # confere .bbmodel x .animation.json
 ./gradlew runClient                       # cliente de desenvolvimento
 ./gradlew runServer                       # servidor de desenvolvimento
 ```
 
-O CI do GitHub roda os três primeiros em cada push e PR. Comandos úteis no jogo: `/tupini perfil`,
-`/tupini skills list`, `/tupini finishers`, `/tupinianim list` e, para admins, `/tupini selftest` e `/tupini admin ...`.
+O CI do GitHub roda os três primeiros em cada push e PR. Comandos úteis no jogo (árvore única `/respectcraft`):
+`/respectcraft profile`, `/respectcraft skills list`, `/respectcraft finishers`,
+`/respectcraft test finisher accept|deny` e, para admins, `/respectcraft selftest`, `/respectcraft speciality list|odds|simulate <rolls>`,
+`/respectcraft anim list|play|together|sequence|next|stop` e `/respectcraft admin profile|points|roulette|reset|skill|finisher|effect|need ...`
+(ex.: `/respectcraft admin roulette <player> boner`). `/leaodofim` e `/stopitstopnow` continuam como estão.
 
 ## Animações no Blockbench
 
