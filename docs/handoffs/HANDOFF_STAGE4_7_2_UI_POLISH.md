@@ -84,4 +84,5 @@ Nenhum alias nem camada de compatibilidade foi criado.
 
 ## Entrega
 
-- Branch `claude/keen-mayer-8zadhb`, PR [#32](https://github.com/Juann027/MineModding_01/pull/32); merge commit registrado após o merge.
+- Branch `claude/keen-mayer-8zadhb`, PR [#32](https://github.com/Juann027/MineModding_01/pull/32), CI **Build** verde (build + teste de fumaça), integrado na `main` com o merge commit `4337112a7b04455b279536b4574b50f0412efba7`.
+- Sem release: `mod_version` continua `0.5.7`.
