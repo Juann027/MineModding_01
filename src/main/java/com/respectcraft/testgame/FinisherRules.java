@@ -21,4 +21,26 @@ public final class FinisherRules {
     public static boolean isCooldownOver(long now, long endsAt) {
         return now >= endsAt;
     }
+
+    /** Distancia maxima (ao quadrado) entre os participantes antes de a cena ser cancelada. */
+    public static final double MAX_SESSION_DISTANCE_SQUARED = 16.0D;
+
+    /**
+     * Etapa 4.8: o contador de derrotas (🍆💦) e so de JOGADOR. Mob ou chefe vencido nunca ganha contador,
+     * estatistica nem plaqueta; jogador vencido por mob continua contando, como antes.
+     */
+    public static boolean countsDefeat(com.respectcraft.finisher.FinisherParticipants.Kind victim) {
+        return victim == com.respectcraft.finisher.FinisherParticipants.Kind.PLAYER;
+    }
+
+    /**
+     * Motivo para cancelar a cena neste tick, ou null para seguir. "Presente" = vivo, nao removido (despawn,
+     * descarregado) e, se jogador, conectado. Dimensao diferente e distancia excessiva tambem cancelam.
+     */
+    public static String abortReason(boolean attackerPresent, boolean victimPresent, boolean sameLevel, double distanceSquared) {
+        if (!attackerPresent || !victimPresent) return "participant unavailable";
+        if (!sameLevel) return "participant changed dimension";
+        if (distanceSquared > MAX_SESSION_DISTANCE_SQUARED) return "participants too far apart";
+        return null;
+    }
 }

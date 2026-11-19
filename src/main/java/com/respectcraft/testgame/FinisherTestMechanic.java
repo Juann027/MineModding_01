@@ -3,7 +3,11 @@ package com.respectcraft.testgame;
 import com.respectcraft.animation.PlayerAnimationDef;
 import com.respectcraft.animation.PlayerAnimationEvent;
 import com.respectcraft.animation.PlayerAnimationService;
+import com.respectcraft.RespectCraft;
 import com.respectcraft.finisher.FinisherDef;
+import com.respectcraft.finisher.FinisherParticipants;
+import com.respectcraft.finisher.FinisherRole;
+import com.respectcraft.finisher.FinisherSessionEvent;
 import com.respectcraft.finisher.Finishers;
 import com.respectcraft.network.FinisherVisualSyncPayload;
 import com.respectcraft.profile.ProfileService;
@@ -27,7 +31,9 @@ import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
+import software.bernie.geckolib.animatable.GeoEntity;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,6 +44,11 @@ import java.util.UUID;
  * A vitima jogador deve aceitar CADA convite; para teste com mob, opt-in e revogavel.
  * Shift desmonta/cancela; /stopitstopnow funciona durante a cena e recuperacao.
  * Apenas servidor modifica estado e pontuacao. Nenhuma animacao sexual implementada.
+ *
+ * <p>Etapa 4.8 (varios rigs): cada participante resolve o proprio clip por {@link FinisherParticipants} — rig do
+ * jogador, rig GeckoLib proprio da entidade ({@code triggerAnim} no controlador dela) ou parado. Combinacoes sem
+ * jogador e participantes invalidos sao recusados antes de comecar. Fim e cancelamento postam
+ * {@link FinisherSessionEvent} uma vez por sessao.
  */
 public final class FinisherTestMechanic {
     private static final double RANGE_SQUARED = 3.5 * 3.5;
@@ -52,23 +63,32 @@ public final class FinisherTestMechanic {
         final LivingEntity attacker;
         final LivingEntity target;
         final FinisherDef finisher;
+        final FinisherParticipants.Interaction interaction;
+        final FinisherParticipants.Clip attackerClip;
+        final FinisherParticipants.Clip targetClip;
         final Vec3 attackerAnchor;
         final Vec3 targetAnchor;
+        final float attackerYaw;
+        final float targetYaw;
         final long finishAt;
         long lastProcessed = Long.MIN_VALUE;
 
-        Session(LivingEntity attacker, LivingEntity target, FinisherDef finisher, Vec3 targetAnchor, long finishAt) {
+        Session(LivingEntity attacker, LivingEntity target, FinisherDef finisher, FinisherParticipants.Interaction interaction,
+                FinisherParticipants.Clip attackerClip, FinisherParticipants.Clip targetClip,
+                Vec3 targetAnchor, float attackerYaw, float targetYaw, long finishAt) {
             this.attacker = attacker;
             this.target = target;
             this.finisher = finisher;
+            this.interaction = interaction;
+            this.attackerClip = attackerClip;
+            this.targetClip = targetClip;
             this.attackerAnchor = attacker.position();
             this.targetAnchor = targetAnchor;
+            this.attackerYaw = attackerYaw;
+            this.targetYaw = targetYaw;
             this.finishAt = finishAt;
         }
     }
-
-    /** Distancia entre os participantes durante a cena (frente a frente). */
-    private static final double STAGE_DISTANCE = 1.15;
 
     private static final Map<UUID, Invite> PENDING = new HashMap<>();
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
@@ -210,22 +230,45 @@ public final class FinisherTestMechanic {
     }
 
     private static boolean start(LivingEntity attacker, LivingEntity target, FinisherDef chosen, boolean force) {
+        // Primeiro: sem jogador nao ha sessao (ela so avanca no tick do jogador), seja qual for a distancia.
+        Optional<FinisherParticipants.Interaction> interaction = FinisherParticipants.interaction(
+                FinisherParticipants.kindOf(attacker), FinisherParticipants.kindOf(target));
+        if (interaction.isEmpty()) {
+            RespectCraft.LOGGER.debug("Finisher refused: {} vs {} has no player participant",
+                    FinisherParticipants.typeId(attacker), FinisherParticipants.typeId(target));
+            return false;
+        }
         if (force ? !stageable(attacker, target) : !available(attacker, target)) return false;
         FinisherDef finisher = chosen != null ? chosen : attacker instanceof ServerPlayer player
                 ? Finishers.pick(skill -> ProfileService.get(player).hasSkill(skill.toString()), java.util.random.RandomGenerator.of("L64X128MixRandom"))
                 : Finishers.TAKEDOWN;
-        // Palco: vitima de frente para o executor, a STAGE_DISTANCE blocos, se houver espaco.
+        // Cada lado resolve o proprio clip no proprio rig; participante invalido recusa a cena antes de mexer em algo.
+        FinisherParticipants.Resolution attackerRes = FinisherParticipants.resolve(finisher, FinisherRole.ATTACKER, attacker);
+        FinisherParticipants.Resolution targetRes = FinisherParticipants.resolve(finisher, FinisherRole.VICTIM, target);
+        if (!attackerRes.valid() || !targetRes.valid()) {
+            RespectCraft.LOGGER.warn("Finisher {} refused: {}", finisher.id(),
+                    attackerRes.valid() ? targetRes.problem() : attackerRes.problem());
+            return false;
+        }
+        FinisherParticipants.Clip attackerClip = attackerRes.clip().get();
+        FinisherParticipants.Clip targetClip = targetRes.clip().get();
+        // Palco: vitima de frente para o executor, a distancia do palco (1,15 entre jogadores; maior se as caixas de
+        // colisao se sobrepuserem; ou a do alinhamento do clip/palco do tipo de entidade), se houver espaco.
+        var alignment = FinisherParticipants.alignment(attackerClip, FinisherParticipants.typeId(attacker),
+                targetClip, FinisherParticipants.typeId(target));
         float yaw = attacker.getYRot();
-        Vec3 facing = Vec3.directionFromRotation(0, yaw);
-        Vec3 staged = attacker.position().add(facing.scale(STAGE_DISTANCE));
+        Vec3 staged = FinisherParticipants.stage(attacker.position(), yaw,
+                FinisherParticipants.stageDistance(alignment, attacker.getBbWidth(), target.getBbWidth()), alignment.lateral());
         Vec3 targetAnchor = target.level().noCollision(target, target.getBoundingBox().move(staged.subtract(target.position())))
                 ? staged : target.position();
-        float targetYaw = Mth.wrapDegrees(yaw + 180F);
+        float attackerYaw = Mth.wrapDegrees(yaw + FinisherParticipants.yawOffset(attackerClip));
+        float targetYaw = Mth.wrapDegrees(yaw + 180F + FinisherParticipants.yawOffset(targetClip));
         place(target, targetAnchor, targetYaw);
-        place(attacker, attacker.position(), yaw);
+        place(attacker, attacker.position(), attackerYaw);
 
         long now = attacker.level().getGameTime();
-        Session session = new Session(attacker, target, finisher, targetAnchor, now + finisher.durationTicks());
+        Session session = new Session(attacker, target, finisher, interaction.get(), attackerClip, targetClip,
+                targetAnchor, attackerYaw, targetYaw, now + finisher.durationTicks());
         SESSIONS.put(attacker.getUUID(), session);
         SESSIONS.put(target.getUUID(), session);
         PENDING.remove(target.getUUID());
@@ -244,10 +287,27 @@ public final class FinisherTestMechanic {
         } else if (target instanceof ServerPlayer v) {
             PlayerAnimationService.play(v, finisher.victim(), now, Optional.of(attacker.getUUID()), params, true);
         }
+        // Rigs GeckoLib proprios: mesmo tick do servidor que os jogadores (o GeckoLib sincroniza com quem ve).
+        triggerEntityClip(attacker, attackerClip);
+        triggerEntityClip(target, targetClip);
         sendVisual(session, true);
         if (attacker instanceof ServerPlayer p) message(p, "Test finisher started. /stopitstopnow cancels.");
         if (target instanceof ServerPlayer p) message(p, "Test started. Press Shift or /stopitstopnow to cancel.");
         return true;
+    }
+
+    private static void triggerEntityClip(LivingEntity entity, FinisherParticipants.Clip clip) {
+        if (clip instanceof FinisherParticipants.EntityClip e && entity instanceof GeoEntity geo) {
+            geo.stopTriggeredAnim(e.clip().controller(), null);
+            geo.triggerAnim(e.clip().controller(), e.clip().animation());
+        }
+    }
+
+    /** Devolve o controlador da entidade ao estado normal dela (fim ou cancelamento; seguro se ja acabou). */
+    private static void stopEntityClip(LivingEntity entity, FinisherParticipants.Clip clip) {
+        if (clip instanceof FinisherParticipants.EntityClip e && entity instanceof GeoEntity geo && !entity.isRemoved()) {
+            geo.stopTriggeredAnim(e.clip().controller(), e.clip().animation());
+        }
     }
 
     private static void place(LivingEntity entity, Vec3 position, float yaw) {
@@ -347,6 +407,8 @@ public final class FinisherTestMechanic {
         if (SESSIONS.get(s.attacker.getUUID()) != s) return;
         SESSIONS.remove(s.attacker.getUUID());
         SESSIONS.remove(s.target.getUUID());
+        stopEntityClip(s.attacker, s.attackerClip);
+        stopEntityClip(s.target, s.targetClip);
         sendVisual(s, false);
     }
 
@@ -356,6 +418,7 @@ public final class FinisherTestMechanic {
         stopAnimations(s);
         if (s.attacker instanceof ServerPlayer p) message(p, "Finisher cancelled: " + reason);
         if (s.target instanceof ServerPlayer p) message(p, "Finisher cancelled: " + reason);
+        NeoForge.EVENT_BUS.post(new FinisherSessionEvent.Aborted(s.attacker, s.target, s.finisher, s.interaction, reason));
     }
 
     private static void complete(Session s) {
@@ -365,11 +428,13 @@ public final class FinisherTestMechanic {
         PAIR_COOLDOWNS.put(new Pair(s.attacker.getUUID(), s.target.getUUID()),
                 now + FinisherRules.SAME_PAIR_COOLDOWN_TICKS);
         VICTIM_COOLDOWNS.put(s.target.getUUID(), now + FinisherRules.VICTIM_COOLDOWN_TICKS);
-        if (s.target instanceof ServerPlayer player && s.finisher.recoveryInScene()) {
+        // Contador so de jogador (FinisherRules.countsDefeat): mob e chefe vencidos nunca recebem contador.
+        boolean counts = FinisherRules.countsDefeat(FinisherParticipants.kindOf(s.target));
+        if (counts && s.target instanceof ServerPlayer player && s.finisher.recoveryInScene()) {
             // A vitima ja se levantou dentro do clip: os dois voltam ao controle normal agora.
             int updated = DefeatCounter.increment(player);
             message(player, "Special TEST defeat recorded (" + updated + ").");
-        } else if (s.target instanceof ServerPlayer player) {
+        } else if (counts && s.target instanceof ServerPlayer player) {
             int updated = DefeatCounter.increment(player);
             INCAPACITATED.put(player.getUUID(), new Incapacitated(player.position(), now + FinisherRules.INCAPACITATED_TICKS, player.level().dimension()));
             message(player, "Special TEST defeat recorded (" + updated + "). Recovery: 10s. /stopitstopnow releases you.");
@@ -377,6 +442,7 @@ public final class FinisherTestMechanic {
             PlayerAnimationService.play(player, Finishers.KNOCKED_DOWN, now, Optional.empty(), new CompoundTag(), true);
         }
         if (s.attacker instanceof ServerPlayer player) message(player, "Test combat finisher complete.");
+        NeoForge.EVENT_BUS.post(new FinisherSessionEvent.Completed(s.attacker, s.target, s.finisher, s.interaction));
     }
 
     public static int emergencyStop(ServerPlayer player) {
@@ -418,11 +484,10 @@ public final class FinisherTestMechanic {
         Session s = SESSIONS.get(player.getUUID());
         if (s == null || s.lastProcessed == now) return;
         s.lastProcessed = now;
-        if (!s.attacker.isAlive() || !s.target.isAlive()
-                || s.attacker.isRemoved() || s.target.isRemoved()
-                || s.attacker.level() != s.target.level()
-                || s.attacker.distanceToSqr(s.target) > 16.0D) {
-            abort(s, "participant unavailable or too far");
+        String problem = FinisherRules.abortReason(present(s.attacker), present(s.target),
+                s.attacker.level() == s.target.level(), s.attacker.distanceToSqr(s.target));
+        if (problem != null) {
+            abort(s, problem);
             return;
         }
         // A vitima pode cancelar por Shift ou comando; o executor tambem pode usar o comando.
@@ -434,11 +499,21 @@ public final class FinisherTestMechanic {
             complete(s);
             return;
         }
-        hold(s.attacker, s.attackerAnchor);
-        hold(s.target, s.targetAnchor);
+        hold(s.attacker, s.attackerAnchor, s.attackerYaw);
+        hold(s.target, s.targetAnchor, s.targetYaw);
     }
 
-    private static void hold(LivingEntity entity, Vec3 anchor) {
+    /** Vivo, nao removido (despawn/descarregado) e, se jogador, conectado. */
+    private static boolean present(LivingEntity entity) {
+        return entity.isAlive() && !entity.isRemoved()
+                && !(entity instanceof ServerPlayer player && player.hasDisconnected());
+    }
+
+    /**
+     * Mantem o participante no palco. Mob: so posicao, giro e navegacao, reaplicados a cada tick; nada e gravado na
+     * entidade (sem NoAI), entao ao fim da cena — ou se o servidor cair no meio — ela volta ao normal sozinha.
+     */
+    private static void hold(LivingEntity entity, Vec3 anchor, float yaw) {
         if (entity instanceof ServerPlayer player) {
             freezePlayer(player, anchor);
             return;
@@ -446,6 +521,9 @@ public final class FinisherTestMechanic {
         entity.setDeltaMovement(Vec3.ZERO);
         if (entity instanceof Mob mob) mob.getNavigation().stop();
         if (entity.distanceToSqr(anchor) > 0.01D) entity.setPos(anchor.x, anchor.y, anchor.z);
+        entity.setYRot(yaw);
+        entity.setYHeadRot(yaw);
+        entity.setYBodyRot(yaw);
     }
 
     private static void freezePlayer(ServerPlayer player, Vec3 position) {
@@ -460,9 +538,11 @@ public final class FinisherTestMechanic {
         if (event.getEntity().level().isClientSide()) return;
         Session s = SESSIONS.get(event.getEntity().getUUID());
         if (s != null) {
-            // Uma tentativa de dano interrompe a cena, SEM aplicar o dano da tentativa.
+            // Uma tentativa de dano interrompe a cena, SEM aplicar o dano da tentativa. Excecao (Etapa 4.8): o golpe
+            // automatico da IA do PROPRIO parceiro mob faz parte da cena; e anulado sem cancelar a finalizacao.
             event.setCanceled(true);
-            abort(s, "interrupted by damage");
+            LivingEntity partner = s.attacker == event.getEntity() ? s.target : s.attacker;
+            if (partner instanceof ServerPlayer || event.getSource().getEntity() != partner) abort(s, "interrupted by damage");
         }
     }
 

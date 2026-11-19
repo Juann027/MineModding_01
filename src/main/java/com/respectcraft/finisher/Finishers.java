@@ -140,6 +140,13 @@ public final class Finishers {
                     new CameraTrack.Key(140, 62, 4.8, 1.8, 1.1, 1.0, 0)),
             null, 3, true));
 
+    /**
+     * Etapa 4.8, palco do Leao do Fim (sem clip de finalizacao): no .geo.json a cabeca chega a ~1,41 bloco a frente do
+     * centro, alem da caixa de 1,4 de largura; a 1,9 o jogador fica diante da cabeca em vez de dentro da juba.
+     */
+    public static final EntityFinisherClip.Alignment LEAO_DO_FIM_STAGING = FinisherParticipants.registerStaging(
+            RespectCraft.id("leao_do_fim"), new EntityFinisherClip.Alignment(1.9, 0.0, 0F));
+
     private Finishers() {}
 
     public static synchronized FinisherDef register(FinisherDef def) {
