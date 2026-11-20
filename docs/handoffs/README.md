@@ -26,6 +26,8 @@ e o `CLAUDE.md`.
 | 4.7.2 | Polimento: traço de nascimento no Character Hub sem passar da borda, nomes longos de Speciality no painel Body & Traits, conferência pós-rebrand | [HANDOFF_STAGE4_7_2_UI_POLISH.md](HANDOFF_STAGE4_7_2_UI_POLISH.md) | Concluída (PR #32) | Descrição da Speciality na roleta ainda em uma linha |
 | 4.8 | Finisher Engine com vários rigs (participantes, clips por entidade, recusa sem jogador, limpeza), Rimulib 1.3.0, caminho preparado para recompensas de chefe | [HANDOFF_STAGE4_8_MULTIRIG_RIMULIB.md](HANDOFF_STAGE4_8_MULTIRIG_RIMULIB.md) | Concluída | Nenhum mob tem clip de finalização; nenhuma recompensa ou efeito Rimulib ainda |
 | 4.8.1 | Menu holográfico da tecla K: painéis em perspectiva real (superfícies + passada 3D), clique pelo raio inverso, holograma 3D do jogador, 5 seções, Rimulib (`UiApi`, `FxApi`, `MenuApi`), config de cliente | [HANDOFF_STAGE4_8_1_HOLOGRAPHIC_MENU.md](HANDOFF_STAGE4_8_1_HOLOGRAPHIC_MENU.md) | Concluída | Teste só em llvmpipe; texto dos painéis inclinados passa por filtro linear |
+| 4.8.3 | Auditoria e plano aprovado do menu holográfico no mundo (decisões do dono, entrada, posição, migração) | [HANDOFF_STAGE4_8_3_AUDIT_WORLD_HOLO_PLAN.md](HANDOFF_STAGE4_8_3_AUDIT_WORLD_HOLO_PLAN.md) | Concluída (PR #37, só documentação) | Nada implementado |
+| 4.8.4-A | Menu K **no mundo**: núcleo `HoloMenu` + casca `HoloWorld` (âncora fixa, passada AFTER_LEVEL com profundidade do cenário), posição contra paredes, K/Recall (R), ciclo de vida, tela 4.8.1 como reserva | [HANDOFF_STAGE4_8_4A_WORLD_HOLO.md](HANDOFF_STAGE4_8_4A_WORLD_HOLO.md) | Implementada, aguardando aprovação | Sem clique/roda/arrasto no mundo (4.8.4-B); só llvmpipe/Fast |
 
 Não há handoff da Etapa 4.3 neste repositório.
 
@@ -42,4 +44,5 @@ Não há handoff da Etapa 4.3 neste repositório.
 - Contador de derrotas → Etapa 4.2.
 - Finalizações com mobs/chefes (rigs diferentes), Rimulib e recompensas de chefe (preparação) → 4.8.
 - Menu da tecla K (holográfico), projeção/clique dos painéis, fontes e efeitos do Rimulib → 4.8.1.
+- Menu K no mundo (âncora, posição contra paredes, passada no mundo, K/Recall, plano da interação) → 4.8.3 e 4.8.4-A.
 - Ids aposentados e compatibilidade de saves → Etapa 4.4 (antes do corte de compatibilidade da 4.7.1).
