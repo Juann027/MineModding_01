@@ -43,7 +43,8 @@ final class HoloSettings {
         y += 17F;
         c.alpha = c.panel.contentAlpha;
         float doneY = h - 20F;
-        if (y + 10 <= doneY - 2) c.wrap(Component.translatable(KEY + "hint"), x, y, sw, Math.max(1, (int) ((doneY - y - 2) / 10)), c.dim());
+        if (y + 10 <= doneY - 2) c.wrap(menu.world ? Component.translatable(KEY + "hint_world",
+                com.respectcraft.client.character.CharacterCreatorKeybinds.recallKeyName()) : Component.translatable(KEY + "hint"), x, y, sw, Math.max(1, (int) ((doneY - y - 2) / 10)), c.dim());
         c.button("settings.done", HoloView.tr(KEY + "done"), w / 2F - 40F, doneY, 80F, 14F, null, HoloStyle.VIOLET, true, false, "",
                 menu::closeSettings);
     }

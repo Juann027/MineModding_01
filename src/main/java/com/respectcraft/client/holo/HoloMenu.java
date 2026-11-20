@@ -85,6 +85,8 @@ final class HoloMenu {
     float unit = 1F;
     /** Giro somado ao holograma do jogador (mundo: o yaw da ancora; tela: 0). */
     float entityYawOffset;
+    /** Casca do mundo (Etapa 4.8.4-B): as dicas citam os controles que valem la (sem teclas da tela). */
+    boolean world;
     /** Tamanho da tela em unidades de GUI, so para a caixa de arrasto do holograma no modo tela (0 = nao usa). */
     float screenW, screenH;
 

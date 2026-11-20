@@ -26,7 +26,8 @@ import org.lwjgl.glfw.GLFW;
  *   <li>{@code InputEvent.InteractionKeyMappingTriggered}: postado por {@code startAttack}, {@code continueAttack}
  *   (mineracao segurada), {@code startUseItem} e {@code pickBlock}. Rede de seguranca: cancela com
  *   {@code setSwingHand(false)} enquanto o holograma e dono, e decide o dono quando ataque/uso/pegar bloco estao
- *   presos a uma tecla do teclado (o evento de botao do mouse nao existe nesse caso).</li>
+ *   presos a uma tecla do teclado (o evento de botao do mouse nao existe nesse caso). Um aperto do mundo continua do
+ *   mundo ate soltar, mas a repeticao segurada nao age atras de uma placa que entrou na frente da mira.</li>
  * </ul>
  *
  * <p><b>Modo cursor</b> (opcional, tecla configuravel, Alt esquerdo por padrao, so enquanto segurada): solta o mouse
@@ -38,6 +39,8 @@ import org.lwjgl.glfw.GLFW;
 public final class HoloWorldInput {
     private static final HoloInputArbiter ARBITER = new HoloInputArbiter();
     private static boolean cursorMode;
+    /** O modo cursor acabou com a janela sem foco: o mouse volta a ser preso assim que ela voltar (sem tela). */
+    private static boolean regrabPending;
 
     private HoloWorldInput() {}
 
@@ -52,6 +55,18 @@ public final class HoloWorldInput {
         if (event.getAction() == InputConstants.PRESS) {
             HoloWorld w = HoloWorld.current();
             int action = actionOf(button);
+            Minecraft mc = Minecraft.getInstance();
+            if (!cursorMode && mc.screen == null && !mc.mouseHandler.isMouseGrabbed()) {
+                // clique que so devolve o mouse ao jogo (janela voltou ao foco): com a mira numa placa nao vira clique
+                // de placa nem acao no mundo atras dela; fora das placas segue o vanilla (que prende o mouse)
+                boolean holo = w != null && w.acceptsInput() && w.ownsAim();
+                ARBITER.press(button, holo);
+                if (holo) {
+                    event.setCanceled(true);
+                    mc.mouseHandler.grabMouse();
+                }
+                return;
+            }
             boolean holo = w != null && w.acceptsInput() && (cursorMode || action >= 0 && w.ownsAim());
             if (ARBITER.press(button, holo) == Owner.HOLO) {
                 event.setCanceled(true);
@@ -92,7 +107,11 @@ public final class HoloWorldInput {
                 if (owner == Owner.HOLO) w.press(source, action != HoloInputArbiter.PICK);
             }
         }
-        if (owner == Owner.HOLO) {
+        // Dono holograma: nada no mundo. Dono mundo (apertou fora das placas): continua do mundo, mas a repeticao
+        // segurada (mineracao continua, uso repetido) nao atravessa uma placa que passou para a frente da mira; volta
+        // sozinha quando a mira sai dela. Nunca vira clique de placa.
+        HoloWorld w = HoloWorld.current();
+        if (owner == Owner.HOLO || owner == Owner.WORLD && w != null && w.ownsAim()) {
             event.setCanceled(true);
             event.setSwingHand(false);
         }
@@ -103,6 +122,7 @@ public final class HoloWorldInput {
     static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         ARBITER.clear();
         cursorMode = false;
+        regrabPending = false;
     }
 
     // ================================================================ estado
@@ -135,13 +155,23 @@ public final class HoloWorldInput {
         } else if (!want && cursorMode) {
             exitCursor(true);
         }
+        if (regrabPending && !cursorMode) {
+            if (mc.screen != null || mc.level == null) regrabPending = false;
+            else if (mc.isWindowActive()) {
+                regrabPending = false;
+                if (!mc.mouseHandler.isMouseGrabbed()) mc.mouseHandler.grabMouse();
+            }
+        }
     }
 
     /** Paineis fecharam: sai do modo cursor e devolve o mouse-look. */
     static void closed() { exitCursor(true); }
 
     /** Uma tela vai abrir (ela mesma solta o mouse e o prende de novo ao fechar): sai do modo cursor sem prender. */
-    static void screenOpened() { exitCursor(false); }
+    static void screenOpened() {
+        exitCursor(false);
+        regrabPending = false;
+    }
 
     private static void exitCursor(boolean regrab) {
         if (!cursorMode) return;
@@ -149,7 +179,10 @@ public final class HoloWorldInput {
         HoloWorld w = HoloWorld.current();
         if (w != null) w.cancelDrag();
         Minecraft mc = Minecraft.getInstance();
-        if (regrab && mc.screen == null && mc.level != null && mc.isWindowActive()) mc.mouseHandler.grabMouse();
+        if (!regrab || mc.screen != null || mc.level == null) return;
+        // sem foco (Alt+Tab com a tecla segurada) o GLFW solta a tecla e o grab nao pega: prende quando o foco voltar
+        if (mc.isWindowActive()) mc.mouseHandler.grabMouse();
+        else regrabPending = true;
     }
 
     /** Acao do vanilla presa a este botao do mouse ({@link HoloInputArbiter#ATTACK}/USE/PICK) ou -1. */

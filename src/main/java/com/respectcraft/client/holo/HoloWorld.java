@@ -115,6 +115,7 @@ public final class HoloWorld {
         }, initial);
         float eyeZ = HoloGeometry.referenceDistance(LAYOUT_H, HoloMenu.FOV);
         menu.layout(LAYOUT_W, LAYOUT_H, 1F, eyeZ);
+        menu.world = true;
     }
 
     // ================================================================ API (teclas)
@@ -461,8 +462,25 @@ public final class HoloWorld {
             x = (int) (mc.mouseHandler.xpos() * window.getGuiScaledWidth() / Math.max(1, window.getScreenWidth()));
             y = (int) (mc.mouseHandler.ypos() * window.getGuiScaledHeight() / Math.max(1, window.getScreenHeight()));
         }
-        g.renderComponentTooltip(mc.font, menu.tooltip, x, y);
+        tooltipLines.clear();
+        int maxW = Math.max(80, Math.min(220, g.guiWidth() / 2 - 16));
+        for (Component line : menu.tooltip) tooltipLines.addAll(mc.font.split(line, maxW));
+        g.renderTooltip(mc.font, tooltipLines, ABOVE_AIM, x, y);
     }
+
+    private final List<net.minecraft.util.FormattedCharSequence> tooltipLines = new ArrayList<>();
+
+    /**
+     * Dica acima e a direita da mira (nao cobre o que esta logo abaixo dela, como a fileira de chips); vira para a
+     * esquerda/baixo quando nao cabe.
+     */
+    private static final net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner ABOVE_AIM =
+            (screenW, screenH, mx, my, tw, th) -> {
+                int x = mx + 10, y = my - 10 - th;
+                if (x + tw > screenW - 4) x = mx - 10 - tw;
+                if (y < 4) y = my + 14;
+                return new org.joml.Vector2i(Math.max(4, x), Math.max(4, Math.min(y, screenH - th - 4)));
+            };
 
     /** Passada no mundo: matrizes da camera real, esmaecimento de perto/por tras e desenho. */
     private void renderWorld(RenderLevelStageEvent event) {
