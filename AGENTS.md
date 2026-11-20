@@ -26,8 +26,10 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   reintroduza sem pedido explícito.
 - **Finalizações (Etapa 4.8):** cada participante usa o próprio rig (`FinisherParticipants`, `EntityFinisherClip`);
   sessão sempre com um jogador; contador só de jogador; `BossDefeatEvent` é só preparação (nada concedido).
-- **Menu K (Etapas 4.8.1 e 4.8.4-A):** holográfico em `client.holo`, núcleo `HoloMenu`. Padrão = **no mundo**
-  (`HoloWorld`: placas paradas no mundo, jogador anda/pula/olha; K invoca/dispensa, R chama de volta; sem `Screen`). A
+- **Menu K (Etapas 4.8.1, 4.8.4-A e 4.8.4-B):** holográfico em `client.holo`, núcleo `HoloMenu`. Padrão = **no mundo**
+  (`HoloWorld`: placas paradas no mundo, jogador anda/pula/olha; K invoca/dispensa, R chama de volta; sem `Screen`).
+  Clique/arrasto/roda pela mira (Alt segurado = modo cursor) via `HoloWorldInput`: o dono do botão é decidido no aperto
+  e nada atravessa uma placa para o mundo (sem ataque, mineração, uso, balanço ou troca de slot). A
   tela `HoloCharacterScreen` é só reserva temporária (`mode = "SCREEN"`). A árvore de habilidades é a seção Skills.
   Os antigos `CharacterHubScreen`/`SkillTreeScreen` não existem mais.
 - **Animações:** dados em `PlayerAnimations`; `.bbmodel` em `model_sources/player/`; respeite
