@@ -9,6 +9,7 @@
   "gui.respectcraft.emotion": "Emotion",
   "gui.respectcraft.traits": "Trait",
   "key.respectcraft.creator": "RespectCraft Menu (K)",
+  "key.respectcraft.holo_recall": "Recall Holographic Menu (R)",
   "gui.respectcraft.creator.title": "RespectCraft | Character creator",
   "gui.respectcraft.creator.body": "Body",
   "gui.respectcraft.creator.hair": "Hairstyle",
@@ -324,5 +325,7 @@
   "gui.respectcraft.holo.settings.done": "Done",
   "gui.respectcraft.holo.settings.hint": "Visual only. Right-drag tilts the view, R recenters it.",
   "gui.respectcraft.holo.points_short": "Pts",
-  "gui.respectcraft.holo.bring_forward": "Click to bring this plate forward"
+  "gui.respectcraft.holo.bring_forward": "Click to bring this plate forward",
+  "gui.respectcraft.holo.world.summoned": "Holograms anchored here · %s: dismiss · %s: recall in front of you",
+  "gui.respectcraft.holo.world.cramped": "Tight space: holograms moved as close as possible · %s: recall elsewhere"
 }
