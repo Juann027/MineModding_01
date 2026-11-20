@@ -105,6 +105,62 @@ public final class HoloGeometry {
         return true;
     }
 
+    // ------------------------------------------------------------------ holograma no mundo (Etapa 4.8.4-A)
+
+    /**
+     * Layout -> mundo relativo a camera (blocos). A ancora e o "olho" do arco: o ponto de layout
+     * {@code (centerX, centerY, eyeZ)} cai em {@code (relX, relY, relZ)} = ancora - camera, a frente do arco (-z do
+     * layout) aponta para o yaw da ancora (graus do Minecraft: 0 = sul/+z, 90 = oeste/-x), x do layout vai para a
+     * direita de quem olha para esse yaw e y do layout vai para baixo. {@code blocksPerUnit} = escala do arranjo.
+     * Composta com a rotacao da camera real, da a mesma {@code visao * layout} da tela, so que com o mundo de verdade.
+     */
+    public static Matrix4f layoutToWorld(Matrix4f dest, float relX, float relY, float relZ, float yawDegrees,
+                                         float blocksPerUnit, float centerX, float centerY, float eyeZ) {
+        return dest.translation(relX, relY, relZ)
+                .rotateY((float) Math.toRadians(180.0 - yawDegrees))
+                .scale(blocksPerUnit, -blocksPerUnit, blocksPerUnit)
+                .translate(-centerX, -centerY, -eyeZ);
+    }
+
+    /**
+     * Raio (origem e direcao no espaco de origem de {@code model}, ex.: espaco do olho ou do mundo) contra o plano local
+     * z = 0 de um painel, dado o inverso de {@code model} (local -> origem). {@code out} recebe (x local, y local, t),
+     * com {@code t} na unidade da direcao (direcao unitaria = distancia). Falso se o raio for paralelo ou o plano
+     * estiver atras da origem. Nao recorta pelo retangulo (ver {@link #rayHit}).
+     */
+    public static boolean rayLocal(Matrix4f inverseModel, float ox, float oy, float oz, float dx, float dy, float dz,
+                                   Vector3f out) {
+        float lox = inverseModel.m00() * ox + inverseModel.m10() * oy + inverseModel.m20() * oz + inverseModel.m30();
+        float loy = inverseModel.m01() * ox + inverseModel.m11() * oy + inverseModel.m21() * oz + inverseModel.m31();
+        float loz = inverseModel.m02() * ox + inverseModel.m12() * oy + inverseModel.m22() * oz + inverseModel.m32();
+        float ldx = inverseModel.m00() * dx + inverseModel.m10() * dy + inverseModel.m20() * dz;
+        float ldy = inverseModel.m01() * dx + inverseModel.m11() * dy + inverseModel.m21() * dz;
+        float ldz = inverseModel.m02() * dx + inverseModel.m12() * dy + inverseModel.m22() * dz;
+        if (Math.abs(ldz) < 1e-9F) return false;
+        float t = -loz / ldz;
+        if (!(t > 0F)) return false;
+        out.set(lox + ldx * t, loy + ldy * t, t);
+        return true;
+    }
+
+    /** Como {@link #rayLocal}, mas so aceita o ponto dentro do retangulo {@code 0..w x 0..h}. */
+    public static boolean rayHit(Matrix4f inverseModel, float ox, float oy, float oz, float dx, float dy, float dz,
+                                 float w, float h, Vector3f out) {
+        if (!rayLocal(inverseModel, ox, oy, oz, dx, dy, dz, out)) return false;
+        float eps = 1e-3F;
+        return out.x >= -eps && out.y >= -eps && out.x <= w + eps && out.y <= h + eps;
+    }
+
+    /**
+     * Distancia (na unidade local do painel) de um ponto local {@code (lx, ly, lz)} ao retangulo {@code 0..w x 0..h}
+     * do plano z = 0. Usada para esmaecer a placa quando a camera a atravessa.
+     */
+    public static float distanceToRect(float lx, float ly, float lz, float w, float h) {
+        float dx = lx < 0F ? -lx : lx > w ? lx - w : 0F;
+        float dy = ly < 0F ? -ly : ly > h ? ly - h : 0F;
+        return (float) Math.sqrt(dx * dx + dy * dy + lz * lz);
+    }
+
     /** NDC -> coordenada de GUI (pixels logicos da tela, y para baixo). */
     public static float ndcToGuiX(float ndcX, float screenW) { return (ndcX + 1F) * 0.5F * screenW; }
     public static float ndcToGuiY(float ndcY, float screenH) { return (1F - ndcY) * 0.5F * screenH; }

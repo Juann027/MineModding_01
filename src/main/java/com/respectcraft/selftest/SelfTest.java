@@ -865,6 +865,79 @@ public final class SelfTest {
                 .mul(com.respectcraft.ui.HoloGeometry.panel(new org.joml.Matrix4f(), 113.5F, 70F, 200F, 100F, 0.5F, 0.5F,
                         0F, 0F, 0F, 1F, 1F)).invert(), 0F, 0F, 200F, 100F, b);
         check(f, hitNear && hitFlat && a.z < b.z, "holo: painel mais perto vence a sobreposicao");
+        holoWorld(f);
+    }
+
+    /**
+     * Etapa 4.8.4-A: holograma no mundo. A matriz layout -> mundo leva o olho do arco para a ancora e a frente para o
+     * yaw; o raio da mira acha o mesmo ponto local que o desenho, de qualquer posicao da camera (a ancora nao se mexe);
+     * a escolha da posicao encolhe a distancia diante de uma parede, gira o arco quando a frente esta bloqueada e
+     * avisa quando nada cabe.
+     */
+    private static void holoWorld(List<String> f) {
+        float cx = 320F, cy = 180F, eyeZ = 469F, s = 2F / 469F;
+        org.joml.Vector3f out = new org.joml.Vector3f();
+        for (float yaw : new float[]{0F, 90F, -135F, 200F}) {
+            org.joml.Matrix4f m = com.respectcraft.ui.HoloGeometry.layoutToWorld(new org.joml.Matrix4f(), 10F, 64F, -3F, yaw, s,
+                    cx, cy, eyeZ);
+            m.transformPosition(out.set(cx, cy, eyeZ));
+            check(f, out.distance(10F, 64F, -3F) < 1e-3F, "holo mundo: olho do arco cai na ancora (yaw " + yaw + ")");
+            // placa da frente (z = 0 do layout) a 2 blocos na direcao do yaw, na altura dos olhos
+            m.transformPosition(out.set(cx, cy, 0F));
+            float fx = (float) com.respectcraft.ui.HoloPlacement.forwardX(yaw), fz = (float) com.respectcraft.ui.HoloPlacement.forwardZ(yaw);
+            check(f, out.distance(10F + 2F * fx, 64F, -3F + 2F * fz) < 1e-3F, "holo mundo: frente do arco segue o yaw " + yaw + " = " + out);
+            // x do layout = direita de quem olha; y do layout = para baixo
+            m.transformPosition(out.set(cx + 100F, cy + 50F, 0F));
+            float rx = (float) com.respectcraft.ui.HoloPlacement.rightX(yaw), rz = (float) com.respectcraft.ui.HoloPlacement.rightZ(yaw);
+            check(f, out.distance(10F + 2F * fx + 100F * s * rx, 64F - 50F * s, -3F + 2F * fz + 100F * s * rz) < 1e-3F,
+                    "holo mundo: direita e baixo do layout (yaw " + yaw + ")");
+        }
+        // Mesmo ponto local pelo desenho e pelo raio, com a camera em lugares diferentes em volta da ancora fixa.
+        org.joml.Matrix4f panel = com.respectcraft.ui.HoloGeometry.panel(new org.joml.Matrix4f(), cx - 147F, 48F, 294F, 264F,
+                0.5F, 0.5F, 0F, 31F, 3F, 1F, 1F);
+        float ax = 100.5F, ay = 70.62F, az = -40.25F;
+        for (float[] cam : new float[][]{{ax, ay, az}, {ax + 1.3F, ay - 0.4F, az + 0.6F}, {ax - 2.5F, ay + 0.3F, az - 3.5F}}) {
+            org.joml.Matrix4f model = com.respectcraft.ui.HoloGeometry.layoutToWorld(new org.joml.Matrix4f(), ax - cam[0], ay - cam[1],
+                    az - cam[2], 37F, s, cx, cy, eyeZ).mul(panel);
+            org.joml.Vector3f target = model.transformPosition(new org.joml.Vector3f(60F, 200F, 0F));
+            org.joml.Vector3f dir = new org.joml.Vector3f(target).normalize();
+            boolean ok = com.respectcraft.ui.HoloGeometry.rayHit(new org.joml.Matrix4f(model).invert(), 0F, 0F, 0F, dir.x, dir.y, dir.z,
+                    294F, 264F, out);
+            check(f, ok && Math.abs(out.x - 60F) < 0.05F && Math.abs(out.y - 200F) < 0.05F && Math.abs(out.z - target.length()) < 1e-3F,
+                    "holo mundo: raio da camera -> ponto local da placa ancorada = " + out);
+            check(f, !com.respectcraft.ui.HoloGeometry.rayHit(new org.joml.Matrix4f(model).invert(), 0F, 0F, 0F, -dir.x, -dir.y, -dir.z,
+                    294F, 264F, out), "holo mundo: placa atras da camera recusada");
+        }
+        check(f, Math.abs(com.respectcraft.ui.HoloGeometry.distanceToRect(10F, 20F, -3F, 100F, 50F) - 3F) < 1e-4F
+                && Math.abs(com.respectcraft.ui.HoloGeometry.distanceToRect(-3F, 54F, 0F, 100F, 50F) - 5F) < 1e-4F,
+                "holo mundo: distancia ate o retangulo da placa");
+
+        // Escolha da posicao: amostras de um arco simples (frente, vizinhas e pontas), olho em (0.5, 65.62, 0.5).
+        List<com.respectcraft.ui.HoloPlacement.Sample> samples = new ArrayList<>();
+        for (int i = -2; i <= 2; i++) {
+            double a = Math.toRadians(i * 31.0);
+            int kind = i == 0 ? com.respectcraft.ui.HoloPlacement.ESSENTIAL
+                    : Math.abs(i) == 1 ? com.respectcraft.ui.HoloPlacement.IMPORTANT : com.respectcraft.ui.HoloPlacement.OPTIONAL;
+            for (float up : new float[]{-0.25F, 0F, 0.25F}) samples.add(new com.respectcraft.ui.HoloPlacement.Sample(
+                    (float) Math.sin(a) * 1.2F, up, (float) Math.cos(a) * 1.2F, kind));
+        }
+        double ex = 0.5, ey = 65.62, ez = 0.5;
+        com.respectcraft.ui.HoloPlacement.Result open = com.respectcraft.ui.HoloPlacement.choose(ex, ey, ez, 0F, 2F, 0.7F, samples,
+                (x0, y0, z0, x1, y1, z1) -> true);
+        check(f, open.fits() && open.yaw() == 0F && open.distance() == 2F, "holo mundo: campo aberto usa a distancia preferida = " + open);
+        // parede em z = 2 (yaw 0 olha para +z): encolhe ate a placa da frente caber antes dela
+        com.respectcraft.ui.HoloPlacement.Sight wall = (x0, y0, z0, x1, y1, z1) -> z1 < 2.0;
+        com.respectcraft.ui.HoloPlacement.Result near = com.respectcraft.ui.HoloPlacement.choose(ex, ey, ez, 0F, 2F, 0.7F, samples, wall);
+        check(f, near.fits() && near.yaw() == 0F && near.distance() < 2F && ez + near.distance() * 1.2F < 2.0,
+                "holo mundo: parede na frente aproxima as placas = " + near);
+        // pilar logo a frente (x perto do olho, z >= 1.2): a frente e as vizinhas batem -> o arco gira para o lado livre
+        com.respectcraft.ui.HoloPlacement.Sight pillar = (x0, y0, z0, x1, y1, z1) -> !(z1 >= 1.2 && Math.abs(x1 - 0.5) < 0.6);
+        com.respectcraft.ui.HoloPlacement.Result turned = com.respectcraft.ui.HoloPlacement.choose(ex, ey, ez, 0F, 2F, 0.7F, samples, pillar);
+        check(f, turned.fits() && Math.abs(turned.yaw()) == 50F && turned.distance() == 2F, "holo mundo: pilar na frente gira o arco = " + turned);
+        // cubiculo: nada cabe -> fica com a menor distancia e avisa
+        com.respectcraft.ui.HoloPlacement.Result boxed = com.respectcraft.ui.HoloPlacement.choose(ex, ey, ez, 0F, 2F, 0.7F, samples,
+                (x0, y0, z0, x1, y1, z1) -> Math.abs(x1 - x0) < 0.3 && Math.abs(z1 - z0) < 0.3);
+        check(f, !boxed.fits() && boxed.distance() <= 0.7F + 1e-4F, "holo mundo: espaco minimo avisa e usa a menor distancia = " + boxed);
     }
 
     /** Etapa 4.8: Rimulib carregado e conectado pela API comum (segura no servidor dedicado). */

@@ -41,7 +41,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/respectcraft anim`. |
 | `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/respectcraft test` (e `/stopitstopnow`). |
 | `character`, `client.character` | **Character Creator** (primeira vez na tecla K): aparência (`CharacterAppearance`, `CharacterAppearanceService`). |
-| `client.holo`, `ui` | **Menu holográfico da tecla K** (Etapa 4.8.1): `HoloCharacterScreen` (placas das seções Overview, Character, Body & Traits, Speciality, Skills num arco em volta do olho; navegar gira o arco), superfícies por painel + passada 3D (`Holo3D`), clique pelo raio inverso (`ui.HoloGeometry`, puro, no `SelfTest`), config de cliente `respectcraft-holomenu-client.toml`. |
+| `client.holo`, `ui` | **Menu holográfico da tecla K** (Etapas 4.8.1 e 4.8.4-A). Núcleo `HoloMenu` (arco das seções Overview, Character, Body & Traits, Speciality, Skills, superfícies por painel, passada 3D `Holo3D`) com duas cascas: **`HoloWorld`** (padrão: placas paradas no mundo, `RenderFrameEvent.Pre` + `RenderLevelStageEvent` AFTER_LEVEL, K/Recall, posição sem paredes `ui.HoloPlacement`) e `HoloCharacterScreen` (tela da 4.8.1, reserva temporária `mode = "SCREEN"`). Geometria pura em `ui.HoloGeometry` (no `SelfTest`); config de cliente `respectcraft-holomenu-client.toml`. |
 | `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`), **traços de nascimento** (`BirthTrait`) e **Specialities** (`Speciality`, `SpecialityRarity`, `SpecialityOdds`, `SpecialityRoll`, `Specialities`, `SpecialityConfig`). |
 | `skill` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`; a árvore é a seção Skills do menu K (`client.holo.SkillsView`). |
 | `needs`, `client.hud` | **Necessidades** (`Needs`, `NeedsRules`, `NeedsService`) e **consumíveis** (`NeedEffects`/`NeedEffectDef`, `ConsumableItem`, `ChamberPotItem`). Orbe de Emoção na tela; painel Body & Traits no inventário. |
@@ -112,9 +112,13 @@ sistema em que vai mexer; veja o fim deste arquivo).
   são **dados legados inativos** (`Need.active() == false`): continuam no Codec, mas não mudam, não afetam a Emoção,
   não penalizam e não aparecem. Não as reative sem pedido. Medidores detalhados só no painel do inventário e no
   menu K; na tela de jogo, só o orbe de Emoção. Consumível novo = entrada em `NeedEffects`.
-- **Menu K holográfico (Etapa 4.8.1):** desenho e clique usam as mesmas matrizes do quadro (`HoloPanel`); conteúdo
-  novo entra numa `HoloView` desenhada com `HoloCanvas` (regiões registradas no desenho). Não aloque framebuffer por
-  quadro, não crie entidades/blocos para o menu e devolva todo o estado GL em `Holo3D.end`. Fundo do mundo pelo Rimulib
+- **Menu K holográfico (Etapas 4.8.1 e 4.8.4-A):** desenho e clique/hover usam as mesmas matrizes do quadro
+  (`HoloPanel`); conteúdo novo entra numa `HoloView` desenhada com `HoloCanvas` (regiões registradas no desenho) e
+  vale para as duas cascas (`HoloMenu`). **Modo mundo (padrão):** nada de `Screen` nem entrada capturada; a âncora
+  (olho + yaw, `HoloWorld`) só muda por K/Recall; o depth buffer do mundo nunca é limpo (`Holo3D.beginWorld/endWorld`);
+  fecha na morte, respawn, troca de nível/dimensão, logout e telas incompatíveis. A tela da 4.8.1 é reserva temporária
+  (sem recursos novos). Não aloque framebuffer por quadro, não crie entidades/blocos para o menu e devolva todo o
+  estado GL em `Holo3D.end`/`endWorld`. Fundo do mundo pelo Rimulib
   com passada própria (`FxApi` + `shaders/fx/holo_backdrop.fsh`): os campos de `Frame.screen()` sozinhos não fazem nada
   no 1.3.0. Fontes do Rimulib: o `y` do `UiApi.text` é a linha de base (`HoloCanvas.capHeight`).
 - **Telas** herdam `client.ui.RespectScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
@@ -206,5 +210,6 @@ python3 tools/player_anim/test_export.py # proteção do exportador
   roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada; traços por corpo
   (universais × só masculinos) e textos em inglês → 4.6; rebrand técnico (mod id/pacote/comandos/configs) e roda da
   roleta com chances do servidor → 4.7.1; layout de texto do Hub e do painel Body & Traits → 4.7.2; menu holográfico da
-  tecla K (projeção, clique, Rimulib UiApi/FxApi) → 4.8.1.
+  tecla K (projeção, clique, Rimulib UiApi/FxApi) → 4.8.1; auditoria e plano do menu no mundo → 4.8.3; menu K no mundo
+  (âncora, posição, passada no mundo, K/Recall) → 4.8.4-A.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

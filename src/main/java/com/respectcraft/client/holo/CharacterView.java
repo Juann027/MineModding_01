@@ -16,7 +16,7 @@ import net.minecraft.network.chat.Component;
  * atalho para o Character Creator que ja existia. O criador nao foi refeito.
  */
 final class CharacterView extends HoloView {
-    CharacterView(HoloCharacterScreen screen) { super(screen, HoloCharacterScreen.Section.CHARACTER); }
+    CharacterView(HoloMenu menu) { super(menu, HoloCharacterScreen.Section.CHARACTER); }
 
     @Override
     boolean fitsContent() { return false; }
@@ -80,7 +80,7 @@ final class CharacterView extends HoloView {
         iy += 6F;
         c.stage(since, i++);
         boolean hot = c.button("ch.edit", tr("gui.respectcraft.holo.edit_appearance"), ix, iy, Math.min(iw, 150F), 16F,
-                SkillDef.iconTexture("identidade_dinheiro"), HoloStyle.CYAN, true, false, "", screen::openCreator);
+                SkillDef.iconTexture("identidade_dinheiro"), HoloStyle.CYAN, true, false, "", menu::openCreator);
         if (hot) c.tooltip(List.of(Component.translatable("gui.respectcraft.holo.edit_appearance").withStyle(ChatFormatting.BOLD),
                 Component.translatable("gui.respectcraft.holo.edit_appearance.desc").withStyle(ChatFormatting.GRAY)));
         iy += 22F;

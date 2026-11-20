@@ -25,7 +25,7 @@ final class BodyView extends HoloView {
     private final float[] shown = new float[Need.ACTIVE.length];
     private boolean primed;
 
-    BodyView(HoloCharacterScreen screen) { super(screen, HoloCharacterScreen.Section.BODY); }
+    BodyView(HoloMenu menu) { super(menu, HoloCharacterScreen.Section.BODY); }
 
     /** Mesmo limite usado pelo servidor nos avisos e efeitos (e pelo painel do inventario). */
     static boolean critical(Need need, int raw) {
