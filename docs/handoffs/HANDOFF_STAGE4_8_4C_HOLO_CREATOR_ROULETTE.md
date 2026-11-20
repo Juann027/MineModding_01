@@ -21,6 +21,19 @@ do clique.
   usam as duas; não há segunda implementação.
 - Se o dono recusar o #36, este PR precisa ser refeito sem ele (a extração depende do `requestId`).
 
+## 1.1 Causa raiz do erro da roleta (confirmada pelo dono)
+
+Stack trace do dono: `IllegalArgumentException: No implementation of the random number generator algorithm
+"L64X128MixRandom" is available` em `ProfileService.roll` (giro → `ERROR` do #36; antes do #36, timeout). O algoritmo
+fica no módulo opcional `jdk.random`, que o runtime Java do dono não tem. Correção: `BirthRoulette.newRandom()` =
+`new SplittableRandom()` (`java.base`, implementa `RandomGenerator`), usado no giro (`ProfileService.roll`), em
+`/respectcraft speciality simulate`, na escolha de finalização (`FinisherTestMechanic`) e no `SelfTest` (que lançaria a
+mesma exceção). Chances, Specialities, traços, atributos e novo giro intactos. Testes: runtime com só `java.base`
+(jlink) reproduz a exceção antiga e roda o `BirthRoulette.roll` real com o gerador novo (200 000 giros nas chances
+aprovadas); servidor dedicado num runtime com todos os módulos **menos** `jdk.random` + cliente real: Spin, erro
+injetado no novo giro (ERROR #2, giro intacto), novo giro, Continue, reconectar, `speciality simulate 100000`; zero
+ocorrências da exceção. `SelfTest.rouletteRandom`.
+
 ## 2. Lógica sem desenho (uma só para as duas cascas)
 
 | Peça | Papel |

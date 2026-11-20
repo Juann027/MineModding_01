@@ -48,6 +48,7 @@ public final class SelfTest {
             roulette(f);
             rouletteFailures(f);
             rouletteMachine(f);
+            rouletteRandom(f);
             creatorOptions(f);
             needs(f);
             coomAndEffects(f);
@@ -108,7 +109,7 @@ public final class SelfTest {
 
     private static void roulette(List<String> f) {
         // Etapa 4.7: o nascimento sorteia uma Speciality (raridade primeiro); atributos sem bonus de origem.
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         int rolls = 40_000;
         Map<SpecialityRarity, Integer> counts = new EnumMap<>(SpecialityRarity.class);
         Map<Speciality, Integer> seen = new EnumMap<>(Speciality.class);
@@ -214,9 +215,9 @@ public final class SelfTest {
         check(f, com.respectcraft.needs.ActiveNeedEffects.CODEC.parse(NbtOps.INSTANCE, at).getOrThrow().equals(active), "efeitos: codec");
 
         // Roleta: um unico novo giro, so depois do nascimento; fichas antigas com mais giros sao corrigidas.
-        CharacterProfile born = CharacterProfile.DEFAULT.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom"), BirthTrait.Body.MALE), BirthRoulette.FREE_REROLLS);
+        CharacterProfile born = CharacterProfile.DEFAULT.withBirth(BirthRoulette.roll(BirthRoulette.newRandom(), BirthTrait.Body.MALE), BirthRoulette.FREE_REROLLS);
         check(f, born.canReroll() && born.rerolls() == 1, "roleta: um novo giro após nascer");
-        CharacterProfile afterReroll = born.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom"), BirthTrait.Body.MALE), born.rerolls() - 1);
+        CharacterProfile afterReroll = born.withBirth(BirthRoulette.roll(BirthRoulette.newRandom(), BirthTrait.Body.MALE), born.rerolls() - 1);
         check(f, !afterReroll.canReroll(), "roleta: segundo novo giro bloqueado");
         check(f, new CharacterProfile(true, "sertao", List.of(), 5, 1, 0, 0, List.of(), List.of()).rerolls() == 1, "roleta: ficha antiga com 5 giros");
         check(f, !CharacterProfile.DEFAULT.canReroll(), "roleta: sem nascimento não há novo giro");
@@ -352,6 +353,19 @@ public final class SelfTest {
                 "roleta/máquina: reabrir mostra o resultado salvo");
     }
 
+    /**
+     * Causa confirmada do erro da roleta: {@code RandomGenerator.of("L64X128MixRandom")} exige o modulo opcional
+     * {@code jdk.random}. O gerador dos sorteios tem de vir do {@code java.base} e sortear normalmente.
+     */
+    private static void rouletteRandom(List<String> f) {
+        RandomGenerator random = BirthRoulette.newRandom();
+        check(f, random instanceof java.util.SplittableRandom && "java.base".equals(random.getClass().getModule().getName()),
+                "roleta/rng: gerador do java.base (sem jdk.random)");
+        BirthRoulette.Result r = BirthRoulette.roll(random, BirthTrait.Body.FEMALE, SpecialityOdds.DEFAULT, null);
+        check(f, r.speciality() != null && r.attributes().length == CharacterAttribute.values().length
+                && r.traits().size() == BirthTrait.PER_BIRTH, "roleta/rng: sorteio completo com o gerador portátil");
+    }
+
     /** Etapa 4.8.4-C: Skin e Face sairam do criador; aparencias antigas continuam validas e passam a usar a skin da conta. */
     private static void creatorOptions(List<String> f) {
         var old = new com.respectcraft.character.CharacterAppearance(true, 1, 3, 2, 0, 1);
@@ -372,7 +386,7 @@ public final class SelfTest {
         check(f, afterReroll.traits().size() == BirthTrait.PER_BIRTH,
                 "traços: novo giro substitui (não soma) = " + afterReroll.traits());
         Map<BirthTrait, Integer> seen = new EnumMap<>(BirthTrait.class);
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         for (int i = 0; i < 4_000; i++) {
             for (BirthTrait t : BirthTrait.roll(random, i % 2 == 0 ? BirthTrait.Body.MALE : BirthTrait.Body.FEMALE)) seen.merge(t, 1, Integer::sum);
         }
@@ -406,7 +420,7 @@ public final class SelfTest {
         // 1. Sorteio masculino: todos os tracos, um por nascimento.
         Map<BirthTrait, Integer> maleSeen = new EnumMap<>(BirthTrait.class);
         Map<BirthTrait, Integer> femaleSeen = new EnumMap<>(BirthTrait.class);
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         boolean onePerBirth = true;
         for (int i = 0; i < 6_000; i++) {
             List<BirthTrait> m = BirthRoulette.roll(random, male).traits();
@@ -526,7 +540,7 @@ public final class SelfTest {
         check(f, Math.abs(o[0]) < 1e-6 && Math.abs(o[2] - 2) < 1e-6, "câmera: offset frontal");
         double[] side = CameraTrack.offset(track.sample(10), 0);
         check(f, Math.abs(side[0] + 4) < 1e-6, "câmera: offset lateral");
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         for (int i = 0; i < 32; i++) {
             check(f, Finishers.pick(s -> false, random).requiresSkill() == null, "finalizações: sem habilidade só as livres");
         }
@@ -724,7 +738,7 @@ public final class SelfTest {
 
         // Amostra: a raridade sai com a chance aprovada mesmo com raridades vazias (sem redistribuicao).
         Specialities partial = Specialities.of(List.of(Speciality.VANILLA, Speciality.SCATBORN));
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         int samples = 200_000;
         int[] counts = new int[all.length];
         int empty = 0;

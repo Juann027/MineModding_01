@@ -135,7 +135,7 @@ public final class ProfileService {
      * administrativo ({@code /respectcraft admin roulette <player> <rarity>}, permissao 2); o jogador nunca escolhe.
      */
     public static BirthRoulette.Result roll(ServerPlayer player, int rerollsLeft, SpecialityRarity forcedRarity) {
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         BirthRoulette.Result result = BirthRoulette.roll(random, body(player), SpecialityConfig.odds(), forcedRarity);
         CharacterProfile next = get(player).withBirth(result, rerollsLeft);
         player.getPersistentData().remove(LEGACY_LAST_ROLL_KEY);

@@ -70,6 +70,9 @@ sistema em que vai mexer; veja o fim deste arquivo).
   apresenta o resultado. Todo `BirthRollRequest` (com o `rollCount` esperado e um `requestId`) recebe um
   `BirthRollReply` com o mesmo `requestId`; nunca descarte pedido em silêncio. Exceção no servidor vira resposta
   `ERROR` (nada gravado) ou `ROLLED` (já gravado) com log do `requestId`, sem a ficha inteira (Etapa 4.8.2).
+  Gerador dos sorteios: só `BirthRoulette.newRandom()` (`SplittableRandom`, módulo `java.base`). **Nunca**
+  `RandomGenerator.of("...")` com algoritmo nomeado: exige o módulo opcional `jdk.random`, ausente em alguns runtimes
+  de launcher (causa confirmada do ERROR/timeout da roleta).
 - **Três conceitos separados:** **atributos** (`CharacterAttribute`: Força, Agilidade, Vigor, Inteligência,
   Carisma, Sorte — vêm do sorteio; fichas antigas incluem o bônus da origem legada), **necessidades** (`Need`, medidores que mudam no jogo) e
   **traços de nascimento** (`BirthTrait`, sorteados à parte, nunca derivados da origem; gravados em
