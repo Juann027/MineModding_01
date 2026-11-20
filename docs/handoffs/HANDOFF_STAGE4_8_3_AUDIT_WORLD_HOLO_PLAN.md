@@ -1,10 +1,28 @@
 # Handoff — Etapa 4.8.3: auditoria e arquitetura do menu holográfico físico (no mundo)
 
-Status: **auditoria e plano, nada implementado.** Nenhum código foi alterado, nada foi apagado, nenhum PR foi integrado.
-A Etapa 4.8.4 implementa o que está aqui depois da aprovação do dono. O PR #36 (Etapa 4.8.2, diagnóstico da
-roleta) continua aberto e intocado; o plano abaixo depende dele (seção 6, passo 0).
+Status: **auditoria e plano aprovados pelo dono, com as decisões da seção 0. Nada implementado.** Nenhum código foi
+alterado, nada foi apagado, nenhum PR foi integrado. A Etapa 4.8.4 só começa quando o dono entregar as instruções
+finais de implementação (e a skill `immersive-minecraft-ui`). O PR #36 (Etapa 4.8.2, diagnóstico da roleta) continua
+aberto e intocado; o plano abaixo depende dele (seção 7, passo 0).
 
 Base auditada: `main` em `f14f8af` (merge do PR #35, Etapa 4.8.1).
+
+## 0. Decisões do dono (aprovação da auditoria)
+
+A arquitetura de holograma no mundo (seções 4-7) está **aprovada**, com estas decisões. Onde conflitarem com o texto
+original das seções seguintes, valem estas.
+
+| # | Assunto | Decisão |
+|---|---|---|
+| 0.1 | PR #36 | Fica **aberto** até o teste pessoal do Spin feito pelo dono. **Sem merge automático** (exceção à política de merge com CI verde do `CLAUDE.md`). A 4.8.4 parte da rede da roleta **corrigida pelo #36**; não construir a apresentação nova da roleta sobre o código de rede antigo (seção 7, passo 0, vira bloqueio). |
+| 0.2 | Menu K em tela (`HoloCharacterScreen`) | Fica **temporariamente** como reserva de desenvolvimento/teste durante a migração (resolve o UNCERTAIN da 6.3: config de cliente `mode = world \| screen`, padrão `world`). **Não** vira uma segunda UI de personagem mantida para sempre: não recebe recursos novos, só o mínimo para continuar abrindo. Sai depois que o modo mundo passar no teste de regressão em cliente real. |
+| 0.3 | Criador e roleta antigos | `CharacterCreationScreen` e `BirthRouletteScreen` ficam no código durante a migração (só saem do fluxo). Removidos na **4.8.5**, depois que `CreatorView` e `RouletteView` no mundo forem verificados. Nada apagado antes disso. |
+| 0.4 | Compatibilidade com mundos antigos | **Não é requisito.** Ids legados (ex.: `familia_politica`) são candidatos a limpeza, mas cada remoção exige conferir todas as referências antes (seção 1.5). Muda a classificação de `familia_politica` na 1.3 de KEEP para candidato. |
+| 0.5 | Entrada | Interagir com o holograma **nunca** pode atacar mob, minerar bloco, usar item ou trocar slot da hotbar. Método confiável com WASD e mouse-look contínuos; criador e roleta precisam ser confortáveis (seção 5, revisada). |
+| 0.6 | Posição no mundo | O 1,6 bloco é só ponto de partida. Considerar paredes, obstáculos, salas pequenas, legibilidade e reposicionamento. A interface tem de ficar **de fato** no mundo enquanto o jogador anda em volta (seção 4.6, nova). |
+| 0.7 | Documentação | Este handoff entra num PR só de documentação, sem código de jogo e sem mexer em seções do README que conflitem com o #36. |
+
+Fora do escopo até pedido: implementação da 4.8.4, qualquer remoção de código, merge do #36.
 
 ## 1. Achados da auditoria
 
@@ -50,7 +68,7 @@ mas precisa ser dividido/adaptado), **REMOVE LATER** (pode sair depois que o sub
 | `client/hud/HudMeters.java`, `HudStatusClient.java` | Record com 6 campos (inclui Hidratação/Energia inativas) para o orbe ler só `emotion()`. | REMOVE LATER (o orbe pode ler `ProfileClientCache.needs()` direto); inofensivo |
 | `network/ProfileClientCache.java`, `CharacterAppearanceClientCache.java`, `GameplayNetworking.java` | Caches só de exibição, `revision()`/`rollReplyRevision()` para detectar respostas, limpos no logout. Servem ao modo mundo sem mudança; nenhum pacote novo é necessário. | KEEP (não mexer: o #36 altera `GameplayNetworking`/`ProfileClientCache`) |
 | `lang/en_us.json` | Sem uso: `key.respectcraft.skill_tree` (não existe tecla), `gui.respectcraft.bladder`, `gui.respectcraft.bowel`, `gui.respectcraft.emotion`. As demais chaves "sem referência literal" são montadas por id (skills, traços, raridades, `.desc` do Display). | REMOVE LATER |
-| Namespace antigo | Nenhuma referência ativa. Só `familia_politica` em `profile/LegacyOriginIds.java:13` e no `SelfTest` (alias exigido para fichas antigas) e a nota de tema no `AGENTS.md`. | KEEP |
+| Namespace antigo | Nenhuma referência ativa. Só `familia_politica` em `profile/LegacyOriginIds.java:13` e no `SelfTest` (alias exigido para fichas antigas) e a nota de tema no `AGENTS.md`. | ~~KEEP~~ → candidato a limpeza (decisão 0.4, seção 1.5) |
 | `RespectCraftClient.java` | Um único handler de `LoggingOut` limpa as caches; o holograma limpa o próprio fundo em `HoloClient`. Sem handlers redundantes. | KEEP |
 
 ### 1.4 Resumo
@@ -64,6 +82,18 @@ mas precisa ser dividido/adaptado), **REMOVE LATER** (pode sair depois que o sub
   liberados em `removed()`, arrasto solto quando a janela perde o foco, rotação da entidade restaurada em `finally`)
   está correto.
 - **Nada a remover antes do substituto:** criador e roleta antigos continuam até o modo mundo passar no teste real.
+
+### 1.5 Candidatos de limpeza de legado (decisão 0.4)
+
+Compatibilidade com mundos antigos deixou de ser requisito. Levantamento das referências em `src/main/java` (base
+`f14f8af`), para conferir **de novo** antes de remover qualquer coisa. Nada foi removido.
+
+| Candidato | Referências encontradas | Observação antes de remover |
+|---|---|---|
+| Alias `familia_politica` → `familia_artistica` (`profile/LegacyOriginIds`) | `LegacyOriginIds` (mapa `ALIASES`), `CharacterProfile.java:42-43` (Codec do campo `origin` chama `LegacyOriginIds::migrate`), `BirthOrigin` (javadoc), `SelfTest.java:437-459` (3 casos) | Remover o alias exige tirar o `xmap` do Codec e os casos do `SelfTest` juntos; o `CLAUDE.md` (seção de ids) e o `AGENTS.md` mandam criar alias para id aposentado: atualizar essa regra no mesmo PR. |
+| Origens sociais `BirthOrigin` (8, legadas desde a 4.7) | 11 arquivos: `profile` (`BirthOrigin`, `BirthRoulette`, `BirthTrait`, `CharacterProfile`, `Speciality`, `LegacyOriginIds`), `client.holo` (`SpecialityView`, `HoloNav`, `OverviewView`), `BirthRouletteScreen`, `SelfTest` | Maior que o alias: a ficha ainda exibe a origem de personagens sem Speciality. Decisão própria do dono; não é limpeza trivial. |
+| Necessidades `hidratacao`/`energia` (inativas desde a 4.5) | 9 arquivos: `needs` (`Need`, `Needs` Codec, `NeedsDelta`, `NeedsRules`, `NeedsService`, `NeedEffects`), `HudMeters`, `BodyStatusInventoryPanel`, `SelfTest`; mais `Skills.java:45,47,55,66` (`needRate`), `SkillsView.java:315`, `en_us.json:93-94` | Os campos são lidos pelo Codec e citados como estáveis no `CLAUDE.md`; o `CLAUDE.md` também diz para não reativá-las sem pedido. Remover mexe em habilidades (Cantil, Rede): pedir decisão. |
+| `origin()` fora de `profile` | `RespectCraftCommands` (exibição) | Acompanha a decisão de `BirthOrigin`. |
 
 ## 2. Por que a 4.8.1 parece uma tela
 
@@ -140,7 +170,8 @@ Coordenadas relativas à câmera (`âncora − câmera`) em `float` para não pe
 | Reload de recursos / resize | superfícies recriadas no próximo redesenho |
 
 Invocação: âncora a ~1,6 bloco na horizontal da mira, na altura dos olhos; um `level.clip` do cliente encurta a
-distância (mínimo ~0,8) se houver parede. Sem colisão: o jogador atravessa os painéis.
+distância (mínimo ~0,8) se houver parede. Sem colisão: o jogador atravessa os painéis. **Revisado pela decisão 0.6:
+o 1,6 bloco é só o primeiro candidato; a escolha da posição está na seção 4.6.**
 
 ### 4.5 Rimulib
 
@@ -149,13 +180,54 @@ APIs públicas usadas hoje: `UiApi.text/measure` (fontes, continua dentro das su
 jar não está no cache desta sessão. **UNCERTAIN:** no início da 4.8.4, `javap` no jar para ver se existe algo de
 painel no mundo; o plano não depende disso (desenho próprio no `RenderLevelStageEvent`).
 
+### 4.6 Posição no mundo (decisão 0.6)
+
+Regra fixa: a âncora é uma posição e um yaw **em coordenadas de mundo**, gravados na invocação (ou no recall) e nunca
+recalculados a partir da câmera. Andar, pular, girar a câmera ou dar a volta não move os painéis; só K, Recall ou um
+reposicionamento explícito mudam a âncora. A animação de montagem também acontece no lugar da âncora, sem seguir a
+câmera. Teste de aceitação: dar uma volta de 360° em torno do arco e ver os painéis parados (capturas de 3+ ângulos).
+
+Escolha da posição (só no cliente, só leitura do nível, sem bloco nem entidade):
+
+1. Volume do arranjo: o arco inteiro (todas as placas no `layoutToWorld` com a escala atual) vira um conjunto de
+   retângulos no mundo. A âncora é aceita se, de um ponto dos olhos do jogador, um `level.clip` até os cantos e o
+   centro da **placa da frente** não bate em bloco, e as placas laterais têm no máximo uma fração (config) dentro de
+   blocos sólidos (`getBlockCollisions` contra a caixa fina de cada placa).
+2. Candidatos, em ordem: distâncias 1,6 → 1,3 → 1,0 → 0,8 bloco na direção da mira; depois yaw ±30° e ±60° nas mesmas
+   distâncias (a placa da frente continua de frente para o jogador). O primeiro aceito vence.
+3. Sala pequena / corredor: se nenhum candidato passa, usar o **arranjo compacto**: raio do arco menor e abertura
+   angular menor (placas laterais mais fechadas em volta da frente), escala `s` reduzida até um mínimo de
+   legibilidade. Se ainda não couber, invocar só a placa da frente (as outras ficam como chips na borda dela) e avisar
+   com uma dica curta ("Not enough space — showing compact view").
+4. Altura: centro da placa da frente na altura dos olhos, limitado para não atravessar teto/chão (clip vertical de
+   2 blocos); em túnel de 2 blocos a placa desce/encolhe em vez de entrar no teto.
+5. Profundidade: painéis com teste de profundidade contra o mundo (parede na frente esconde). Se a câmera chegar a
+   menos de ~0,3 bloco do plano de uma placa (jogador atravessando), a placa esmaece em vez de cortar no plano
+   próximo.
+
+Legibilidade:
+
+- Placa da frente perpendicular à linha olho → âncora na invocação, com inclinação vertical para o olho (pitch
+  limitado a ±20°).
+- Densidade da superfície fixa (px por unidade) + mipmap; tamanho mínimo do texto calculado para a distância de leitura
+  da config; acima do alcance de leitura (config, ex. 6 blocos) as placas mostram só título/estado.
+- Contraste próprio (fundo semi-opaco atrás do texto), sem depender da luz do mundo (fullbright) e sem o
+  pós-processamento do Rimulib no modo mundo.
+
+Reposicionar:
+
+- **Recall** (tecla configurável): refaz a escolha acima a partir da mira atual, com a animação de montagem.
+- **Mover** (opcional, avaliar no teste): segurar ataque sobre a barra de título da placa da frente arrasta a âncora
+  pelo plano do chão, com os mesmos testes do passo 1 (a âncora não entra em parede).
+- Afastar-se além de N blocos (config) dispensa; não há "seguir o jogador".
+
 ## 5. Controles propostos
 
 | Ação | Controle |
 |---|---|
 | Andar, pular, agachar, olhar | vanilla, sempre (não há `Screen`) |
 | Apontar | **mira** (centro da tela): raio da câmera real até os planos dos painéis, até o alcance de interação do jogador; ponto de mira e realce de hover desenhados no painel |
-| Clicar | botão de ataque (ou usar) **só quando a mira está num painel interativo**: `InputEvent.InteractionKeyMappingTriggered` cancelado, sem balanço da mão. Fora dos painéis, ataque e mineração normais |
+| Clicar | botão de ataque (ou usar) **quando a mira está numa placa** (a placa inteira, revisado na 5.1): `InputEvent.InteractionKeyMappingTriggered` cancelado, sem balanço da mão. Fora dos painéis, ataque e mineração normais |
 | Rolar / trocar seção | roda sobre um painel: cancelada no `InputEvent.MouseScrollingEvent` (hotbar não troca); fora dos painéis a roda volta a ser a hotbar |
 | Arrastar (árvore de skills, girar holograma, mudar escala) | segurar ataque com a mira no painel; posição pelo raio no plano do painel capturado (`HoloZone.Drag`, já existe) |
 | Modo cursor (opcional) | tecla configurável (ex.: Alt esquerdo) segurada: solta o mouse, a câmera para de girar, WASD continua; raio pelo cursor (desprojeção com as matrizes do quadro). Para quem prefere apontar com cursor |
@@ -164,6 +236,32 @@ painel no mundo; o plano não depende disso (desenho próprio no `RenderLevelSta
 
 Tudo continua sendo intenção para o servidor (`CharacterAppearanceUpdatePayload`, `BirthRollRequest`,
 `BirthConfirmRequest`, `SkillPurchaseRequest`). Nenhum pacote novo.
+
+### 5.1 Garantias de entrada (decisão 0.5)
+
+Objetivo: interagir com o holograma **nunca** ataca mob, minera bloco, usa/coloca item, pega bloco (botão do meio) ou
+troca o slot da hotbar, e o jogador continua com WASD e mouse-look o tempo todo.
+
+| Garantia | Como |
+|---|---|
+| Quem é dono do clique | A cada quadro, o raio da mira é testado contra as placas da frente (só a face da frente, dentro do alcance). Se acerta uma placa **mais perto** que o `hitResult` vanilla, o holograma é o dono; senão, o mundo. A placa inteira (não só os botões) é dona: um clique "no vazio" do painel não atravessa para o mob atrás. |
+| Captura por pressão | O dono é decidido **no instante em que o botão desce** e vale até o botão subir. Clique que começou no painel nunca vira ataque/mineração, mesmo se a mira sair dele no meio do arrasto; clique que começou no mundo nunca vira clique de painel. |
+| Ataque, uso e pegar bloco | `InputEvent.InteractionKeyMappingTriggered` cancelado com `setSwingHand(false)` enquanto o holograma é dono (cobre ataque, uso e pegar bloco). **Conferir no jar 21.1.265** se a mineração contínua (`Minecraft.continueAttack`) também passa por esse evento; se não, zerar o `KeyMapping` de ataque (`setDown(false)`) durante a captura. Uso contínuo (comer, arco) idem para o `keyUse`. |
+| Hotbar | `InputEvent.MouseScrollingEvent` cancelado enquanto a mira está num painel. Teclas 1-9 **não** são capturadas (são escolha explícita do jogador, não interação com o holograma). Teste: `Inventory.selected` igual antes e depois de cada interação. |
+| Invocação | Ao invocar/recall, ataque e uso ficam ignorados até serem soltos (evita que o K com o botão segurado vire clique). |
+| Telas abertas, morte, cinemática, espectador | Entrada do holograma desligada; tudo volta ao vanilla. |
+
+Conforto para criador e roleta (controles complexos):
+
+- Alvos grandes: setas e botões do criador com no mínimo ~0,12 bloco de altura na distância padrão; Spin / Spin again /
+  Continue como botões largos na base da placa da roleta. Hover com realce e som, para o jogador saber antes de clicar.
+- Roda sobre um seletor do criador troca o valor (cabelo, pele, rosto…), sem precisar mirar nas setas pequenas.
+- **Modo foco** (tecla configurável, segurar; padrão a definir no teste): solta o cursor para apontar com precisão
+  sem girar a câmera; WASD continua. É o modo recomendado para o criador; o padrão continua sendo a mira.
+- A placa ativa (criador/roleta) fica na frente e perpendicular à mira; durante a revelação da roleta a entrada da
+  roleta fica travada até o servidor responder (como hoje).
+- Confirmação para ações que gastam algo (novo giro, Continue, compra de skill): segundo clique no mesmo botão em até
+  ~2 s, para um clique acidental não gastar o giro.
 
 ## 6. Migração das interfaces de personagem
 
@@ -197,18 +295,20 @@ seção Character continua sendo onde se edita a aparência depois (abre a placa
 
 - 4.8.4: `CharacterCreationScreen` e `BirthRouletteScreen` deixam de ser abertas pelo fluxo, mas **ficam no código**
   até o teste real aprovar o modo mundo.
-- **UNCERTAIN (decisão do dono):** manter `HoloCharacterScreen` como modo de reserva por config de cliente
-  (`mode = world | screen`, padrão `world`) durante uma etapa, para comparar e para quem usa mod de shader; ou
-  removê-lo já na 4.8.4.
-- 4.8.5 (limpeza): apagar as duas telas, `RespectScreen`, `RespectButton`, `CycleSelector`, `EntityPreview`,
-  `UiParticles`, `panel.png`/`button.png`/`tab.png`, `Ui.TAB`/`PANEL`/`BUTTON`/`titledPanel`/`nineSlice`, as funções
-  da câmera virtual em `HoloGeometry`, as chaves de idioma órfãs e (se não houver modo reserva) `HoloCharacterScreen`
-  e `HoloBackdrop`.
+- **Decidido (0.2):** `HoloCharacterScreen` fica como reserva de desenvolvimento/teste por config de cliente
+  (`mode = world | screen`, padrão `world`) durante a migração. Sem recursos novos; não é uma segunda UI permanente.
+  Sai depois do teste de regressão em cliente real do modo mundo.
+- 4.8.5 (limpeza, só depois de `CreatorView`/`RouletteView` verificados — decisão 0.3): apagar as duas telas,
+  `RespectScreen`, `RespectButton`, `CycleSelector`, `EntityPreview`, `UiParticles`, `panel.png`/`button.png`/
+  `tab.png`, `Ui.TAB`/`PANEL`/`BUTTON`/`titledPanel`/`nineSlice`, as chaves de idioma órfãs e, se o teste de regressão
+  do modo mundo já tiver passado, `HoloCharacterScreen`, `HoloBackdrop` e as funções da câmera virtual em
+  `HoloGeometry`. Candidatos de legado da seção 1.5 só com as referências conferidas de novo.
 
 ## 7. Sequência de implementação da 4.8.4
 
-0. **Pré-requisito:** o dono decide o PR #36 (integra ou fecha). A extração da roleta parte da versão final de
-   `BirthRouletteScreen`/`GameplayNetworking`; começar antes gera conflito no mesmo bloco `WAITING`.
+0. **Pré-requisito (decisão 0.1):** o PR #36 fica aberto até o teste pessoal do Spin do dono; **ninguém o integra
+   automaticamente**. A extração da roleta (passo 7) parte da rede corrigida do #36 (`requestId`, `ERROR`, timeout
+   separado); os passos 1-6 não tocam a rede da roleta e podem vir antes, mas o passo 7 espera o #36.
 1. `HoloGeometry`: `layoutToWorld`, raio no painel em espaço de mundo, alcance; casos no `SelfTest` (ida e volta
    layout → mundo → local, raio paralelo, atrás da câmera, painel girado).
 2. `Holo3D` dividido (lote de primitivas + estado GUI + estado mundo). A tela atual continua funcionando igual.
@@ -229,7 +329,7 @@ seção Character continua sendo onde se edita a aparência depois (abre a placa
 
 | Risco | Mitigação |
 |---|---|
-| Clique no painel acertando a entidade/bloco atrás (ou o contrário) | cancelar só quando o raio acerta painel interativo **mais perto** que o `hitResult` vanilla; teste explícito |
+| Clique no painel acertando a entidade/bloco atrás (ou o contrário) | a placa é dona quando o raio a acerta **mais perto** que o `hitResult` vanilla, decidido no instante em que o botão desce (seção 5.1); teste explícito |
 | Texto ilegível de longe ou inclinado | densidade fixa + mipmap; placa da frente perpendicular à mira na invocação; alcance de leitura na config |
 | Custo de 12 framebuffers e redesenho | cadência por painel; chips desenhados como geometria; medir ms/quadro como na 4.8.1 |
 | Estado GL vazando para o `LevelRenderer` | `begin/end` do mundo restauram tudo; teste com F3, água, vidro, partículas e neblina |
@@ -245,7 +345,10 @@ seção Character continua sendo onde se edita a aparência depois (abre a placa
   gasto uma vez só), `python3 tools/player_anim/bbsync.py`.
 - Cliente real (Xvfb, um cenário por item): invocar; andar em volta e capturar de 3 ângulos; pular e girar a
   câmera com os painéis abertos; passar através; clicar seção, chip e skill pela mira; mineração e ataque normais
-  fora dos painéis; roda sobre painel × hotbar; arrastar a árvore; jogador novo do zero: criar → girar → novo giro →
+  fora dos painéis; roda sobre painel × hotbar; arrastar a árvore; clicar no painel com um mob e um bloco logo atrás
+  (nenhum dano, nenhuma quebra, nenhum balanço da mão, slot da hotbar igual); arrastar do painel para fora segurando
+  o botão (não minera); invocar em sala 3×3, corredor de 1×2 e encostado na parede (seção 4.6); recall; ler o texto a
+  1, 3 e 5 blocos; jogador novo do zero: criar → girar → novo giro →
   Continue → HUB; erro e timeout da roleta (com o #36: `/respectcraft admin roulette_fail`); morrer, trocar de
   dimensão, deslogar com os painéis abertos; F1 e F5; finalização cinematográfica com painéis abertos.
 - Multiplayer (dois clientes + servidor dedicado): o outro jogador não vê nada; aparência e ficha só mudam pela
