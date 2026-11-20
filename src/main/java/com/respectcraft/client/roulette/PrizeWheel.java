@@ -12,10 +12,10 @@ import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 
 /**
- * Desenho da roda de premios da roleta de nascimento (so visual): fatias na cor da propria raridade com degrade do
- * miolo escuro ate a borda clara, luz fixa de cima/esquerda (o brilho fica parado enquanto a roda gira), divisorias
+ * Desenho da roda de premios da roleta de nascimento (so visual): roda <b>preta</b>, cada fatia com uma luz suave na
+ * cor da raridade que nasce perto do aro e se apaga no preto (nunca cor chapada), luz fixa de cima/esquerda (o brilho fica parado enquanto a roda gira), divisorias
  * douradas com pinos, aro de metal com lampadas, miolo com joia e ponteiro tipo "lingueta" que bate nos pinos.
- * A fatia vencedora acende, ganha contorno e as outras escurecem.
+ * A fatia vencedora ganha mais luz, contorno e brilho no aro; as outras apagam.
  *
  * <p>Nada aqui le ou muda o sorteio: angulo, raridades e fatias iguais vem de {@link RouletteLayout} e da
  * {@code RouletteMachine}. Usado pela janela holografica ({@code RouletteView}) e pela tela de reserva
@@ -34,6 +34,8 @@ public final class PrizeWheel {
     public enum Mode { IDLE, SPINNING, WINNER }
 
     private static final int INK = 0xFF06080A;
+    /** Superficie das fatias: preto levemente carvao. */
+    private static final int SURFACE = 0xFF0B0C0F;
     private static final int WHITE = 0xFFFFFFFF;
     private static final int BLACK = 0xFF000000;
     private static final int GOLD_HI = 0xFFFFF0B8;
@@ -90,8 +92,10 @@ public final class PrizeWheel {
             float lr = rs * 0.62F;
             float a = rad(mid);
             int bg = sliceColor(rarity, 0.62F, 0.5F, abs(mid), t, win, boner);
-            int text = readableOn(bg);
-            boolean shadow = text == WHITE;
+            // como o giz colorido da roda de referencia: texto na cor da raridade (clareada) sobre o preto
+            int text = readableOn(bg) == WHITE ? Ui.lerpColor(rarity.color(), WHITE, rarity.ordinal() == win ? 0.3F + 0.55F * focus : 0.3F)
+                    : readableOn(bg);
+            boolean shadow = readableOn(bg) == WHITE;
             if (win >= 0 && rarity.ordinal() != win) text = Ui.lerpColor(text, bg, 0.25F * focus);
             labeler.label(rarity, cx + Mth.cos(a) * lr, cy + Mth.sin(a) * lr, text, shadow);
         }
@@ -150,38 +154,29 @@ public final class PrizeWheel {
      * angulo absoluto na tela (luz fixa).
      */
     private int sliceColor(SpecialityRarity rarity, float tr, float u, float absAngle, float t, int win, boolean boner) {
-        int base = rarity.color();
-        int deep, lip;
-        switch (rarity) {
-            case LEGENDARY -> { deep = 0xFF6A3A08; lip = 0xFFFFF2B8; }
-            case BONER -> { deep = 0xFF4A0838; lip = 0xFFFFC6E6; }
-            case COMMON -> { deep = 0xFF3A4048; lip = 0xFFF2F5F8; }
-            default -> { deep = Ui.lerpColor(base, BLACK, 0.66F); lip = Ui.lerpColor(base, WHITE, 0.4F); }
-        }
-        int col;
-        if (tr < 0.88F) col = Ui.lerpColor(deep, base, smooth(tr / 0.88F));
-        else if (tr < 0.95F) col = Ui.lerpColor(base, lip, (tr - 0.88F) / 0.07F);
-        else col = Ui.lerpColor(lip, Ui.lerpColor(base, BLACK, 0.25F), (tr - 0.95F) / 0.05F);
-        // "almofada": bordas da fatia um pouco mais escuras que o meio
+        // Roda preta: a raridade e so luz colorida que nasce perto do aro e some no preto (nunca cor chapada).
+        int light = rarity.color();
         float e = 2F * u - 1F;
-        col = Ui.lerpColor(col, BLACK, 0.22F * e * e);
-        // luz fixa: reflexo largo na parte de cima/esquerda da roda
-        float spec = (float) Math.pow(Math.max(0F, toLight(absAngle)), 6) * bell(tr, 0.7F, 0.28F);
-        col = Ui.lerpColor(col, WHITE, 0.3F * spec);
-        // brilho que corre do centro pra borda: Legendary suave, BONER forte (e mais forte no efeito especial)
+        float across = 1F - 0.75F * e * e;                       // laterais da fatia ficam pretas
+        float glow = (0.04F + 0.4F * (float) Math.pow(smooth((tr - 0.3F) / 0.65F), 1.6F)) * across;
+        if (tr > 0.9F) glow += 0.22F * bell(tr, 0.955F, 0.03F) * (0.5F + 0.5F * across); // fio de luz junto do aro
+        // Legendary e BONER: onda de luz que corre do centro pra borda (BONER mais viva no efeito especial)
         if (rarity == SpecialityRarity.LEGENDARY || rarity == SpecialityRarity.BONER) {
-            float speed = rarity == SpecialityRarity.BONER ? (boner ? 1.4F : 0.55F) : 0.35F;
+            boolean pink = rarity == SpecialityRarity.BONER;
+            float speed = pink ? (boner ? 1.4F : 0.55F) : 0.35F;
             float phase = frac(t * speed + u * 0.35F) * 1.4F - 0.2F;
-            float band = (float) Math.exp(-sq(tr - phase) / 0.008F);
-            float amount = rarity == SpecialityRarity.BONER ? (boner ? 0.6F : 0.4F) : 0.28F;
-            col = Ui.lerpColor(col, rarity == SpecialityRarity.BONER ? 0xFFFFE0F0 : 0xFFFFF8DC, amount * band);
-            if (rarity == SpecialityRarity.BONER) col = Ui.lerpColor(col, 0xFFB65CFF, 0.18F * (1F - tr) * (0.5F + 0.5F * Mth.sin(t * 2F)));
+            float band = (float) Math.exp(-sq(tr - phase) / 0.01F) * across;
+            glow += (pink ? (boner ? 0.4F : 0.22F) : 0.16F) * band;
+            if (pink) light = Ui.lerpColor(light, 0xFFB65CFF, 0.25F * (1F - tr) * (0.5F + 0.5F * Mth.sin(t * 2F)));
         }
         if (win >= 0 && focus > 0F) {
-            if (rarity.ordinal() == win) col = Ui.lerpColor(col, WHITE, focus * (0.1F + 0.08F * Mth.sin(t * 6F)));
-            else col = Ui.lerpColor(col, BLACK, focus * 0.4F);
+            if (rarity.ordinal() == win) glow += focus * (0.06F + 0.03F * Mth.sin(t * 6F)) * across;
+            else glow *= 1F - 0.55F * focus;
         }
-        return col;
+        int col = Ui.lerpColor(SURFACE, light, Mth.clamp(glow, 0F, 0.72F));
+        // luz fixa: reflexo discreto na parte de cima/esquerda (verniz preto)
+        float spec = (float) Math.pow(Math.max(0F, toLight(absAngle)), 6) * bell(tr, 0.7F, 0.28F);
+        return Ui.lerpColor(col, WHITE, 0.1F * spec);
     }
 
     /** Reflexo de vidro parado sobre a roda (meia-lua em cima/esquerda). */
@@ -193,7 +188,7 @@ public final class PrizeWheel {
             float u0 = i / (float) steps, u1 = (i + 1) / (float) steps;
             float a0 = from + (to - from) * u0, a1 = from + (to - from) * u1;
             float s0 = Mth.sin(Mth.PI * u0), s1 = Mth.sin(Mth.PI * u1);
-            int c0 = Ui.alpha(WHITE, 0.11F * s0), c1 = Ui.alpha(WHITE, 0.11F * s1);
+            int c0 = Ui.alpha(WHITE, 0.07F * s0), c1 = Ui.alpha(WHITE, 0.07F * s1);
             int z = Ui.alpha(WHITE, 0F);
             p.band(cx, cy, rs * ts[0], rs * ts[1], a0, a1, z, c0, z, c1);
             p.band(cx, cy, rs * ts[1], rs * ts[2], a0, a1, c0, z, c1, z);
@@ -206,8 +201,9 @@ public final class PrizeWheel {
             float a = rad(rotation + s * RouletteLayout.SLICE);
             float cos = Mth.cos(a), sin = Mth.sin(a);
             float x0 = cx + cos * hub, y0 = cy + sin * hub, x1 = cx + cos * (rs - 0.5F), y1 = cy + sin * (rs - 0.5F);
-            p.line(x0, y0, x1, y1, 2.2F, Ui.alpha(INK, 0.75F), Ui.alpha(INK, 0.95F));
-            p.line(x0, y0, x1, y1, 0.7F, Ui.alpha(GOLD_HI, 0.35F), Ui.alpha(GOLD_HI, 0.95F));
+            // divisoria fina e clara (como as linhas brancas da roda preta de referencia)
+            p.line(x0, y0, x1, y1, 1.8F, Ui.alpha(INK, 0.7F), Ui.alpha(INK, 0.9F));
+            p.line(x0, y0, x1, y1, 0.6F, Ui.alpha(0xFFE6E8EC, 0.3F), Ui.alpha(0xFFE6E8EC, 0.85F));
             // pino na ponta (o ponteiro bate nele)
             float px = cx + cos * (rs - 3.4F), py = cy + sin * (rs - 3.4F);
             p.disc(px, py, 2.1F, INK, INK);
@@ -221,14 +217,17 @@ public final class PrizeWheel {
         float pulse = focus * (0.75F + 0.25F * Mth.sin(t * 6F));
         int hot = Ui.lerpColor(winner.color(), WHITE, 0.55F);
         // luz por dentro da borda externa e das duas divisorias
-        p.ring(cx, cy, rs - 7F, rs - 0.5F, start, end, Ui.alpha(hot, 0F), Ui.alpha(hot, 0.65F * pulse));
+        p.ring(cx, cy, rs * 0.45F, rs - 0.5F, start, end, Ui.alpha(winner.color(), 0F), Ui.alpha(winner.color(), 0.1F * pulse));
+        p.ring(cx, cy, rs - 5F, rs - 0.5F, start, end, Ui.alpha(hot, 0F), Ui.alpha(hot, 0.5F * pulse));
         for (float edge : new float[] {start, end}) {
             float a = rad(edge);
             float x0 = cx + Mth.cos(a) * rs * HUB, y0 = cy + Mth.sin(a) * rs * HUB;
             float x1 = cx + Mth.cos(a) * rs, y1 = cy + Mth.sin(a) * rs;
             p.line(x0, y0, x1, y1, 5F, Ui.alpha(hot, 0.1F * pulse), Ui.alpha(hot, 0.45F * pulse));
         }
-        p.ring(cx, cy, rs - 1.6F, rs - 0.4F, start, end, Ui.alpha(WHITE, 0.9F * pulse), Ui.alpha(WHITE, 0.9F * pulse));
+        p.ring(cx, cy, rs - 1.6F, rs - 0.4F, start, end, Ui.alpha(hot, 0.95F * pulse), Ui.alpha(hot, 0.95F * pulse));
+        // brilho no aro, por fora da fatia vencedora
+        p.ring(cx, cy, rs + 0.5F, rs + (rs * BEZEL), start, end, Ui.alpha(hot, 0.45F * pulse), Ui.alpha(hot, 0F));
     }
 
     /** Lampadas fixas no aro: brilho lento parado, perseguicao no giro, pisca na cor da vencedora. */
