@@ -1,6 +1,6 @@
 # Handoff — Etapa 4.8.4-C: criador de personagem e roleta de nascimento como janelas holográficas no mundo
 
-Status: **implementada, testada em cliente real, aguardando o teste pessoal do dono.** Base: `main` em `9807de4`
+Status: **concluída** — PR #36 integrado à `main` primeiro e depois o PR #40 (com a correção do gerador `SplittableRandom`), por decisão do dono. Histórico original: implementada, testada em cliente real, aguardando o teste pessoal do dono. Base: `main` em `9807de4`
 (merge do PR #39, Etapa 4.8.4-B, aprovado pelo dono com CI verde) **mais a branch do PR #36** (Etapa 4.8.2, roleta
 com `requestId`/`ERROR`/timeout), integrada só nesta branch (merge local `3b43807`, conflitos apenas em `CLAUDE.md` e
 no índice de handoffs). **O PR #36 não foi integrado à `main`**: este PR o contém; integrar este PR integra o #36.
