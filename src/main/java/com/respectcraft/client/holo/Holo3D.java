@@ -41,6 +41,8 @@ final class Holo3D {
     private VertexSorting savedSorting;
     private float savedFogStart;
     private boolean active;
+    private boolean world;
+    private boolean entityDrawn;
     private final PoseStack poseStack = new PoseStack();
     private final Vector3f a = new Vector3f(), b = new Vector3f(), cc = new Vector3f(), d = new Vector3f();
     private BufferBuilder batch;
@@ -64,13 +66,9 @@ final class Holo3D {
     }
 
     void end() {
-        if (!active) return;
+        if (!active || world) return;
         active = false;
-        if (batch != null) {
-            MeshData mesh = batch.build();
-            if (mesh != null) mesh.close();
-            batch = null;
-        }
+        discardBatch();
         RenderSystem.setShaderFogStart(savedFogStart);
         RenderSystem.setShaderColor(1F, 1F, 1F, 1F);
         RenderSystem.depthMask(true);
@@ -83,6 +81,65 @@ final class Holo3D {
         RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
         RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
         Lighting.setupFor3DItems();
+    }
+
+    /**
+     * Passada dentro do mundo (Etapa 4.8.4-A, {@code RenderLevelStageEvent} AFTER_LEVEL): mesma projecao da camera
+     * real, model-view zerada (os vertices ja levam visao * layout * modelo, relativos a camera), teste de
+     * profundidade <b>contra o cenario</b> sem gravar e sem limpar o depth buffer (parede na frente esconde a placa),
+     * sem neblina. {@link #endWorld} devolve o estado que o resto do quadro espera.
+     */
+    void beginWorld(Matrix4f projection) {
+        savedProjection.set(RenderSystem.getProjectionMatrix());
+        savedSorting = RenderSystem.getVertexSorting();
+        RenderSystem.setProjectionMatrix(projection, VertexSorting.DISTANCE_TO_ORIGIN);
+        Matrix4fStack mv = RenderSystem.getModelViewStack();
+        mv.pushMatrix();
+        mv.identity();
+        RenderSystem.applyModelViewMatrix();
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        RenderSystem.depthMask(false);
+        RenderSystem.disableCull();
+        savedFogStart = RenderSystem.getShaderFogStart();
+        RenderSystem.setShaderFogStart(Float.MAX_VALUE);
+        RenderSystem.setShaderColor(1F, 1F, 1F, 1F);
+        entityDrawn = false;
+        world = true;
+        active = true;
+    }
+
+    void endWorld() {
+        if (!active || !world) return;
+        active = false;
+        world = false;
+        discardBatch();
+        RenderSystem.setShaderFogStart(savedFogStart);
+        RenderSystem.setShaderColor(1F, 1F, 1F, 1F);
+        RenderSystem.depthMask(true);
+        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        RenderSystem.enableDepthTest();
+        RenderSystem.enableCull();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableBlend();
+        Matrix4fStack mv = RenderSystem.getModelViewStack();
+        mv.popMatrix();
+        RenderSystem.applyModelViewMatrix();
+        RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
+        if (entityDrawn) {
+            // a mao em primeira pessoa (desenhada depois) usa as luzes do mundo
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level != null && mc.level.effects().constantAmbientLight()) Lighting.setupNetherLevel();
+            else Lighting.setupLevel();
+        }
+    }
+
+    private void discardBatch() {
+        if (batch != null) {
+            MeshData mesh = batch.build();
+            if (mesh != null) mesh.close();
+            batch = null;
+        }
     }
 
     // ---------------------------------------------------------------- paineis
@@ -116,6 +173,8 @@ final class Holo3D {
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LEQUAL);
         RenderSystem.depthMask(false);
+        // os RenderTypes do jogador religam o cull ao terminar: no mundo a placa vista por tras sumiria
+        RenderSystem.disableCull();
     }
 
     // ---------------------------------------------------------------- lote de cor aditiva
@@ -301,14 +360,17 @@ final class Holo3D {
         poseStack.translate(feet.x, feet.y, feet.z);
         float s = blockSize / Math.max(0.1F, entity.getScale());
         poseStack.scale(s, s, s);
+        Quaternionf savedOrientation = dispatcher.cameraOrientation();
         dispatcher.overrideCameraOrientation(new Quaternionf().rotateY((float) Math.PI));
         dispatcher.setRenderShadow(false);
+        entityDrawn = true;
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         try {
             RenderSystem.runAsFancy(() -> dispatcher.render(entity, 0.0, 0.0, 0.0, 0.0F, 1.0F, poseStack, buffers, 15728880));
             buffers.endBatch();
         } finally {
             dispatcher.setRenderShadow(true);
+            if (savedOrientation != null) dispatcher.overrideCameraOrientation(savedOrientation);
             poseStack.popPose();
             entity.yBodyRot = bodyRot;
             entity.yBodyRotO = bodyRotO;

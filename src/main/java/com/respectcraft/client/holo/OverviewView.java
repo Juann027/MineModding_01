@@ -20,7 +20,7 @@ import net.minecraft.network.chat.Component;
  * primeiro quadro; so as barras crescem na revelacao.
  */
 final class OverviewView extends HoloView {
-    OverviewView(HoloCharacterScreen screen) { super(screen, HoloCharacterScreen.Section.OVERVIEW); }
+    OverviewView(HoloMenu menu) { super(menu, HoloCharacterScreen.Section.OVERVIEW); }
 
     @Override
     float headerRight(HoloCanvas c, float w) {
@@ -72,7 +72,7 @@ final class OverviewView extends HoloView {
             y += 13F;
             y += c.wrap(Component.translatable("gui.respectcraft.hub.unborn"), x, y, iw, 2, HoloStyle.GOLD) + 3F;
             c.button("ov.birth", tr("gui.respectcraft.hub.birth"), x, y, Math.min(iw, 120F), 14F,
-                    SkillDef.iconTexture("trevo"), HoloStyle.GREEN, true, false, "!", screen::openRoulette);
+                    SkillDef.iconTexture("trevo"), HoloStyle.GREEN, true, false, "!", menu::openRoulette);
             y += 19F;
         }
 
@@ -145,7 +145,7 @@ final class OverviewView extends HoloView {
         }
         y += 18F;
         HoloZone link = c.zone(x, y - 30F, iw, 30F);
-        link.click = () -> screen.select(HoloCharacterScreen.Section.BODY);
+        link.click = () -> menu.select(HoloCharacterScreen.Section.BODY);
         return y + 2F;
     }
 }

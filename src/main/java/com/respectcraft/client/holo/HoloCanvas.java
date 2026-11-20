@@ -36,7 +36,7 @@ final class HoloCanvas {
     GuiGraphics g;
     HoloSurface surface;
     HoloPanel panel;
-    HoloCharacterScreen screen;
+    HoloMenu menu;
     /** Opacidade do elemento atual (revelacao em cascata). */
     float alpha = 1F;
     boolean hc;
@@ -44,11 +44,11 @@ final class HoloCanvas {
     float time, dt;
     private final Map<String, float[]> hover = new HashMap<>();
 
-    void bind(GuiGraphics g, HoloPanel panel, HoloCharacterScreen screen, float time, float dt) {
+    void bind(GuiGraphics g, HoloPanel panel, HoloMenu menu, float time, float dt) {
         this.g = g;
         this.panel = panel;
         this.surface = panel.surface;
-        this.screen = screen;
+        this.menu = menu;
         this.time = time;
         this.dt = dt;
         this.alpha = 1F;
@@ -358,7 +358,7 @@ final class HoloCanvas {
 
     /** Pede a dica para este quadro (so vale se este painel estiver sob o cursor). */
     void tooltip(List<Component> lines) {
-        if (panel.hot) screen.setHoloTooltip(lines);
+        if (panel.hot) menu.setHoloTooltip(lines);
     }
 
     /**

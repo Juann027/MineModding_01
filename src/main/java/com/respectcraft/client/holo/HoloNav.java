@@ -17,15 +17,15 @@ import net.minecraft.network.chat.Component;
  * curva abaixo dele. So exibicao das caches e atalhos para telas que ja existiam.
  */
 final class HoloNav {
-    private final HoloCharacterScreen screen;
+    private final HoloMenu menu;
 
-    HoloNav(HoloCharacterScreen screen) { this.screen = screen; }
+    HoloNav(HoloMenu menu) { this.menu = menu; }
 
     /** Fita de identidade: marca e nome a esquerda, Speciality e traco no meio, pontos e acoes a direita. */
     void drawHeader(HoloCanvas c, float w, float h) {
         c.glass(w, h, HoloStyle.CYAN);
         CharacterProfile p = ProfileClientCache.profile();
-        float since = screen.time() - 0.12F;
+        float since = menu.time() - 0.12F;
         c.stage(since, 0);
         boolean small = h < 28F;
         float mid = h / 2F;
@@ -38,13 +38,13 @@ final class HoloNav {
         float bx = w - 6F - 4 * (bs + 3F);
         boolean born = p.born();
         action(c, "act.edit", bx, 4F, bs, SkillDef.iconTexture("identidade_dinheiro"), null, HoloStyle.CYAN_SOFT,
-                "gui.respectcraft.hub.edit", "", screen::openCreator);
+                "gui.respectcraft.hub.edit", "", menu::openCreator);
         action(c, "act.birth", bx + (bs + 3F), 4F, bs, SkillDef.iconTexture("trevo"), null, born ? HoloStyle.GOLD : HoloStyle.GREEN,
-                born ? "gui.respectcraft.hub.birth_done" : "gui.respectcraft.hub.birth", born ? "" : "!", screen::openRoulette);
+                born ? "gui.respectcraft.hub.birth_done" : "gui.respectcraft.hub.birth", born ? "" : "!", menu::openRoulette);
         action(c, "act.display", bx + 2 * (bs + 3F), 4F, bs, null, "⚙", HoloStyle.VIOLET, "gui.respectcraft.holo.display", "",
-                screen::openSettings);
+                menu::openSettings);
         action(c, "act.close", bx + 3 * (bs + 3F), 4F, bs, null, "✕", HoloStyle.RED, "gui.respectcraft.hub.close", "",
-                screen::onClose);
+                menu::requestClose);
 
         // pontos
         String pts = String.valueOf(p.skillPoints());
@@ -101,13 +101,13 @@ final class HoloNav {
             c.fill(x + s - 5F, y - 1F, 6F, 6F, accent);
             c.text(badge, x + s - 3.5F, y - 1F, 0xFF101317, false);
         }
-        screen.hoverSound(key, hot);
+        menu.hoverSound(key, hot);
         if (hot) c.tooltip(List.of(Component.translatable(labelKey)));
     }
 
     /** Chip de secao na fileira curva: icone e nome; o ativo acende na cor da secao. */
     void drawChip(HoloCanvas c, HoloCharacterScreen.Section s, float w, float h, boolean active) {
-        float since = screen.time() - 0.3F;
+        float since = menu.time() - 0.3F;
         c.alpha = 1F;
         boolean hot = c.over(0, 0, w, h);
         float k = c.hoverAnim("chip." + s.id, hot);
@@ -127,9 +127,10 @@ final class HoloNav {
         String shown = Ui.fit(c.font, label, (int) (w - size - 10F));
         c.text(shown, 6F + size, (h - 8F) / 2F, active ? 0xFFFFFFFF : Ui.lerpColor(c.muted(), c.text(), k), false);
         HoloZone z = c.zone(0, 0, w, h);
-        z.click = () -> screen.select(s);
-        screen.hoverSound("chip." + s.id, hot);
+        z.click = () -> menu.select(s);
+        menu.hoverSound("chip." + s.id, hot);
         if (hot) c.tooltip(List.of(Component.translatable(s.key()).withStyle(ChatFormatting.BOLD),
-                Component.translatable("gui.respectcraft.holo.key_hint", s.ordinal() + 1).withStyle(ChatFormatting.GRAY)));
+                (menu.world ? Component.translatable("gui.respectcraft.holo.key_hint_world")
+                        : Component.translatable("gui.respectcraft.holo.key_hint", s.ordinal() + 1)).withStyle(ChatFormatting.GRAY)));
     }
 }

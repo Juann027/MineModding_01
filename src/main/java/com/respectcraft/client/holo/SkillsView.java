@@ -42,7 +42,7 @@ final class SkillsView extends HoloView {
     private float branchFlash;
     private boolean centerPending = true;
 
-    SkillsView(HoloCharacterScreen screen) { super(screen, HoloCharacterScreen.Section.SKILLS); }
+    SkillsView(HoloMenu menu) { super(menu, HoloCharacterScreen.Section.SKILLS); }
 
     @Override
     int accent() { return branch.accent(); }
@@ -97,11 +97,11 @@ final class SkillsView extends HoloView {
     }
 
     private void celebrate(SkillDef def) {
-        if (def == null || screen.section() != HoloCharacterScreen.Section.SKILLS) return;
+        if (def == null || menu.section() != HoloCharacterScreen.Section.SKILLS) return;
         if (def.branch() != branch) select(def.branch());
         float x = nodeX(def), y = nodeY(def) + originY;
-        screen.burstOnMain(x, y, def.branch().accent(), 34, 90F);
-        screen.burstOnMain(x, y, 0xFFFFFFFF, 10, 50F);
+        menu.burstOnMain(x, y, def.branch().accent(), 34, 90F);
+        menu.burstOnMain(x, y, 0xFFFFFFFF, 10, 50F);
     }
 
     private float nodeX(SkillDef def) { return canvasX + canvasW / 2F + panX + def.x() * gridX; }
@@ -283,12 +283,12 @@ final class SkillsView extends HoloView {
         String blocker = Skills.purchaseBlocker(def, p.skillSet(), p.skillPoints(), p.born());
         if (blocker != null) {
             Ui.playClick(0.6F);
-            screen.burstOnMain(nodeX(def), nodeY(def) + originY, HoloStyle.RED, 8, 40F);
+            menu.burstOnMain(nodeX(def), nodeY(def) + originY, HoloStyle.RED, 8, 40F);
             return;
         }
         Ui.playClick(1.2F);
         pending = def.id();
-        screen.burstOnMain(nodeX(def), nodeY(def) + originY, branch.accent(), 10, 45F);
+        menu.burstOnMain(nodeX(def), nodeY(def) + originY, branch.accent(), 10, 45F);
         PacketDistributor.sendToServer(new GameplayNetworking.SkillPurchaseRequest(def.id()));
     }
 
