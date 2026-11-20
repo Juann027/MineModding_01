@@ -77,15 +77,19 @@ final class HoloPanel {
     }
 
     /**
-     * Raio da mira (origem no olho, direcao -z do espaco do olho) dentro do painel; grava o ponto local e a distancia
-     * (unidades do olho) em {@code out}.
+     * Raio (origem e direcao unitaria no espaco do olho do quadro) dentro do painel, so pela face da frente (a origem
+     * do lado +z local, o mesmo lado que {@code HoloWorld} nao esmaece); grava o ponto local e a distancia (unidades do
+     * olho; no mundo, blocos) em {@code out}.
      */
-    boolean rayHit(Vector3f out) {
+    boolean rayHit(float ox, float oy, float oz, float dx, float dy, float dz, Vector3f out) {
         if (Math.abs(scaleX) < 0.05F || Math.abs(scaleY) < 0.05F) return false;
-        if (!HoloGeometry.rayLocal(inverseModelView, 0F, 0F, 0F, 0F, 0F, -1F, out)) return false;
-        // rayLocal devolve t na unidade da direcao no espaco do olho: a distancia de verdade
-        float eps = 1e-3F;
-        return out.x >= -eps && out.y >= -eps && out.x <= w + eps && out.y <= h + eps;
+        if (inverseModelView.transformPosition(scratch.set(ox, oy, oz)).z <= 0F) return false;
+        return HoloGeometry.rayHit(inverseModelView, ox, oy, oz, dx, dy, dz, w, h, out);
+    }
+
+    /** Raio no plano do painel sem recortar pelo retangulo (arrasto capturado que sai da placa). */
+    boolean rayPlane(float ox, float oy, float oz, float dx, float dy, float dz, Vector3f out) {
+        return HoloGeometry.rayLocal(inverseModelView, ox, oy, oz, dx, dy, dz, out);
     }
 
     /** Posicao do olho no espaco local do painel (x, y e o afastamento z do plano, em unidades de layout). */

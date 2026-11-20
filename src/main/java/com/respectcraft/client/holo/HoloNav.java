@@ -130,6 +130,7 @@ final class HoloNav {
         z.click = () -> menu.select(s);
         menu.hoverSound("chip." + s.id, hot);
         if (hot) c.tooltip(List.of(Component.translatable(s.key()).withStyle(ChatFormatting.BOLD),
-                Component.translatable("gui.respectcraft.holo.key_hint", s.ordinal() + 1).withStyle(ChatFormatting.GRAY)));
+                (menu.world ? Component.translatable("gui.respectcraft.holo.key_hint_world")
+                        : Component.translatable("gui.respectcraft.holo.key_hint", s.ordinal() + 1)).withStyle(ChatFormatting.GRAY)));
     }
 }

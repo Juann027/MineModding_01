@@ -7,7 +7,6 @@ import com.respectcraft.client.ui.RespectScreen;
 import com.respectcraft.client.ui.Ui;
 import com.respectcraft.skill.SkillDef;
 import com.respectcraft.ui.HoloGeometry;
-import java.util.List;
 import net.minecraft.client.Camera;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -203,11 +202,7 @@ public final class HoloCharacterScreen extends RespectScreen {
         pickHot();
         menu.drawSurfaces(g, (float) minecraft.getWindow().getGuiScale(), menu.uiScale, false);
         HoloPanel hot = menu.hotPanel;
-        if (hot != null && menu.isPlate(hot) && menu.sectionOf(hot) != menu.section()) {
-            Section s = menu.sectionOf(hot);
-            menu.tooltip = List.of(Component.translatable(s.key()).withStyle(net.minecraft.ChatFormatting.BOLD),
-                    Component.translatable("gui.respectcraft.holo.bring_forward").withStyle(net.minecraft.ChatFormatting.GRAY));
-        }
+        menu.sidePlateTooltip();
 
         g.flush();
         menu.render3D(false);
@@ -329,27 +324,15 @@ public final class HoloCharacterScreen extends RespectScreen {
             if (menu.modalOpen) menu.closeSettings();
             return true;
         }
-        // placa de lado: o clique traz a secao para a frente (navegacao espacial)
-        if (menu.isPlate(p) && menu.sectionOf(p) != menu.section()) {
-            menu.select(menu.sectionOf(p));
-            return true;
-        }
-        HoloZone z = p.zoneAt(hit.x, hit.y);
-        if (z == null) return true;
-        if (z.drag != null && z.enabled) {
+        // placa de lado vem para a frente; regiao de arrasto e capturada; clique roda a acao (caminho comum ao mundo)
+        HoloZone z = menu.press(p, hit.x, hit.y);
+        if (z != null) {
             dragPanel = p;
             dragZone = z;
             dragButton = button;
             dragStartX = hit.x;
             dragStartY = hit.y;
             dragMoved = false;
-            z.drag.press(hit.x, hit.y);
-            return true;
-        }
-        if (z.click != null && z.enabled) {
-            Ui.playClick(z.pitch);
-            menu.clickBurst(p, hit.x, hit.y);
-            z.click.run();
         }
         return true;
     }

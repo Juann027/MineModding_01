@@ -27,17 +27,28 @@ public final class CharacterCreatorKeybinds {
     private static final KeyMapping RECALL = new KeyMapping(
             "key.respectcraft.holo_recall", InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_R, "key.categories.respectcraft");
+    /**
+     * Modo cursor (Etapa 4.8.4-B), segurar: solta o mouse para apontar nas placas com o cursor; WASD continua. Alt
+     * esquerdo nao tem uso no vanilla 1.21.1; configuravel em Controles.
+     */
+    private static final KeyMapping CURSOR = new KeyMapping(
+            "key.respectcraft.holo_cursor", InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_LEFT_ALT, "key.categories.respectcraft");
 
     private CharacterCreatorKeybinds() {}
 
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(OPEN_CREATOR);
         event.register(RECALL);
+        event.register(CURSOR);
     }
 
     /** Nome da tecla do menu e da tecla Recall como o jogador as configurou (dicas na barra de acao). */
     public static Component menuKeyName() { return OPEN_CREATOR.getTranslatedKeyMessage(); }
     public static Component recallKeyName() { return RECALL.getTranslatedKeyMessage(); }
+
+    /** Tecla do modo cursor (lida a cada quadro por {@code HoloWorldInput}). */
+    public static KeyMapping cursorKey() { return CURSOR; }
 
     /** A tecla configurada para o menu (para fechar com a mesma tecla dentro da tela). */
     public static boolean isMenuKey(int keyCode, int scanCode) { return OPEN_CREATOR.matches(keyCode, scanCode); }

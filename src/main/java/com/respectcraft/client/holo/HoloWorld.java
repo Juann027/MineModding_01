@@ -9,12 +9,14 @@ import com.respectcraft.client.cinematic.CinematicCamera;
 import com.respectcraft.client.holo.HoloCharacterScreen.Section;
 import com.respectcraft.client.roulette.BirthRouletteScreen;
 import com.respectcraft.ui.HoloGeometry;
+import com.respectcraft.ui.HoloInputArbiter;
 import com.respectcraft.ui.HoloPlacement;
 import cyou.rimuru.rimulib.mc1211.client.api.MenuApi;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.GenericMessageScreen;
@@ -27,6 +29,7 @@ import net.minecraft.client.gui.screens.WinScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -56,9 +59,11 @@ import org.joml.Vector3f;
  * matrizes, esmaecimento de perto/por tras e a passada 3D com teste de profundidade contra o cenario (parede na
  * frente esconde a placa; o depth buffer nunca e limpo).
  *
- * <p><b>Escopo da 4.8.4-A.</b> So invocar (K), dispensar (K) e chamar de volta (tecla Recall, R por padrao), mais um
- * prototipo de hover pela mira para validar as coordenadas. Cliques, rolagem e arrasto nos paineis ficam para a
- * 4.8.4-B: aqui o botao do mouse continua sendo do mundo.
+ * <p><b>Interacao (Etapa 4.8.4-B).</b> A mira e o raio do vanilla (olhos e direcao do olhar da entidade da camera, no
+ * mesmo quadro do {@code hitResult}), levado ao espaco do olho do quadro desenhado: hover, clique, arrasto e roda usam
+ * as mesmas matrizes do desenho. A placa so e dona da mira pela face da frente, dentro de {@link #REACH} e mais perto
+ * que o alvo do vanilla; quem decide o dono de cada botao (e o segura ate soltar) e {@link HoloWorldInput}. Com a
+ * tecla do modo cursor segurada o raio vem do cursor solto (desprojecao pelas mesmas matrizes).
  *
  * <p>Estado so visual e so deste cliente (instancia estatica, limpa no logout, na troca de nivel, na morte e no
  * respawn). Nenhuma entidade, bloco ou pacote.
@@ -68,14 +73,23 @@ public final class HoloWorld {
     static final float LAYOUT_W = 640F, LAYOUT_H = 360F;
     /** Menor distancia da placa da frente (blocos) que a escolha de posicao aceita. */
     static final float MIN_DISTANCE = 0.7F;
-    /** Alcance do hover pela mira (blocos). */
-    static final float HOVER_REACH = 6F;
+    /** Alcance da mira nas placas (blocos): hover, clique, arrasto e roda. */
+    static final float REACH = 6F;
 
     private static HoloWorld current;
 
     private final Minecraft mc = Minecraft.getInstance();
     private final HoloMenu menu;
     private final Vector3f hit = new Vector3f(), local = new Vector3f();
+    /** Raio da mira no espaco do olho do ultimo quadro desenhado e distancia do alvo do vanilla no mesmo quadro. */
+    private final Vector3f rayO = new Vector3f(), rayD = new Vector3f(0F, 0F, -1F);
+    private double worldDistance = Double.POSITIVE_INFINITY;
+    /** Arrasto capturado: regiao, painel, fonte (botao do mouse ou acao do teclado) e ponto do aperto. */
+    private HoloPanel dragPanel;
+    private HoloZone dragZone;
+    private int dragSource = -1;
+    private float dragStartX, dragStartY;
+    private boolean dragMoved;
     private ClientLevel level;
     /** Olho do arco no mundo, yaw da frente (graus do Minecraft) e blocos por unidade de layout. */
     private double anchorX, anchorY, anchorZ;
@@ -101,11 +115,15 @@ public final class HoloWorld {
         }, initial);
         float eyeZ = HoloGeometry.referenceDistance(LAYOUT_H, HoloMenu.FOV);
         menu.layout(LAYOUT_W, LAYOUT_H, 1F, eyeZ);
+        menu.world = true;
     }
 
     // ================================================================ API (teclas)
 
     public static boolean isOpen() { return current != null; }
+
+    /** Paineis abertos agora (entrada: {@link HoloWorldInput}). */
+    static HoloWorld current() { return current; }
 
     /** K: invoca na frente da mira; com os paineis abertos, dispensa. */
     public static void toggle() {
@@ -226,6 +244,7 @@ public final class HoloWorld {
         LocalPlayer player = mc.player;
         if (player == null || mc.level == null) return;
         level = mc.level;
+        cancelDrag();
         boolean fits = place(player);
         openNanos = System.nanoTime();
         rendered = false;
@@ -245,8 +264,12 @@ public final class HoloWorld {
     }
 
     private void closeNow() {
+        cancelDrag();
         menu.release();
-        if (current == this) current = null;
+        if (current == this) {
+            current = null;
+            HoloWorldInput.closed();
+        }
     }
 
     /** Escondido (sem fechar) durante a camera cinematografica e com a GUI oculta (F1). */
@@ -267,8 +290,14 @@ public final class HoloWorld {
             closeNow();
             return;
         }
-        if (hidden()) return;
+        if (hidden()) {
+            cancelDrag();
+            return;
+        }
         menu.animate();
+        HoloWorldInput.poll();
+        if (current != this) return;
+        updateDrag();
         hover();
         for (HoloPanel p : menu.all) p.culled = rendered && p.visible && p.offscreen();
         Matrix4fStack mv = RenderSystem.getModelViewStack();
@@ -283,19 +312,175 @@ public final class HoloWorld {
             mv.popMatrix();
             RenderSystem.applyModelViewMatrix();
         }
+        menu.sidePlateTooltip();
         menu.updateParticles();
     }
 
-    /**
-     * Prototipo de hover (so visual, 4.8.4-A): o raio da mira contra as placas, com as matrizes do ultimo quadro.
-     * Realca o elemento sob a mira e desenha o ponto de mira na placa; nao clica, nao rola, nao captura nada.
-     */
+    /** Hover pelo mesmo alvo do clique (com as matrizes do ultimo quadro); nada durante um arrasto. */
     private void hover() {
         menu.clearHot();
-        if (!rendered || mc.screen != null) return;
-        HoloPanel p = menu.pickRay(HOVER_REACH, hit);
+        if (dragZone != null || menu.rotatingPlayer) return;
+        HoloPanel p = target(hit);
         if (p != null) menu.setHot(p, hit.x, hit.y);
     }
+
+    // ================================================================ entrada (Etapa 4.8.4-B)
+
+    /** Dissolvendo (K, botao fechar, distancia): o modo cursor acaba na hora. */
+    boolean menuClosing() { return menu.closing; }
+
+    /** Os paineis podem receber entrada agora (desenhados, visiveis, sem tela por cima, jogador jogando). */
+    boolean acceptsInput() {
+        LocalPlayer player = mc.player;
+        return rendered && !hidden() && mc.screen == null && mc.getOverlay() == null && mc.level == level && player != null
+                && player.isAlive() && !player.isSpectator();
+    }
+
+    /**
+     * A mira pertence ao holograma: o raio acerta a face da frente de uma placa que se ve, dentro do alcance e mais
+     * perto que o bloco/mob que o vanilla escolheu no mesmo quadro (bloco ou mob na frente da placa = mundo).
+     */
+    boolean ownsAim() {
+        if (!acceptsInput()) return false;
+        HoloPanel p = menu.pickRay(rayO, rayD, REACH, false, local);
+        return HoloInputArbiter.hologramWins(p != null, p == null ? -1.0 : local.z, worldDistance, REACH);
+    }
+
+    /**
+     * Painel interativo sob a mira (ou sob o cursor solto) e o ponto local em {@code out}. Pela mira, so a placa que e
+     * dona dela ({@link #ownsAim}) e, com o Display aberto, so ele.
+     */
+    private HoloPanel target(Vector3f out) {
+        if (!acceptsInput() || menu.closing) return null;
+        if (HoloWorldInput.cursorMode()) return menu.pick(cursorNdcX(), cursorNdcY(), out);
+        HoloPanel p = menu.pickRay(rayO, rayD, REACH, false, out);
+        if (p == null || !HoloInputArbiter.hologramWins(true, out.z, worldDistance, REACH)) return null;
+        if (!p.interactive || (menu.modalOpen && p != menu.modal)) return null;
+        return p;
+    }
+
+    /**
+     * Botao (ou acao do teclado) desceu e o holograma e o dono. {@code activate = false} so consome (botao do meio):
+     * nada no mundo, nada no menu. Mesmo caminho do clique da tela: placa lateral vem para a frente, regiao de arrasto
+     * e capturada, regiao de clique roda a acao; clique fora do Display aberto o fecha.
+     */
+    void press(int source, boolean activate) {
+        if (!activate || dragZone != null || menu.closing || menu.time < 0.06F) return;
+        HoloPanel p = target(hit);
+        if (menu.modalOpen && p != menu.modal) {
+            menu.closeSettings();
+            return;
+        }
+        if (p == null) return;
+        float x = hit.x, y = hit.y;
+        HoloZone z = menu.press(p, x, y);
+        if (z != null && current == this) {
+            dragPanel = p;
+            dragZone = z;
+            dragSource = source;
+            dragStartX = x;
+            dragStartY = y;
+            dragMoved = false;
+        }
+    }
+
+    /** Soltou o botao dono do arrasto: ultimo ponto no plano do painel capturado (mesmo fora dele). */
+    void release(int source) {
+        if (dragZone == null || source != dragSource) return;
+        float x = dragStartX, y = dragStartY;
+        if (aimPlane(dragPanel, hit)) {
+            x = hit.x;
+            y = hit.y;
+        }
+        HoloZone z = dragZone;
+        boolean click = !dragMoved;
+        clearDrag();
+        z.drag.release(x, y, click);
+    }
+
+    /** Solta o arrasto sem clique (fechar, Recall, tela por cima, foco perdido, modo cursor trocado). */
+    void cancelDrag() {
+        if (dragZone == null) return;
+        HoloZone z = dragZone;
+        clearDrag();
+        z.drag.release(dragStartX, dragStartY, false);
+    }
+
+    private void clearDrag() {
+        dragZone = null;
+        dragPanel = null;
+        dragSource = -1;
+        menu.rotatingPlayer = false;
+    }
+
+    /** A cada quadro: o arrasto capturado segue a mira no plano do painel, sem recortar pelo retangulo. */
+    private void updateDrag() {
+        if (dragZone == null) return;
+        if (menu.closing || !dragPanel.visible || !acceptsInput()) {
+            cancelDrag();
+            return;
+        }
+        if (!aimPlane(dragPanel, hit)) return;
+        if (Math.abs(hit.x - dragStartX) + Math.abs(hit.y - dragStartY) > 3F) dragMoved = true;
+        dragZone.drag.move(hit.x, hit.y);
+    }
+
+    private boolean aimPlane(HoloPanel p, Vector3f out) {
+        if (HoloWorldInput.cursorMode()) return HoloGeometry.intersect(p.inverse, cursorNdcX(), cursorNdcY(), out);
+        return p.rayPlane(rayO.x, rayO.y, rayO.z, rayD.x, rayD.y, rayD.z, out);
+    }
+
+    /** Roda com o holograma dono: rola a placa da frente; em qualquer outra placa (ou sem rolagem) gira o arco. */
+    void scroll(double amount) {
+        if (menu.closing || menu.modalOpen || amount == 0) return;
+        HoloPanel p = target(hit);
+        boolean scrolled = p == menu.mainPanel() && menu.view(menu.section()).scrollBy(amount);
+        if (!scrolled) menu.cycle(amount > 0 ? -1 : 1);
+    }
+
+    private float cursorNdcX() {
+        return (float) (mc.mouseHandler.xpos() / Math.max(1, mc.getWindow().getScreenWidth()) * 2.0 - 1.0);
+    }
+
+    private float cursorNdcY() {
+        return (float) (1.0 - mc.mouseHandler.ypos() / Math.max(1, mc.getWindow().getScreenHeight()) * 2.0);
+    }
+
+    /** Camada de GUI: a dica do elemento sob a mira, ao lado dela (ou do cursor solto). */
+    static void renderTooltip(GuiGraphics g) {
+        HoloWorld w = current;
+        if (w != null) w.drawTooltip(g);
+    }
+
+    private void drawTooltip(GuiGraphics g) {
+        HoloPanel hot = menu.hotPanel;
+        if (menu.tooltip == null || hot == null || hot.contentAlpha <= 0.6F || dragZone != null || menu.rotatingPlayer
+                || !acceptsInput() || menu.closing) return;
+        var window = mc.getWindow();
+        int x = g.guiWidth() / 2, y = g.guiHeight() / 2;
+        if (HoloWorldInput.cursorMode()) {
+            x = (int) (mc.mouseHandler.xpos() * window.getGuiScaledWidth() / Math.max(1, window.getScreenWidth()));
+            y = (int) (mc.mouseHandler.ypos() * window.getGuiScaledHeight() / Math.max(1, window.getScreenHeight()));
+        }
+        tooltipLines.clear();
+        int maxW = Math.max(80, Math.min(220, g.guiWidth() / 2 - 16));
+        for (Component line : menu.tooltip) tooltipLines.addAll(mc.font.split(line, maxW));
+        g.renderTooltip(mc.font, tooltipLines, ABOVE_AIM, x, y);
+    }
+
+    private final List<net.minecraft.util.FormattedCharSequence> tooltipLines = new ArrayList<>();
+
+    /**
+     * Dica acima e a direita da mira (nao cobre o que esta logo abaixo dela, como a fileira de chips); vira para a
+     * esquerda/baixo quando nao cabe.
+     */
+    private static final net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner ABOVE_AIM =
+            (screenW, screenH, mx, my, tw, th) -> {
+                int x = mx + 10, y = my - 10 - th;
+                if (x + tw > screenW - 4) x = mx - 10 - tw;
+                if (y < 4) y = my + 14;
+                return new org.joml.Vector2i(Math.max(4, x), Math.max(4, Math.min(y, screenH - th - 4)));
+            };
 
     /** Passada no mundo: matrizes da camera real, esmaecimento de perto/por tras e desenho. */
     private void renderWorld(RenderLevelStageEvent event) {
@@ -307,9 +492,27 @@ public final class HoloWorld {
         menu.view.set(event.getModelViewMatrix());
         menu.projection.set(event.getProjectionMatrix());
         menu.freeze();
+        aimRay(camera, cam);
         fadeNearAndBehind();
         menu.render3D(true);
         rendered = true;
+    }
+
+    /**
+     * Raio da mira deste quadro no espaco do olho: olhos e direcao do olhar da entidade da camera no mesmo instante em
+     * que o vanilla escolheu {@code hitResult} ({@code GameRenderer.pick}), e a distancia desse alvo. Hover e clique
+     * entre este quadro e o proximo usam exatamente o que a mira mostrou.
+     */
+    private void aimRay(Camera camera, Vec3 cam) {
+        Entity viewer = mc.getCameraEntity();
+        if (viewer == null) return;
+        float pt = camera.getPartialTickTime();
+        Vec3 eye = viewer.getEyePosition(pt), look = viewer.getViewVector(pt);
+        menu.view.transformPosition(rayO.set((float) (eye.x - cam.x), (float) (eye.y - cam.y), (float) (eye.z - cam.z)));
+        menu.view.transformDirection(rayD.set((float) look.x, (float) look.y, (float) look.z)).normalize();
+        HitResult target = mc.hitResult;
+        worldDistance = target == null || target.getType() == HitResult.Type.MISS ? Double.POSITIVE_INFINITY
+                : target.getLocation().distanceTo(eye);
     }
 
     /**
@@ -390,6 +593,13 @@ public final class HoloWorld {
         Section section = holo.initialSection();
         event.setNewScreen(null);
         mc.tell(() -> summon(section));
+    }
+
+    /** Qualquer outra tela por cima (chat, inventario, pausa...): solta arrasto e modo cursor sem clicar nada. */
+    static void onScreenOpened(ScreenEvent.Opening event) {
+        if (event.isCanceled() || event.getNewScreen() == null) return;
+        if (current != null) current.cancelDrag();
+        HoloWorldInput.screenOpened();
     }
 
     static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
