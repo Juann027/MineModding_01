@@ -36,7 +36,12 @@ public final class BirthRoulette {
         /** Ja nasceu e nao tem mais novo giro. */
         NO_REROLLS,
         /** O pedido foi feito sobre uma ficha desatualizada (outro giro ja aconteceu, ficha zerada etc.). */
-        STALE;
+        STALE,
+        /**
+         * Etapa 4.8.2: o servidor falhou com uma excecao inesperada antes de gravar o giro. A ficha nao mudou (nada
+         * sorteado, novo giro intacto); o erro completo esta no log do servidor com o mesmo {@code requestId}.
+         */
+        ERROR;
 
         public static Outcome byOrdinal(int ordinal) {
             Outcome[] all = values();
@@ -63,6 +68,17 @@ public final class BirthRoulette {
     public static CharacterProfile confirm(CharacterProfile profile, int expectedRollCount) {
         if (!profile.born() || expectedRollCount != profile.rollCount() || profile.birthConfirmed()) return profile;
         return profile.confirmBirth();
+    }
+
+    /**
+     * Resposta depois de uma excecao inesperada no pedido (Etapa 4.8.2). Se a ficha ja tinha sido gravada
+     * ({@code rollCount} andou), o giro aconteceu e a resposta e {@link Outcome#ROLLED}: a tela mostra a ficha nova
+     * e um novo pedido sobre a ficha antiga seria {@code STALE}, entao nada se repete. Senao nada mudou:
+     * {@link Outcome#ERROR}, e o jogador pode tentar de novo sem gastar o novo giro. {@code -1} = nao foi possivel
+     * ler o {@code rollCount}.
+     */
+    public static Outcome afterFailure(int rollCountBefore, int rollCountNow) {
+        return rollCountBefore >= 0 && rollCountNow >= 0 && rollCountNow != rollCountBefore ? Outcome.ROLLED : Outcome.ERROR;
     }
 
     /** Novos giros que restam depois de um giro aceito por {@link #validate}. */

@@ -1,6 +1,7 @@
 package com.respectcraft.client.roulette;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.respectcraft.RespectCraft;
 import com.respectcraft.client.holo.HoloCharacterScreen;
 import com.respectcraft.client.ui.RespectButton;
 import com.respectcraft.client.ui.RespectScreen;
@@ -41,9 +42,11 @@ import org.joml.Matrix4f;
  * resultado disponivel (Continuar ou o unico novo giro). O traco de nascimento aparece junto do resultado.
  * Continuar confirma o nascimento no servidor ({@link GameplayNetworking.BirthConfirmRequest}): o novo giro que
  * sobrou e descartado. A animacao nunca decide dados: o servidor responde a
- * todo pedido ({@link GameplayNetworking.BirthRollReply}) e a tela so mostra a ficha recebida. Sem resposta em
- * {@link #TIMEOUT_TICKS}, a tela volta ao estado real com um aviso; um pedido atrasado nao gera resultado
- * duplicado nem gasta o novo giro (o servidor confere o {@code rollCount} esperado).
+ * todo pedido ({@link GameplayNetworking.BirthRollReply}) e a tela so mostra a ficha recebida. Etapa 4.8.2: cada
+ * pedido leva um {@code requestId}; so a resposta com esse id encerra a espera. Erro do servidor
+ * ({@link BirthRoulette.Outcome#ERROR}) mostra "Server error (request #N)" na hora; sem resposta nenhuma em
+ * {@link #TIMEOUT_TICKS} (rede), a tela volta ao estado real com o aviso de timeout. Um pedido atrasado nao gera
+ * resultado duplicado nem gasta o novo giro (o servidor confere o {@code rollCount} esperado).
  */
 public final class BirthRouletteScreen extends RespectScreen {
     private static final String KEY = "gui.respectcraft.roulette.";
@@ -61,6 +64,8 @@ public final class BirthRouletteScreen extends RespectScreen {
     /** rollCount da ficha que a roda mostra (ou para a qual esta desacelerando). */
     private int shownRollCount;
     private long requestRevision;
+    /** Id do pedido de giro em andamento (Etapa 4.8.2): so a resposta com este id encerra a espera. */
+    private int pendingRequestId;
     private int waitTicks;
     private Component status;
     private int cx, cy, radius;
@@ -135,7 +140,8 @@ public final class BirthRouletteScreen extends RespectScreen {
         waitTicks = 0;
         status = null;
         requestRevision = ProfileClientCache.rollReplyRevision();
-        PacketDistributor.sendToServer(new GameplayNetworking.BirthRollRequest(p.born(), p.rollCount()));
+        pendingRequestId = ProfileClientCache.nextRollRequestId();
+        PacketDistributor.sendToServer(new GameplayNetworking.BirthRollRequest(p.born(), p.rollCount(), pendingRequestId));
         updateButtons();
     }
 
@@ -196,16 +202,27 @@ public final class BirthRouletteScreen extends RespectScreen {
                 angle += speed;
                 tickSound();
                 GameplayNetworking.BirthRollReply reply = ProfileClientCache.lastRollReply();
-                if (ProfileClientCache.rollReplyRevision() != requestRevision && reply != null) {
-                    // Resposta do servidor (a ficha correspondente chegou antes dela).
+                if (ProfileClientCache.rollReplyRevision() != requestRevision && reply != null
+                        && reply.answers(pendingRequestId)) {
+                    // Resposta do servidor ao nosso pedido (a ficha correspondente chegou antes dela).
                     boolean rolled = reply.outcome() == BirthRoulette.Outcome.ROLLED
                             && reply.rollCount() == p.rollCount() && hasResult(p);
-                    if (!rolled) status = Component.translatable(KEY + "status."
-                            + (reply.outcome() == BirthRoulette.Outcome.NO_REROLLS ? "no_rerolls" : "stale"));
+                    if (reply.outcome() == BirthRoulette.Outcome.ERROR) {
+                        // O servidor falhou e disse isso: nada mudou na ficha (o novo giro continua intacto).
+                        status = Component.translatable(KEY + "status.error", pendingRequestId);
+                        RespectCraft.LOGGER.warn("Birth roulette request #{}: the server reported an internal error;"
+                                + " look for the same request number in the server log", pendingRequestId);
+                    } else if (!rolled) {
+                        status = Component.translatable(KEY + "status."
+                                + (reply.outcome() == BirthRoulette.Outcome.NO_REROLLS ? "no_rerolls" : "stale"));
+                    }
                     settleOn(p, rolled);
                 } else if (++waitTicks > TIMEOUT_TICKS) {
-                    // Sem resposta: volta ao estado real. Uma resposta atrasada e tratada abaixo (ficha nova).
-                    status = Component.translatable(KEY + "status.timeout");
+                    // Nenhuma resposta (problema de rede de verdade): volta ao estado real. Uma resposta atrasada
+                    // e tratada abaixo (ficha nova); o servidor recusa um pedido repetido sobre a ficha antiga.
+                    status = Component.translatable(KEY + "status.timeout", pendingRequestId);
+                    RespectCraft.LOGGER.warn("Birth roulette request #{}: no reply from the server after {} ticks",
+                            pendingRequestId, TIMEOUT_TICKS);
                     settleOn(p, false);
                 }
             }
@@ -365,7 +382,13 @@ public final class BirthRouletteScreen extends RespectScreen {
             drawTraits(g, p, x, attrY(CharacterAttribute.values().length) + 2, mouseX, mouseY);
         }
         if (status != null && phase != Phase.WAITING) {
-            g.drawString(font, status, left + 12, top + panelHeight - 28, Ui.RED, false);
+            // Cabe na coluna da roda (os botoes ficam a direita); o texto inteiro aparece na dica.
+            int sx = left + 12, sy = top + panelHeight - 28, sw = left + panelWidth - 136 - sx;
+            String full = status.getString();
+            g.drawString(font, Ui.fit(font, full, sw), sx, sy, Ui.RED, false);
+            if (font.width(full) > sw && mouseX >= sx && mouseX < sx + sw && mouseY >= sy - 2 && mouseY < sy + 10) {
+                g.renderTooltip(font, font.split(status, 200), mouseX, mouseY);
+            }
         }
     }
 
