@@ -23,6 +23,8 @@ public final class CharacterAppearanceService {
     public static void apply(ServerPlayer player, int packed) {
         CharacterAppearance requested = CharacterAppearance.fromPacked(packed);
         if (requested == null || !requested.created()) return;
+        // Etapa 4.8.4-C: Skin e Face nao sao mais opcoes; grava sempre as da skin da conta.
+        requested = requested.withAccountSkinAndFace();
         int previousBody = get(player).bodyType();
         player.getPersistentData().putInt(DATA_KEY, requested.pack());
         broadcast(player);

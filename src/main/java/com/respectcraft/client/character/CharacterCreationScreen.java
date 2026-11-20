@@ -8,33 +8,25 @@ import com.respectcraft.client.ui.EntityPreview;
 import com.respectcraft.client.ui.RespectButton;
 import com.respectcraft.client.ui.RespectScreen;
 import com.respectcraft.client.ui.Ui;
-import com.respectcraft.network.CharacterAppearanceClientCache;
-import com.respectcraft.network.CharacterAppearanceUpdatePayload;
 import com.respectcraft.network.ProfileClientCache;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
-import net.minecraft.util.RandomSource;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Criador de personagem: previa 3D do proprio jogador (rig + Body Layers) atualizada ao vivo e, ao lado, todas as
- * opcoes numa pagina (corpo, pele, rosto, estilo e paleta de cor do cabelo), mais o botao aleatorio. A previa e so
- * local; o servidor valida e confirma ao salvar.
+ * Criador de personagem em tela (reserva do modo {@code SCREEN}; no modo mundo o criador e a placa holografica
+ * {@code CreatorView}). Previa 3D do proprio jogador (rig + Body Layers) atualizada ao vivo e, ao lado, Body,
+ * Hairstyle e a paleta de Hair Color, mais o botao aleatorio. Etapa 4.8.4-C: Skin e Face sairam; o estado e o
+ * {@link AppearanceDraft} comum as duas cascas. A previa e so local; o servidor valida e confirma ao salvar.
  */
 public final class CharacterCreationScreen extends RespectScreen {
     private static final String KEY = "gui.respectcraft.creator.";
     /** Distancia do topo da coluna ate a paleta de cor do cabelo (o nome da cor fica 12 px acima). */
-    private static final int PALETTE_Y = 116;
+    private static final int PALETTE_Y = 70;
 
-    private int bodyType, hairStyle, hairColor, skinTone, face;
+    private final AppearanceDraft draft = new AppearanceDraft();
     private RespectButton saveButton;
-    private boolean waitingForServer;
-    private boolean saveError;
-    private int requestedAppearance;
-    private long revisionBeforeSave;
-    private int waitTicks;
     // Previa: giro por arrasto e "respiro" leve.
     private float previewYaw = -25F;
     private float yawVelocity;
@@ -43,14 +35,6 @@ public final class CharacterCreationScreen extends RespectScreen {
 
     public CharacterCreationScreen() {
         super(Component.translatable(KEY + "title"));
-        Minecraft mc = Minecraft.getInstance();
-        CharacterAppearance current = mc.player == null ? CharacterAppearance.defaults()
-                : CharacterAppearanceClientCache.confirmed(mc.player.getUUID());
-        bodyType = current.bodyType();
-        hairStyle = current.hairStyle();
-        hairColor = current.hairColor();
-        skinTone = current.skinTone();
-        face = current.face();
     }
 
     @Override
@@ -64,31 +48,23 @@ public final class CharacterCreationScreen extends RespectScreen {
         int colX = previewX2 + 10;
         int colW = left + panelWidth - 10 - colX;
 
-        // Uma pagina so (sem abas): corpo, pele, rosto, estilo do cabelo e a paleta de cor do cabelo.
+        // Uma pagina so (sem abas): corpo, estilo do cabelo e a paleta de cor do cabelo.
         int y = top + 28;
         addRenderableWidget(new CycleSelector(colX, y, colW, 20, Component.translatable(KEY + "body"),
-                CharacterAppearance.BODY_IDS.length, bodyType,
-                i -> Component.translatable(KEY + "body." + CharacterAppearance.BODY_IDS[i]), i -> { bodyType = i; preview(); }));
-        addRenderableWidget(new CycleSelector(colX, y + 24, colW, 20, Component.translatable(KEY + "skin"),
-                CharacterAppearance.SKIN_IDS.length, skinTone,
-                i -> Component.translatable(KEY + "skin." + CharacterAppearance.SKIN_IDS[i]), i -> { skinTone = i; preview(); })
-                .swatches(i -> CharacterAppearance.SKIN_ARGB[i]));
-        addRenderableWidget(new CycleSelector(colX, y + 48, colW, 20, Component.translatable(KEY + "face"),
-                CharacterAppearance.FACE_IDS.length, face,
-                i -> Component.translatable(KEY + "face." + CharacterAppearance.FACE_IDS[i]), i -> { face = i; preview(); }));
-        addRenderableWidget(new CycleSelector(colX, y + 78, colW, 20, Component.translatable(KEY + "hair"),
-                CharacterAppearance.HAIR_IDS.length, hairStyle,
-                i -> Component.translatable(KEY + "hair." + CharacterAppearance.HAIR_IDS[i]), i -> { hairStyle = i; preview(); }));
+                CharacterAppearance.BODY_IDS.length, draft.bodyType(),
+                i -> Component.translatable(KEY + "body." + CharacterAppearance.BODY_IDS[i]), draft::setBodyType));
+        addRenderableWidget(new CycleSelector(colX, y + 30, colW, 20, Component.translatable(KEY + "hair"),
+                CharacterAppearance.HAIR_IDS.length, draft.hairStyle(),
+                i -> Component.translatable(KEY + "hair." + CharacterAppearance.HAIR_IDS[i]), draft::setHairStyle));
         // Cor do cabelo: so a paleta clicavel (o nome da cor aparece acima dela e na dica).
         int count = CharacterAppearance.COLOR_IDS.length;
         int sw = Math.min(22, (colW - 4 * (count - 1)) / count);
         for (int i = 0; i < count; i++) {
             final int color = i;
             addRenderableWidget(new RespectButton(colX + i * (sw + 4), y + PALETTE_Y, sw, sw, Component.empty(), b -> {
-                hairColor = color;
-                preview();
+                draft.setHairColor(color);
                 rebuildWidgets();
-            }).selected(i == hairColor).accent(CharacterAppearance.COLOR_ARGB[i]).swatch(CharacterAppearance.COLOR_ARGB[i])
+            }).selected(i == draft.hairColor()).accent(CharacterAppearance.COLOR_ARGB[i]).swatch(CharacterAppearance.COLOR_ARGB[i])
                     .tooltip(Component.translatable(KEY + "color." + CharacterAppearance.COLOR_IDS[i])));
         }
         int footerY = top + panelHeight - 28;
@@ -97,26 +73,12 @@ public final class CharacterCreationScreen extends RespectScreen {
         addRenderableWidget(new RespectButton(left + 10, footerY, 80, 20, Component.translatable(KEY + "back"), b -> onClose()));
         saveButton = addRenderableWidget(new RespectButton(left + panelWidth - 100, footerY, 90, 20,
                 Component.translatable(KEY + "save"), b -> saveCharacter()).accent(Ui.GREEN));
-        saveButton.active = !waitingForServer;
-        preview();
-    }
-
-    private CharacterAppearance current(boolean created) {
-        return new CharacterAppearance(created, bodyType, hairStyle, hairColor, skinTone, face);
-    }
-
-    private void preview() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) CharacterAppearanceClientCache.setPreview(mc.player.getUUID(), current(true));
+        saveButton.active = !draft.saving();
+        draft.preview();
     }
 
     private void randomize() {
-        RandomSource r = RandomSource.create();
-        bodyType = r.nextInt(CharacterAppearance.BODY_IDS.length);
-        hairStyle = r.nextInt(CharacterAppearance.HAIR_IDS.length);
-        hairColor = r.nextInt(CharacterAppearance.COLOR_IDS.length);
-        skinTone = r.nextInt(CharacterAppearance.SKIN_IDS.length);
-        face = r.nextInt(CharacterAppearance.FACE_IDS.length);
+        draft.randomize();
         yawVelocity = 25F;
         vfx.burst((previewX1 + previewX2) / 2F, (previewY1 + previewY2) / 2F, 24, Ui.GOLD, 3F);
         rebuildWidgets();
@@ -124,15 +86,7 @@ public final class CharacterCreationScreen extends RespectScreen {
 
     /** So considera a criacao concluida quando o servidor confirma a aparencia via sync. */
     private void saveCharacter() {
-        Minecraft mc = Minecraft.getInstance();
-        if (waitingForServer || mc.player == null) return;
-        requestedAppearance = current(true).pack();
-        revisionBeforeSave = CharacterAppearanceClientCache.revision(mc.player.getUUID());
-        waitTicks = 0;
-        waitingForServer = true;
-        saveError = false;
-        saveButton.active = false;
-        PacketDistributor.sendToServer(new CharacterAppearanceUpdatePayload(requestedAppearance));
+        if (draft.save()) saveButton.active = false;
     }
 
     @Override
@@ -140,41 +94,26 @@ public final class CharacterCreationScreen extends RespectScreen {
         super.tick();
         previewYaw += yawVelocity;
         yawVelocity *= 0.85F;
-        if (!waitingForServer) return;
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) {
-            waitingForServer = false;
+        if (draft.tick()) {
+            // Personagem novo ainda sem nascimento: segue para a roleta.
+            minecraft.setScreen(ProfileClientCache.profile().born()
+                    ? new HoloCharacterScreen(HoloCharacterScreen.Section.CHARACTER) : new BirthRouletteScreen());
             return;
         }
-        var uuid = mc.player.getUUID();
-        if (CharacterAppearanceClientCache.revision(uuid) > revisionBeforeSave) {
-            CharacterAppearance confirmed = CharacterAppearanceClientCache.confirmed(uuid);
-            if (confirmed.created() && confirmed.pack() == requestedAppearance) {
-                CharacterAppearanceClientCache.clearPreview();
-                // Personagem novo ainda sem nascimento: segue para a roleta.
-                mc.setScreen(ProfileClientCache.profile().born()
-                        ? new HoloCharacterScreen(HoloCharacterScreen.Section.CHARACTER) : new BirthRouletteScreen());
-                return;
-            }
-        }
-        if (++waitTicks >= 200) {
-            waitingForServer = false;
-            saveError = true;
-            saveButton.active = true;
-        }
+        if (saveButton != null) saveButton.active = !draft.saving();
     }
 
     @Override
     public void removed() {
-        CharacterAppearanceClientCache.clearPreview();
+        draft.discard();
         super.removed();
     }
 
     @Override
     public void onClose() {
         Minecraft mc = Minecraft.getInstance();
-        CharacterAppearanceClientCache.clearPreview();
-        if (mc.player != null && CharacterAppearanceClientCache.confirmed(mc.player.getUUID()).created()) {
+        draft.discard();
+        if (!AppearanceDraft.firstTime()) {
             mc.setScreen(new HoloCharacterScreen(HoloCharacterScreen.Section.CHARACTER));
         } else {
             super.onClose();
@@ -221,12 +160,13 @@ public final class CharacterCreationScreen extends RespectScreen {
         g.drawCenteredString(font, Component.translatable(KEY + "drag"), cx, previewY1 + 4, Ui.MUTED);
 
         int colX = previewX2 + 10;
-        Component name = Component.translatable(KEY + "color." + CharacterAppearance.COLOR_IDS[hairColor]);
-        g.drawString(font, Component.translatable(KEY + "color").getString() + ": " + name.getString(),
+        Component name = Component.translatable(KEY + "color." + CharacterAppearance.COLOR_IDS[draft.hairColor()]);
+        g.drawString(font, Component.translatable(KEY + "hair_color").getString() + ": " + name.getString(),
                 colX + 2, top + 28 + PALETTE_Y - 12, Ui.TEXT, false);
-        if (waitingForServer || saveError) {
-            g.drawString(font, Component.translatable(waitingForServer ? KEY + "saving" : KEY + "save_error"),
-                    colX, top + panelHeight - 44, saveError ? Ui.RED : Ui.GREEN, false);
+        boolean error = draft.state() == AppearanceDraft.State.ERROR;
+        if (draft.saving() || error) {
+            g.drawString(font, Component.translatable(draft.saving() ? KEY + "saving" : KEY + "save_error"),
+                    colX, top + panelHeight - 44, error ? Ui.RED : Ui.GREEN, false);
         }
     }
 }

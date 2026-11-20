@@ -1,15 +1,12 @@
 package com.respectcraft.client.roulette;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.respectcraft.RespectCraft;
 import com.respectcraft.client.holo.HoloCharacterScreen;
 import com.respectcraft.client.ui.RespectButton;
 import com.respectcraft.client.ui.RespectScreen;
 import com.respectcraft.client.ui.Ui;
-import com.respectcraft.network.GameplayNetworking;
 import com.respectcraft.network.ProfileClientCache;
 import com.respectcraft.profile.BirthOrigin;
-import com.respectcraft.profile.BirthRoulette;
 import com.respectcraft.profile.BirthTrait;
 import com.respectcraft.profile.CharacterAttribute;
 import com.respectcraft.profile.CharacterProfile;
@@ -17,15 +14,14 @@ import com.respectcraft.profile.RouletteLayout;
 import com.respectcraft.profile.Speciality;
 import com.respectcraft.profile.SpecialityOdds;
 import com.respectcraft.profile.SpecialityRarity;
-import com.respectcraft.registry.ModSounds;
 import com.respectcraft.skill.SkillDef;
+import com.respectcraft.ui.RouletteMachine;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Matrix4f;
 
 /**
@@ -37,58 +33,23 @@ import org.joml.Matrix4f;
  * so para na raridade que o servidor gravou na ficha. Fichas antigas com origem social legada mostram essa origem
  * (com o bonus que ela deu) e param no topo da roda.
  *
- * <p>Maquina de estados (Etapa 4.5): {@code IDLE} aguardando sorteio -> {@code WAITING} pedido enviado, girando
- * -> {@code SPINNING} resposta recebida, desacelerando ate a origem -> {@code REVEAL} atributos -> {@code DONE}
- * resultado disponivel (Continuar ou o unico novo giro). O traco de nascimento aparece junto do resultado.
- * Continuar confirma o nascimento no servidor ({@link GameplayNetworking.BirthConfirmRequest}): o novo giro que
- * sobrou e descartado. A animacao nunca decide dados: o servidor responde a
- * todo pedido ({@link GameplayNetworking.BirthRollReply}) e a tela so mostra a ficha recebida. Etapa 4.8.2: cada
- * pedido leva um {@code requestId}; so a resposta com esse id encerra a espera. Erro do servidor
- * ({@link BirthRoulette.Outcome#ERROR}) mostra "Server error (request #N)" na hora; sem resposta nenhuma em
- * {@link #TIMEOUT_TICKS} (rede), a tela volta ao estado real com o aviso de timeout. Um pedido atrasado nao gera
- * resultado duplicado nem gasta o novo giro (o servidor confere o {@code rollCount} esperado).
+ * <p>Etapa 4.8.4-C: tela de reserva do modo {@code SCREEN}; no modo mundo a roleta e a placa holografica
+ * {@code RouletteView}. A maquina de estados (fases, pedido com {@code requestId} da Etapa 4.8.2, erro, timeout,
+ * resposta atrasada) e os pedidos ao servidor estao em {@link RouletteSession} / {@link RouletteMachine}, comuns as
+ * duas; aqui fica so o desenho 2D e os efeitos da tela.
  */
 public final class BirthRouletteScreen extends RespectScreen {
     private static final String KEY = "gui.respectcraft.roulette.";
-    private static final int TIMEOUT_TICKS = 200;
-    private enum Phase { IDLE, WAITING, SPINNING, REVEAL, DONE }
 
-    private Phase phase;
-    private float angle;       // graus; 0 = inicio da primeira fatia no ponteiro (topo)
-    private float prevAngle;
-    private float speed;       // graus por tick durante a espera
-    private float spinFrom, spinTo;
-    private int spinTick, spinLength;
-    private boolean revealAfterSpin;
-    private int revealTick;
-    /** rollCount da ficha que a roda mostra (ou para a qual esta desacelerando). */
-    private int shownRollCount;
-    private long requestRevision;
-    /** Id do pedido de giro em andamento (Etapa 4.8.2): so a resposta com este id encerra a espera. */
-    private int pendingRequestId;
-    private int waitTicks;
-    private Component status;
+    /** Estado, pedidos, sons e log: comuns a placa holografica (Etapa 4.8.4-C). */
+    private final RouletteSession session = new RouletteSession();
+    private final RouletteMachine machine = session.machine();
     private int cx, cy, radius;
     private RespectButton spinButton, continueButton;
     private boolean continueWarns;
-    /** Ticks desde a revelacao de um resultado BONER (efeito especial so visual; -1 = nenhum). */
-    private int bonerTick = -1;
 
     public BirthRouletteScreen() {
         super(Component.translatable(KEY + "title"));
-        CharacterProfile p = ProfileClientCache.profile();
-        shownRollCount = p.rollCount();
-        if (hasResult(p)) {
-            phase = Phase.DONE;
-            angle = prevAngle = restingAngle(p);
-            revealTick = 999;
-        } else {
-            phase = Phase.IDLE;
-        }
-    }
-
-    private static boolean hasResult(CharacterProfile p) {
-        return p.hasBirthResult();
     }
 
     @Override
@@ -98,7 +59,7 @@ public final class BirthRouletteScreen extends RespectScreen {
         cx = left + 16 + radius;
         cy = top + 30 + radius + 4;
         int bx = left + panelWidth - 130;
-        spinButton = addRenderableWidget(new RespectButton(bx, top + panelHeight - 54, 120, 20, spinLabel(), b -> spin())
+        spinButton = addRenderableWidget(new RespectButton(bx, top + panelHeight - 54, 120, 20, session.spinLabel(), b -> spin())
                 .item(new ItemStack(Items.EMERALD)).accent(Ui.GREEN));
         continueButton = addRenderableWidget(new RespectButton(bx, top + panelHeight - 30, 120, 20,
                 Component.translatable(KEY + "continue"), b -> confirm()));
@@ -106,25 +67,14 @@ public final class BirthRouletteScreen extends RespectScreen {
         updateButtons();
     }
 
-    private Component spinLabel() {
-        CharacterProfile p = ProfileClientCache.profile();
-        return p.born() ? Component.translatable(KEY + "reroll", p.rerolls()) : Component.translatable(KEY + "spin");
-    }
-
-    private boolean busy() {
-        return phase == Phase.WAITING || phase == Phase.SPINNING || phase == Phase.REVEAL;
-    }
-
     /** Botoes sempre derivados da fase e da ficha atual (chamado a cada tick: nunca ficam presos). */
     private void updateButtons() {
         if (spinButton == null) return;
-        CharacterProfile p = ProfileClientCache.profile();
-        boolean idle = !busy();
-        spinButton.active = idle && (!p.born() || p.canReroll());
-        spinButton.setMessage(spinLabel());
-        continueButton.active = idle && phase == Phase.DONE && hasResult(p);
+        spinButton.active = session.canSpin();
+        spinButton.setMessage(session.spinLabel());
+        continueButton.active = session.canContinue();
         // Quem ainda tem o novo giro fica sabendo que Continuar o descarta.
-        boolean warn = continueButton.active && p.canReroll();
+        boolean warn = session.continueDiscardsReroll();
         if (warn != continueWarns) {
             continueWarns = warn;
             continueButton.setTooltip(warn ? net.minecraft.client.gui.components.Tooltip.create(
@@ -133,54 +83,13 @@ public final class BirthRouletteScreen extends RespectScreen {
     }
 
     private void spin() {
-        CharacterProfile p = ProfileClientCache.profile();
-        if (busy() || (p.born() && !p.canReroll())) return;
-        phase = Phase.WAITING;
-        speed = 0;
-        waitTicks = 0;
-        status = null;
-        requestRevision = ProfileClientCache.rollReplyRevision();
-        pendingRequestId = ProfileClientCache.nextRollRequestId();
-        PacketDistributor.sendToServer(new GameplayNetworking.BirthRollRequest(p.born(), p.rollCount(), pendingRequestId));
+        session.spin();
         updateButtons();
     }
 
-    /**
-     * Aceita o resultado: a ficha ja esta salva no servidor; o servidor confirma o nascimento (o novo giro restante
-     * e descartado, entao reabrir a roleta nao troca mais o resultado) e a tela segue para o menu do personagem.
-     */
+    /** Aceita o resultado e segue para o menu do personagem. */
     private void confirm() {
-        CharacterProfile p = ProfileClientCache.profile();
-        if (phase != Phase.DONE || !hasResult(p)) return;
-        if (!p.birthConfirmed()) PacketDistributor.sendToServer(new GameplayNetworking.BirthConfirmRequest(p.rollCount()));
-        minecraft.setScreen(new HoloCharacterScreen());
-    }
-
-    /** Desacelera ate a origem da ficha atual (com revelacao quando e um resultado novo). */
-    private void settleOn(CharacterProfile p, boolean reveal) {
-        shownRollCount = p.rollCount();
-        if (reveal) status = null;
-        spinFrom = angle;
-        spinTick = 0;
-        revealAfterSpin = false;
-        phase = Phase.SPINNING;
-        if (!hasResult(p)) {
-            // Sem nascimento: so desacelera ate parar e volta a aguardar o sorteio.
-            spinTo = angle + speed * 6F;
-            spinLength = 20;
-            return;
-        }
-        float target = restingAngle(p);
-        float base = angle + (reveal ? 720F : 360F);
-        spinTo = base + Mth.positiveModulo(target - base, 360F);
-        spinLength = reveal ? 50 : 30;
-        revealAfterSpin = reveal;
-    }
-
-    /** Rotacao em que a fatia da raridade da Speciality da ficha fica sob o ponteiro (ficha legada: topo). */
-    private static float restingAngle(CharacterProfile p) {
-        Speciality speciality = p.specialityOrNull();
-        return speciality == null ? 0 : RouletteLayout.restingRotation(speciality.rarity(), p.rollCount());
+        if (session.confirm()) minecraft.setScreen(new HoloCharacterScreen());
     }
 
     private static int resultColor(CharacterProfile p) {
@@ -190,102 +99,32 @@ public final class BirthRouletteScreen extends RespectScreen {
         return origin == null ? Ui.GOLD : origin.color();
     }
 
+    /** Efeitos 2D desta tela nos momentos da roleta. */
+    private final RouletteMachine.Listener effects = new RouletteMachine.Listener() {
+        @Override public void revealed(CharacterProfile p) {
+            int color = resultColor(p);
+            vfx.flash(cx, cy - radius, 50, color, 16);
+            vfx.ring(cx, cy, radius + 30, color, 20);
+            vfx.burst(cx, cy - radius, 50, color, 4F);
+        }
+        @Override public void revealStep(int step) {
+            CharacterAttribute a = CharacterAttribute.values()[step - 1];
+            vfx.burst(attrX() + attrW() * session.profile().attribute(a) / (float) CharacterAttribute.MAX,
+                    attrY(step - 1) + 11, 8, a.color(), 1.8F);
+        }
+    };
+
     @Override
     public void tick() {
         super.tick();
-        prevAngle = angle;
-        CharacterProfile p = ProfileClientCache.profile();
+        session.tick(effects);
         tickBonerReveal();
-        switch (phase) {
-            case WAITING -> {
-                speed = Math.min(24F, speed + 2.5F);
-                angle += speed;
-                tickSound();
-                GameplayNetworking.BirthRollReply reply = ProfileClientCache.lastRollReply();
-                if (ProfileClientCache.rollReplyRevision() != requestRevision && reply != null
-                        && reply.answers(pendingRequestId)) {
-                    // Resposta do servidor ao nosso pedido (a ficha correspondente chegou antes dela).
-                    boolean rolled = reply.outcome() == BirthRoulette.Outcome.ROLLED
-                            && reply.rollCount() == p.rollCount() && hasResult(p);
-                    if (reply.outcome() == BirthRoulette.Outcome.ERROR) {
-                        // O servidor falhou e disse isso: nada mudou na ficha (o novo giro continua intacto).
-                        status = Component.translatable(KEY + "status.error", pendingRequestId);
-                        RespectCraft.LOGGER.warn("Birth roulette request #{}: the server reported an internal error;"
-                                + " look for the same request number in the server log", pendingRequestId);
-                    } else if (!rolled) {
-                        status = Component.translatable(KEY + "status."
-                                + (reply.outcome() == BirthRoulette.Outcome.NO_REROLLS ? "no_rerolls" : "stale"));
-                    }
-                    settleOn(p, rolled);
-                } else if (++waitTicks > TIMEOUT_TICKS) {
-                    // Nenhuma resposta (problema de rede de verdade): volta ao estado real. Uma resposta atrasada
-                    // e tratada abaixo (ficha nova); o servidor recusa um pedido repetido sobre a ficha antiga.
-                    status = Component.translatable(KEY + "status.timeout", pendingRequestId);
-                    RespectCraft.LOGGER.warn("Birth roulette request #{}: no reply from the server after {} ticks",
-                            pendingRequestId, TIMEOUT_TICKS);
-                    settleOn(p, false);
-                }
-            }
-            case SPINNING -> {
-                spinTick++;
-                float t = Math.min(1F, spinTick / (float) spinLength);
-                float eased = 1F - (1F - t) * (1F - t) * (1F - t);
-                angle = spinFrom + (spinTo - spinFrom) * eased;
-                tickSound();
-                if (t >= 1F) {
-                    speed = 0;
-                    if (revealAfterSpin) {
-                        phase = Phase.REVEAL;
-                        revealTick = 0;
-                        int color = resultColor(p);
-                        vfx.flash(cx, cy - radius, 50, color, 16);
-                        vfx.ring(cx, cy, radius + 30, color, 20);
-                        vfx.burst(cx, cy - radius, 50, color, 4F);
-                        Ui.playUi(ModSounds.ROULETTE_WIN.get(), 1F, 0.8F);
-                        Speciality won = p.specialityOrNull();
-                        bonerTick = won != null && won.rarity() == SpecialityRarity.BONER ? 0 : -1;
-                        if (bonerTick == 0) Ui.playUi(ModSounds.ROULETTE_WIN.get(), 1.5F, 1F);
-                    } else {
-                        phase = hasResult(p) ? Phase.DONE : Phase.IDLE;
-                        revealTick = 999;
-                    }
-                }
-            }
-            case REVEAL -> {
-                revealTick++;
-                int shown = revealTick / 6;
-                if (revealTick % 6 == 0 && shown <= CharacterAttribute.values().length) {
-                    Ui.playUi(ModSounds.ROULETTE_TICK.get(), 0.8F + shown * 0.1F, 0.6F);
-                    if (shown > 0) {
-                        CharacterAttribute a = CharacterAttribute.values()[shown - 1];
-                        vfx.burst(attrX() + attrW() * p.attribute(a) / (float) CharacterAttribute.MAX,
-                                attrY(shown - 1) + 11, 8, a.color(), 1.8F);
-                    }
-                }
-                if (revealTick > 6 * (CharacterAttribute.values().length + 1)) {
-                    phase = hasResult(p) ? Phase.DONE : Phase.IDLE;
-                }
-            }
-            default -> {
-                if (p.rollCount() != shownRollCount || (phase == Phase.DONE) != hasResult(p)) {
-                    // A ficha mudou fora de um pedido desta tela (resposta atrasada, giro do admin, ficha zerada).
-                    settleOn(p, hasResult(p) && p.rollCount() != shownRollCount);
-                } else if (ticks % 6 == 0 && p.born()) {
-                    vfx.ember(cx + (float) (Math.random() - 0.5) * radius * 2, cy + radius, Ui.alpha(Ui.GOLD, 0.8F));
-                }
-            }
+        RouletteMachine.Phase phase = machine.phase();
+        if ((phase == RouletteMachine.Phase.IDLE || phase == RouletteMachine.Phase.DONE) && ticks % 6 == 0
+                && session.profile().born()) {
+            vfx.ember(cx + (float) (Math.random() - 0.5) * radius * 2, cy + radius, Ui.alpha(Ui.GOLD, 0.8F));
         }
         updateButtons();
-    }
-
-    private int lastSegment = -1;
-
-    private void tickSound() {
-        int segment = segmentAtPointer(angle);
-        if (segment != lastSegment) {
-            lastSegment = segment;
-            Ui.playUi(ModSounds.ROULETTE_TICK.get(), 1.0F + (segment % 3) * 0.08F, 0.35F);
-        }
     }
 
     private static int segmentAtPointer(float angle) {
@@ -297,11 +136,8 @@ public final class BirthRouletteScreen extends RespectScreen {
      * propria tela, sem texturas novas) e fora da maquina de estados: nao muda fase, botoes nem tempo da revelacao.
      */
     private void tickBonerReveal() {
+        int bonerTick = session.bonerTick();
         if (bonerTick < 0) return;
-        if (++bonerTick > 40) {
-            bonerTick = -1;
-            return;
-        }
         int pink = SpecialityRarity.BONER.color();
         if (bonerTick % 4 == 0) {
             float a = (float) (Math.random() * Math.PI * 2);
@@ -318,14 +154,16 @@ public final class BirthRouletteScreen extends RespectScreen {
 
     @Override
     protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        float a = Mth.lerp(partialTick, prevAngle, angle);
+        float a = machine.angle(partialTick);
         drawWheel(g, a);
-        CharacterProfile p = ProfileClientCache.profile();
+        CharacterProfile p = session.profile();
+        RouletteMachine.Phase phase = machine.phase();
+        int bonerTick = session.bonerTick();
         Speciality speciality = p.specialityOrNull();
         // Origem social so em ficha antiga (sem Speciality): o bonus dela continua nos atributos.
         BirthOrigin origin = speciality == null ? p.originOrNull() : null;
         int x = attrX();
-        boolean showResult = (phase == Phase.REVEAL || phase == Phase.DONE) && hasResult(p);
+        boolean showResult = machine.showsResult(p);
         if (showResult && speciality != null) {
             SpecialityRarity rarity = speciality.rarity();
             boolean boner = rarity == SpecialityRarity.BONER;
@@ -358,16 +196,13 @@ public final class BirthRouletteScreen extends RespectScreen {
         } else {
             g.drawWordWrap(font, Component.translatable(KEY + "intro"), x, top + 28, attrW(), Ui.MUTED);
         }
-        int shown = phase == Phase.DONE ? 99 : phase == Phase.REVEAL ? revealTick / 6 : 0;
+        int shown = machine.attributesShown();
         for (CharacterAttribute attr : CharacterAttribute.values()) {
             int i = attr.ordinal();
             int y = attrY(i);
             boolean visible = i < shown;
             g.drawString(font, Component.translatable("attribute.respectcraft." + attr.id()), x, y, visible ? Ui.TEXT : 0xFF5A6570, false);
-            int value = visible ? p.attribute(attr) : 0;
-            if (visible && phase == Phase.REVEAL && i == shown - 1) {
-                value = Math.round(p.attribute(attr) * Math.min(1F, ((revealTick % 6) + partialTick) / 5F));
-            }
+            int value = machine.attributeValue(p, i, partialTick);
             String num = visible ? String.valueOf(value) : "?";
             g.drawString(font, num, x + attrW() - font.width(num), y, Ui.GOLD, false);
             Ui.bar(g, x, y + 9, attrW(), 6, value / (float) CharacterAttribute.MAX, attr.color());
@@ -377,11 +212,12 @@ public final class BirthRouletteScreen extends RespectScreen {
                         origin.bonus(attr) > 0 ? Ui.GREEN : Ui.RED, false);
             }
         }
-        if (phase == Phase.DONE && p.born()) {
+        if (phase == RouletteMachine.Phase.DONE && p.born()) {
             g.drawString(font, Component.translatable(KEY + "points", p.skillPoints()), left + 12, top + panelHeight - 16, Ui.GOLD, false);
             drawTraits(g, p, x, attrY(CharacterAttribute.values().length) + 2, mouseX, mouseY);
         }
-        if (status != null && phase != Phase.WAITING) {
+        Component status = session.status();
+        if (status != null) {
             // Cabe na coluna da roda (os botoes ficam a direita); o texto inteiro aparece na dica.
             int sx = left + 12, sy = top + panelHeight - 28, sw = left + panelWidth - 136 - sx;
             String full = status.getString();
@@ -426,15 +262,16 @@ public final class BirthRouletteScreen extends RespectScreen {
     }
 
     private void drawWheel(GuiGraphics g, float rotation) {
-        boolean boner = bonerTick >= 0;
+        boolean boner = session.bonerTick() >= 0;
         int glow = boner ? Ui.alpha(SpecialityRarity.BONER.color(), 0.35F + 0.25F * Mth.sin(ticks * 0.5F)) : 0x40FFE27A;
         Ui.glow(g, cx, cy, radius + (boner ? 34 : 26), glow);
         // Aro externo
         disc(g, cx, cy, radius + 5, 0xFF06080A);
         disc(g, cx, cy, radius + 3, 0xFFD6B84A);
-        CharacterProfile p = ProfileClientCache.profile();
+        CharacterProfile p = session.profile();
         SpecialityOdds odds = ProfileClientCache.odds();
-        int highlighted = (phase == Phase.REVEAL || phase == Phase.DONE) && p.specialityOrNull() != null
+        int highlighted = (machine.phase() == RouletteMachine.Phase.REVEAL || machine.phase() == RouletteMachine.Phase.DONE)
+                && p.specialityOrNull() != null
                 ? segmentAtPointer(rotation) : -1;
         // Fatias iguais (so visual): a chance real de cada raridade vem escrita na fatia.
         for (SpecialityRarity r : SpecialityRarity.values()) {
