@@ -240,7 +240,7 @@ public final class FinisherTestMechanic {
         }
         if (force ? !stageable(attacker, target) : !available(attacker, target)) return false;
         FinisherDef finisher = chosen != null ? chosen : attacker instanceof ServerPlayer player
-                ? Finishers.pick(skill -> ProfileService.get(player).hasSkill(skill.toString()), java.util.random.RandomGenerator.of("L64X128MixRandom"))
+                ? Finishers.pick(skill -> ProfileService.get(player).hasSkill(skill.toString()), com.respectcraft.profile.BirthRoulette.newRandom())
                 : Finishers.TAKEDOWN;
         // Cada lado resolve o proprio clip no proprio rig; participante invalido recusa a cena antes de mexer em algo.
         FinisherParticipants.Resolution attackerRes = FinisherParticipants.resolve(finisher, FinisherRole.ATTACKER, attacker);

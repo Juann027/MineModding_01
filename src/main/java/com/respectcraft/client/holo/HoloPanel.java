@@ -147,6 +147,15 @@ final class HoloPanel {
         return null;
     }
 
+    /** Regiao com roda propria no ponto local, ou null. */
+    HoloZone scrollZoneAt(float lx, float ly) {
+        for (int i = zoneCount - 1; i >= 0; i--) {
+            HoloZone zone = zones.get(i);
+            if (zone.contains(lx, ly) && zone.scroll != null && zone.enabled) return zone;
+        }
+        return null;
+    }
+
     void close() {
         if (surface != null) surface.close();
         zoneCount = 0;

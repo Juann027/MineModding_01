@@ -172,7 +172,7 @@ public final class RespectCraftCommands {
     private static int specialitySimulate(CommandContext<CommandSourceStack> c) {
         int rolls = IntegerArgumentType.getInteger(c, "rolls");
         SpecialityOdds odds = SpecialityConfig.odds();
-        java.util.random.RandomGenerator random = java.util.random.RandomGenerator.of("L64X128MixRandom");
+        java.util.random.RandomGenerator random = com.respectcraft.profile.BirthRoulette.newRandom();
         int[] counts = new int[SpecialityRarity.values().length];
         int empty = 0;
         for (int i = 0; i < rolls; i++) {

@@ -17,7 +17,9 @@ import org.lwjgl.glfw.GLFW;
  *
  * <p>Etapa 4.8.4-A: no modo mundo (padrao) K invoca e dispensa as placas paradas no mundo ({@link HoloWorld}) e a
  * tecla Recall (R por padrao, configuravel em Controles) as leva para a frente da mira atual. No modo tela (reserva
- * de desenvolvimento) K abre a tela da 4.8.1, e a mesma tecla a fecha ({@link #isMenuKey}).
+ * de desenvolvimento) K abre a tela da 4.8.1, e a mesma tecla a fecha ({@link #isMenuKey}). Etapa 4.8.4-C: no modo
+ * mundo o primeiro K tambem e no mundo (janela do criador, depois a da roleta); o criador e a roleta em tela so
+ * existem no modo tela.
  */
 public final class CharacterCreatorKeybinds {
     private static final KeyMapping OPEN_CREATOR = new KeyMapping(
@@ -58,13 +60,11 @@ public final class CharacterCreatorKeybinds {
         while (OPEN_CREATOR.consumeClick()) {
             // O menu proprio do Rimulib (WhiteSpace) capturando a entrada tem prioridade: nao abre por cima dele.
             if (mc.player != null && mc.screen == null && !rimulibMenuOpen()) {
-                boolean created = com.respectcraft.network.CharacterAppearanceClientCache
-                        .get(mc.player.getUUID()).created();
-                if (!created) {
-                    HoloWorld.closeAll();
-                    mc.setScreen(new CharacterCreationScreen());
-                } else if (HoloConfig.worldMode()) {
+                if (HoloConfig.worldMode()) {
+                    // Etapa 4.8.4-C: criador -> roleta -> Hub, tudo nos paineis no mundo (HoloWorld escolhe a janela)
                     HoloWorld.toggle();
+                } else if (AppearanceDraft.firstTime()) {
+                    mc.setScreen(new CharacterCreationScreen());
                 } else {
                     mc.setScreen(new HoloCharacterScreen());
                 }

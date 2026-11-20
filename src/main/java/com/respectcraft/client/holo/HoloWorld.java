@@ -102,14 +102,9 @@ public final class HoloWorld {
 
     private HoloWorld(Section initial) {
         this.menu = new HoloMenu(new HoloMenu.Host() {
-            @Override public void openCreator() {
-                closeNow();
-                mc.setScreen(new CharacterCreationScreen());
-            }
-            @Override public void openRoulette() {
-                closeNow();
-                mc.setScreen(new BirthRouletteScreen());
-            }
+            // Etapa 4.8.4-C: criador e roleta sao janelas holograficas no mesmo arco (nada de setScreen)
+            @Override public void openCreator() { menu.openPopup(HoloPopup.Kind.CREATOR); }
+            @Override public void openRoulette() { menu.openPopup(HoloPopup.Kind.ROULETTE); }
             @Override public void requestClose() { dismiss(); }
             @Override public void relayout() {}
         }, initial);
@@ -125,20 +120,34 @@ public final class HoloWorld {
     /** Paineis abertos agora (entrada: {@link HoloWorldInput}). */
     static HoloWorld current() { return current; }
 
-    /** K: invoca na frente da mira; com os paineis abertos, dispensa. */
+    /**
+     * K: invoca na frente da mira; com os paineis abertos, dispensa. Fluxo do personagem (Etapa 4.8.4-C), tudo no
+     * mesmo arco: sem aparencia confirmada abre a janela do criador; com aparencia e sem nascimento, a da roleta;
+     * nascido, o Hub.
+     */
     public static void toggle() {
         if (current != null && !current.menu.closing) dismiss();
-        else summon(Section.OVERVIEW);
+        else summon(Section.OVERVIEW, flowPopup());
+    }
+
+    /** Janela que o fluxo do personagem exige agora (criador -> roleta -> Hub), ou null no Hub. */
+    static HoloPopup.Kind flowPopup() {
+        if (com.respectcraft.client.character.AppearanceDraft.firstTime()) return HoloPopup.Kind.CREATOR;
+        return com.respectcraft.network.ProfileClientCache.profile().born() ? null : HoloPopup.Kind.ROULETTE;
     }
 
     /** Invoca (ou, se ja houver paineis, chama de volta para a mira atual). */
-    public static void summon(Section initial) {
+    public static void summon(Section initial) { summon(initial, null); }
+
+    /** Invoca com uma janela (criador/roleta) aberta na frente, ou so o arco ({@code popup} null). */
+    static void summon(Section initial, HoloPopup.Kind popup) {
         Minecraft mc = Minecraft.getInstance();
         if (!canSummon(mc)) return;
         if (current != null) {
             if (current.menu.closing) current.closeNow();
             else {
                 current.recallHere();
+                if (popup != null) current.menu.openPopup(popup);
                 return;
             }
         }
@@ -147,6 +156,7 @@ public final class HoloWorld {
         boolean fits = w.place(mc.player);
         current = w;
         w.start();
+        if (popup != null) w.menu.openPopup(popup);
         w.hint(fits);
         w.logAnchor("summoned", fits);
     }
@@ -355,14 +365,16 @@ public final class HoloWorld {
         if (HoloWorldInput.cursorMode()) return menu.pick(cursorNdcX(), cursorNdcY(), out);
         HoloPanel p = menu.pickRay(rayO, rayD, REACH, false, out);
         if (p == null || !HoloInputArbiter.hologramWins(true, out.z, worldDistance, REACH)) return null;
-        if (!p.interactive || (menu.modalOpen && p != menu.modal)) return null;
+        HoloPanel ex = menu.exclusive();
+        if (!p.interactive || (ex != null && p != ex)) return null;
         return p;
     }
 
     /**
      * Botao (ou acao do teclado) desceu e o holograma e o dono. {@code activate = false} so consome (botao do meio):
      * nada no mundo, nada no menu. Mesmo caminho do clique da tela: placa lateral vem para a frente, regiao de arrasto
-     * e capturada, regiao de clique roda a acao; clique fora do Display aberto o fecha.
+     * e capturada, regiao de clique roda a acao; clique fora do Display aberto o fecha. Com uma janela aberta
+     * (criador/roleta) so ela responde: o clique nas placas de tras e so consumido (nada atravessa, nada fecha).
      */
     void press(int source, boolean activate) {
         if (!activate || dragZone != null || menu.closing || menu.time < 0.06F) return;
@@ -430,10 +442,24 @@ public final class HoloWorld {
         return p.rayPlane(rayO.x, rayO.y, rayO.z, rayD.x, rayD.y, rayD.z, out);
     }
 
-    /** Roda com o holograma dono: rola a placa da frente; em qualquer outra placa (ou sem rolagem) gira o arco. */
+    /**
+     * Roda com o holograma dono: regiao com roda propria sob a mira (seletor do criador) troca o valor; senao rola a
+     * placa da frente; em qualquer outra placa (ou sem rolagem) gira o arco. Com uma janela aberta o arco nao gira.
+     */
     void scroll(double amount) {
         if (menu.closing || menu.modalOpen || amount == 0) return;
         HoloPanel p = target(hit);
+        if (p != null) {
+            HoloZone z = p.scrollZoneAt(hit.x, hit.y);
+            if (z != null) {
+                z.scroll.accept(amount);
+                return;
+            }
+        }
+        if (menu.popupOpen()) {
+            if (p == menu.popup && menu.popupView != null) menu.popupView.scrollBy(amount);
+            return;
+        }
         boolean scrolled = p == menu.mainPanel() && menu.view(menu.section()).scrollBy(amount);
         if (!scrolled) menu.cycle(amount > 0 ? -1 : 1);
     }
@@ -587,12 +613,30 @@ public final class HoloWorld {
      * paineis no mundo: a tela nao abre, a anterior fecha normalmente ({@code removed}) e o arco e invocado.
      */
     static void onScreenOpening(ScreenEvent.Opening event) {
-        if (!(event.getNewScreen() instanceof HoloCharacterScreen holo) || !HoloConfig.worldMode()) return;
+        if (!HoloConfig.worldMode()) return;
+        Screen next = event.getNewScreen();
+        HoloPopup.Kind popup;
+        Section section;
+        if (next instanceof HoloCharacterScreen holo) {
+            section = holo.initialSection();
+            popup = null;
+        } else if (next instanceof CharacterCreationScreen) {
+            // Etapa 4.8.4-C: no modo mundo o criador e a roleta antigos nunca aparecem; viram as janelas holograficas
+            section = Section.CHARACTER;
+            popup = HoloPopup.Kind.CREATOR;
+        } else if (next instanceof BirthRouletteScreen) {
+            section = Section.OVERVIEW;
+            popup = HoloPopup.Kind.ROULETTE;
+        } else {
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
         if (!canSummon(mc)) return;
-        Section section = holo.initialSection();
         event.setNewScreen(null);
-        mc.tell(() -> summon(section));
+        mc.tell(() -> {
+            if (current != null && !current.menu.closing && popup != null) current.menu.openPopup(popup);
+            else summon(section, popup);
+        });
     }
 
     /** Qualquer outra tela por cima (chat, inventario, pausa...): solta arrasto e modo cursor sem clicar nada. */

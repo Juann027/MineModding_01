@@ -16,6 +16,8 @@ final class HoloZone {
     float x, y, w, h;
     Runnable click;
     Drag drag;
+    /** Roda sobre a regiao (Etapa 4.8.4-C: seletor do criador troca o valor); recebe o passo da roda. */
+    java.util.function.DoubleConsumer scroll;
     boolean enabled;
     float pitch;
 
@@ -26,6 +28,7 @@ final class HoloZone {
         this.h = h;
         this.click = null;
         this.drag = null;
+        this.scroll = null;
         this.enabled = true;
         this.pitch = 1F;
         return this;

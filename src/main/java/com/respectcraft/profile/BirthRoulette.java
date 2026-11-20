@@ -88,6 +88,16 @@ public final class BirthRoulette {
 
     private BirthRoulette() {}
 
+    /**
+     * Gerador de numeros aleatorios dos sorteios do servidor. {@link java.util.SplittableRandom} fica no modulo
+     * {@code java.base} (sempre presente). Antes era {@code RandomGenerator.of("L64X128MixRandom")}, que exige o modulo
+     * opcional {@code jdk.random}: em runtimes Java sem ele (alguns launchers montam o Java so com os modulos minimos)
+     * o giro lancava {@code IllegalArgumentException} e a roleta respondia ERROR (Etapa 4.8.4-C, causa confirmada).
+     */
+    public static RandomGenerator newRandom() {
+        return new java.util.SplittableRandom();
+    }
+
     /** Sorteio com a distribuicao aprovada (testes e ferramentas puras). */
     public static Result roll(RandomGenerator random, BirthTrait.Body body) {
         return roll(random, body, SpecialityOdds.DEFAULT, null);

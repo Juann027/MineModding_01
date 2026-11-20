@@ -47,6 +47,8 @@ final class HoloMenu {
     /** Ultima altura de conteudo de cada secao (cache so visual): a placa ja abre no tamanho certo. */
     private static final float[] FIT_CACHE = new float[Section.values().length];
     static final float CLOSE_TIME = 0.3F;
+    /** Quanto a janela (criador/roleta) fica mais perto do olho que as placas (unidades de layout). */
+    static final float POPUP_DZ = 80F;
 
     final Minecraft mc = Minecraft.getInstance();
     private final Host host;
@@ -74,6 +76,8 @@ final class HoloMenu {
     final HoloPanel[] chips = new HoloPanel[Section.values().length];
     final HoloPanel header = new HoloPanel("header", true);
     final HoloPanel modal = new HoloPanel("modal", true);
+    /** Janela do criador / roleta (Etapa 4.8.4-C), na frente do arco. */
+    final HoloPanel popup = new HoloPanel("popup", true);
     final List<HoloPanel> all = new ArrayList<>();
     private final List<HoloPanel> drawOrder = new ArrayList<>();
 
@@ -117,6 +121,13 @@ final class HoloMenu {
     private final HoloSettings settings = new HoloSettings(this);
     private boolean settingsDirty;
 
+    // janela (Etapa 4.8.4-C): a aberta, ou a que esta sumindo depois de fechar
+    HoloPopup popupView;
+    private boolean popupOpen;
+    private float popupAmt, popupStart;
+    /** 0..1: o holograma do jogador no palco do criador / escondido atras da roleta. */
+    private float creatorAmt, rouletteAmt;
+
     HoloMenu(Host host, Section initial) {
         this.host = host;
         this.section = initial == null ? Section.OVERVIEW : initial;
@@ -130,6 +141,7 @@ final class HoloMenu {
         all.add(header);
         for (HoloPanel p : plates) all.add(p);
         for (HoloPanel p : chips) all.add(p);
+        all.add(popup);
         all.add(modal);
     }
 
@@ -196,6 +208,63 @@ final class HoloMenu {
 
     void requestClose() { host.requestClose(); }
 
+    // ================================================================ janelas (Etapa 4.8.4-C)
+
+    boolean popupOpen() { return popupOpen; }
+
+    HoloPopup.Kind popupKind() { return popupOpen && popupView != null ? popupView.kind : null; }
+
+    /** Painel que captura toda a entrada agora (Display aberto ou janela aberta), ou null. */
+    HoloPanel exclusive() { return modalOpen ? modal : popupOpen ? popup : null; }
+
+    /**
+     * Abre a janela do criador ou da roleta na frente do arco (no lugar da anterior, se houver). Fecha o Display.
+     * O arco fica recuado, esmaecido e sem resposta enquanto ela estiver aberta.
+     */
+    void openPopup(HoloPopup.Kind kind) {
+        if (closing || kind == null) return;
+        if (modalOpen) closeSettings();
+        if (popupOpen && popupView != null && popupView.kind == kind) return;
+        if (popupView != null) popupView.closed();
+        popupView = kind == HoloPopup.Kind.CREATOR ? new CreatorView(this) : new RouletteView(this);
+        popupOpen = true;
+        popupStart = time;
+        Ui.playUi(ModSounds.UI_HOVER.get(), 0.9F, 0.6F);
+        if (HoloConfig.motion() > 0 && popup.visible) particles.alongEdges(popup, 18, popupView.accent(), 36F);
+    }
+
+    /** Fecha a janela e devolve o arco (a janela some com animacao). */
+    void closePopup() {
+        if (!popupOpen) return;
+        popupOpen = false;
+        if (popupView != null) popupView.closed();
+        Ui.playUi(ModSounds.UI_HOVER.get(), 0.7F, 0.5F);
+        if (HoloConfig.motion() > 0 && popup.visible) particles.alongEdges(popup, 12, popup.accent, 40F);
+    }
+
+    /** O servidor confirmou a aparencia: personagem novo segue para a roleta; senao volta a secao Character. */
+    void creatorSaved(boolean toRoulette) {
+        if (toRoulette) {
+            openPopup(HoloPopup.Kind.ROULETTE);
+        } else {
+            closePopup();
+            select(Section.CHARACTER);
+        }
+    }
+
+    /** Continuar na roleta: a janela fecha e o Hub fica na visao geral. */
+    void rouletteConfirmed() {
+        closePopup();
+        select(Section.OVERVIEW);
+    }
+
+    /** Faiscas que nascem de um ponto local da janela. */
+    void burstOnPopup(float lx, float ly, int color, int count, float speed) {
+        if (HoloConfig.motion() <= 0F || !popup.visible) return;
+        Vector3f at = popup.toLayout(lx, ly, burstAt);
+        particles.burst(at.x, at.y, at.z + 2F, count, color, speed);
+    }
+
     void openSettings() {
         modalOpen = true;
         Ui.playClick(0.9F);
@@ -239,12 +308,15 @@ final class HoloMenu {
         closing = false;
         modalOpen = false;
         modalAmt = 0F;
+        popupAmt = 0F;
+        popupStart = 0F;
         particles.clear();
         opened();
     }
 
     void tick() {
         for (HoloView v : views) v.tick();
+        if (popupOpen && popupView != null && !closing) popupView.tick();
     }
 
     float closeDuration() { return HoloConfig.reducedMotion() ? 0.1F : CLOSE_TIME; }
@@ -274,6 +346,9 @@ final class HoloMenu {
         settingsDirty = false;
         particles.clear();
         hotPanel = null;
+        if (popupView != null) popupView.closed();
+        popupView = null;
+        popupOpen = false;
         for (HoloPanel p : all) p.close();
     }
 
@@ -401,6 +476,58 @@ final class HoloMenu {
             }
         }
         if (closing) closeOut(modal, 0F, 1F);
+        animatePopup(reduced);
+    }
+
+    /**
+     * Janela do criador/roleta: vem do fundo para a frente do arco (mais perto do olho que as placas), cresce ate o
+     * tamanho da janela atual e empurra o resto para tras, esmaecido e sem resposta (como o Display).
+     */
+    private void animatePopup(boolean reduced) {
+        popupAmt = HoloAnim.approach(popupAmt, popupOpen ? 1F : 0F, reduced ? 40F : 9F, dt);
+        creatorAmt = HoloAnim.approach(creatorAmt, popupKind() == HoloPopup.Kind.CREATOR ? 1F : 0F, reduced ? 40F : 7F, dt);
+        rouletteAmt = HoloAnim.approach(rouletteAmt, popupKind() == HoloPopup.Kind.ROULETTE ? 1F : 0F, reduced ? 40F : 10F, dt);
+        popup.rest();
+        if (popupView == null || (!popupOpen && popupAmt < 0.01F)) {
+            if (!popupOpen) popupView = null;
+            popup.visible = false;
+            popup.interactive = false;
+            return;
+        }
+        popup.accent = popupView.accent();
+        float tw = popupView.width(), th = popupView.height();
+        if (reduced || popup.w <= 1F) {
+            popup.w = tw;
+            popup.h = th;
+        } else {
+            popup.w = HoloAnim.approach(popup.w, tw, 12F, dt);
+            popup.h = HoloAnim.approach(popup.h, th, 12F, dt);
+        }
+        popup.rect(centerX - popup.w / 2F, plateTop + plateMaxH / 2F - popup.h / 2F, popup.w, popup.h);
+        float k = HoloAnim.outCubic(popupAmt);
+        float since = time - popupStart;
+        popup.dz = HoloAnim.lerp(k, -90F, POPUP_DZ);
+        popup.scaleX = HoloAnim.lerp(k, 0.82F, 1F);
+        popup.scaleY = HoloAnim.lerp(HoloAnim.outBack(Math.min(1F, popupAmt * 1.1F), 1.05F), 0.1F, 1F);
+        if (!reduced) popup.yaw = (1F - k) * 24F;
+        popup.alpha = k * HoloAnim.window(time, 0.05F, 0.2F);
+        popup.outline = k;
+        popup.contentAlpha = HoloAnim.window(popupAmt, 0.45F, 0.55F) * HoloAnim.window(since, 0.05F, 0.15F);
+        popup.visible = popupAmt > 0.01F;
+        popup.interactive = popupOpen && popupAmt > 0.6F && !closing;
+        popup.sweep = -1F;
+        if (popupOpen && !reduced && since < 0.55F) popup.sweep = HoloAnim.window(since, 0.08F, 0.42F);
+        if (popup.visible) {
+            for (HoloPanel p : all) {
+                if (p == popup || p == modal) continue;
+                p.dz -= 60F * k;
+                p.alpha *= 1F - 0.55F * k;
+                p.contentAlpha *= 1F - 0.65F * k;
+                p.outline *= 1F - 0.5F * k;
+                if (popupOpen) p.interactive = false;
+            }
+        }
+        if (closing) closeOut(popup, 0F, 1F);
     }
 
     /** Passo angular entre chips vizinhos (graus). */
@@ -481,7 +608,8 @@ final class HoloMenu {
     /** Painel interativo mais perto sob o cursor (NDC); o modal, quando aberto, captura tudo. */
     HoloPanel pick(float nx, float ny, Vector3f out) {
         if (closing) return null;
-        if (modalOpen) return modal.interactive && modal.hit(nx, ny, out) ? modal : null;
+        HoloPanel ex = exclusive();
+        if (ex != null) return ex.interactive && ex.hit(nx, ny, out) ? ex : null;
         HoloPanel best = null;
         float bestT = Float.MAX_VALUE, bx = 0, by = 0;
         for (HoloPanel p : all) {
@@ -507,11 +635,11 @@ final class HoloMenu {
      */
     HoloPanel pickRay(Vector3f o, Vector3f d, float reach, boolean interactive, Vector3f out) {
         if (interactive && closing) return null;
-        HoloPanel best = null;
+        HoloPanel best = null, ex = exclusive();
         float bestT = reach, bx = 0, by = 0;
         for (HoloPanel p : all) {
             if (!p.visible) continue;
-            if (interactive ? !p.interactive || (modalOpen && p != modal) : p.alpha <= 0.05F) continue;
+            if (interactive ? !p.interactive || (ex != null && p != ex) : p.alpha <= 0.05F) continue;
             if (p.rayHit(o.x, o.y, o.z, d.x, d.y, d.z, out) && out.z < bestT) {
                 bestT = out.z;
                 best = p;
@@ -601,6 +729,11 @@ final class HoloMenu {
             p.hot = hot;
             HoloPanel chip = chips[s.ordinal()];
             drawPanel(g, chip, density, contentScale, mipmaps, chipW, chipH, () -> navView.drawChip(canvas, s, chip.w, chip.h, active));
+        }
+        if (popup.visible && popupView != null) {
+            HoloPopup view = popupView;
+            drawPanel(g, popup, density, contentScale, mipmaps, HoloPopup.MAX_W, HoloPopup.MAX_H,
+                    () -> view.draw(canvas, popup.w, popup.h, time - popupStart - 0.12F));
         }
         if (modal.visible) drawPanel(g, modal, density, contentScale, mipmaps, modal.w, modal.h, () -> settings.draw(canvas, modal.w, modal.h));
     }
@@ -712,7 +845,7 @@ final class HoloMenu {
     private void lightTrails(float env, boolean pulses) {
         HoloPanel active = plates[section.ordinal()];
         if (!active.visible || closing || env < 0.05F) return;
-        float k = env * HoloAnim.window(time, 0.45F, 0.3F);
+        float k = env * HoloAnim.window(time, 0.45F, 0.3F) * (1F - 0.75F * popupAmt);
         if (k <= 0.01F) return;
         float motion = HoloConfig.motion();
         int idx = 0;
@@ -804,11 +937,13 @@ final class HoloMenu {
     // ================================================================ holograma do jogador
 
     private float playerScale(float env) {
-        float vis = Math.max(dockAvailable ? 1F : 0F, HoloAnim.outCubic(stageAmt));
+        float vis = Math.max(Math.max(dockAvailable ? 1F : 0F, HoloAnim.outCubic(stageAmt)), creatorAmt);
         float appear = HoloConfig.reducedMotion() ? HoloAnim.window(time, 0F, 0.15F)
                 : HoloAnim.outBack(HoloAnim.window(time, 0.3F, 0.32F), 1.2F);
         float closeK = closing ? 1F - HoloAnim.inCubic(HoloAnim.window(time - closeStart, 0F, closeDuration())) : 1F;
-        return vis * appear * closeK * (modalOpen ? 1F - 0.3F * modalAmt : 1F);
+        // atras da roleta o holograma some; no criador ele sobe no palco da janela
+        float behind = 1F - HoloAnim.smooth(Math.max(0F, rouletteAmt - creatorAmt));
+        return vis * appear * closeK * behind * (modalOpen ? 1F - 0.3F * modalAmt : 1F);
     }
 
     /**
@@ -834,6 +969,15 @@ final class HoloMenu {
         placement[1] = HoloAnim.lerp(s, dockY, stage.y);
         placement[2] = HoloAnim.lerp(s, dockZ, stageZ);
         placement[3] = HoloAnim.lerp(s, dockH, Math.max(40F, stageH));
+        if (creatorAmt > 0.001F && popup.visible) {
+            // palco do criador: os pes no chao do palco, um pouco na frente da janela
+            Vector3f feet = popup.toLayout(CreatorView.feetX(), CreatorView.feetY(), vb);
+            float c = HoloAnim.inOutCubic(creatorAmt);
+            placement[0] = HoloAnim.lerp(c, placement[0], feet.x);
+            placement[1] = HoloAnim.lerp(c, placement[1], feet.y);
+            placement[2] = HoloAnim.lerp(c, placement[2], feet.z + 26F);
+            placement[3] = HoloAnim.lerp(c, placement[3], CreatorView.hologramHeight() * popup.scaleY);
+        }
         return placement;
     }
 
@@ -845,9 +989,10 @@ final class HoloMenu {
         float[] at = playerPlacement();
         float height = at[3] * scale;
         float blockSize = height / 1.95F;
-        if (!rotatingPlayer && HoloConfig.motion() > 0F && stageAmt < 0.5F) playerYaw += dt * 14F * HoloConfig.motion();
+        boolean onStage = section == Section.CHARACTER || creatorAmt > 0.5F;
+        if (!rotatingPlayer && HoloConfig.motion() > 0F && stageAmt < 0.5F && creatorAmt < 0.5F) playerYaw += dt * 14F * HoloConfig.motion();
         // no palco o holograma vira de frente (3/4) ate o jogador arrastar
-        if (section == Section.CHARACTER && !playerTouched && !rotatingPlayer) {
+        if (onStage && !playerTouched && !rotatingPlayer) {
             float front = -22F + 360F * Math.round((playerYaw + 22F) / 360F);
             playerYaw = HoloConfig.reducedMotion() ? front : HoloAnim.approach(playerYaw, front, 6F, dt);
         }

@@ -13,7 +13,7 @@ import net.minecraft.network.chat.Component;
 /**
  * Secao 02 "Character": palco transparente onde o proprio jogador (rig GeckoLib, Body Layers, skin Classic/Slim)
  * fica de pe em 3D na frente do painel, girado por arrasto, e a ficha da aparencia confirmada pelo servidor com o
- * atalho para o Character Creator que ja existia. O criador nao foi refeito.
+ * atalho para o Character Creator (Etapa 4.8.4-C: a janela holografica; so Body, Hairstyle e Hair Color).
  */
 final class CharacterView extends HoloView {
     /** Arrasto horizontal no palco = giro do holograma do jogador (so visual). */
@@ -87,11 +87,8 @@ final class CharacterView extends HoloView {
                 : CharacterAppearanceClientCache.confirmed(player.getUUID());
         String k = "gui.respectcraft.creator.";
         iy = row(c, since, i++, ix, iy, iw, tr(k + "body"), tr(k + "body." + CharacterAppearance.BODY_IDS[look.bodyType()]), 0);
-        iy = row(c, since, i++, ix, iy, iw, tr(k + "skin"), tr(k + "skin." + CharacterAppearance.SKIN_IDS[look.skinTone()]),
-                look.customSkinTone() ? CharacterAppearance.SKIN_ARGB[look.skinTone()] : 0);
-        iy = row(c, since, i++, ix, iy, iw, tr(k + "face"), tr(k + "face." + CharacterAppearance.FACE_IDS[look.face()]), 0);
         iy = row(c, since, i++, ix, iy, iw, tr(k + "hair"), tr(k + "hair." + CharacterAppearance.HAIR_IDS[look.hairStyle()]), 0);
-        iy = row(c, since, i++, ix, iy, iw, tr(k + "color"), tr(k + "color." + CharacterAppearance.COLOR_IDS[look.hairColor()]),
+        iy = row(c, since, i++, ix, iy, iw, tr(k + "hair_color"), tr(k + "color." + CharacterAppearance.COLOR_IDS[look.hairColor()]),
                 CharacterAppearance.COLOR_ARGB[look.hairColor()]);
         iy += 6F;
         c.stage(since, i++);

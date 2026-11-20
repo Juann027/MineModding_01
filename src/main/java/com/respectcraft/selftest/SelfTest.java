@@ -47,6 +47,9 @@ public final class SelfTest {
         try {
             roulette(f);
             rouletteFailures(f);
+            rouletteMachine(f);
+            rouletteRandom(f);
+            creatorOptions(f);
             needs(f);
             coomAndEffects(f);
             skills(f);
@@ -106,7 +109,7 @@ public final class SelfTest {
 
     private static void roulette(List<String> f) {
         // Etapa 4.7: o nascimento sorteia uma Speciality (raridade primeiro); atributos sem bonus de origem.
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         int rolls = 40_000;
         Map<SpecialityRarity, Integer> counts = new EnumMap<>(SpecialityRarity.class);
         Map<Speciality, Integer> seen = new EnumMap<>(Speciality.class);
@@ -212,9 +215,9 @@ public final class SelfTest {
         check(f, com.respectcraft.needs.ActiveNeedEffects.CODEC.parse(NbtOps.INSTANCE, at).getOrThrow().equals(active), "efeitos: codec");
 
         // Roleta: um unico novo giro, so depois do nascimento; fichas antigas com mais giros sao corrigidas.
-        CharacterProfile born = CharacterProfile.DEFAULT.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom"), BirthTrait.Body.MALE), BirthRoulette.FREE_REROLLS);
+        CharacterProfile born = CharacterProfile.DEFAULT.withBirth(BirthRoulette.roll(BirthRoulette.newRandom(), BirthTrait.Body.MALE), BirthRoulette.FREE_REROLLS);
         check(f, born.canReroll() && born.rerolls() == 1, "roleta: um novo giro após nascer");
-        CharacterProfile afterReroll = born.withBirth(BirthRoulette.roll(RandomGenerator.of("L64X128MixRandom"), BirthTrait.Body.MALE), born.rerolls() - 1);
+        CharacterProfile afterReroll = born.withBirth(BirthRoulette.roll(BirthRoulette.newRandom(), BirthTrait.Body.MALE), born.rerolls() - 1);
         check(f, !afterReroll.canReroll(), "roleta: segundo novo giro bloqueado");
         check(f, new CharacterProfile(true, "sertao", List.of(), 5, 1, 0, 0, List.of(), List.of()).rerolls() == 1, "roleta: ficha antiga com 5 giros");
         check(f, !CharacterProfile.DEFAULT.canReroll(), "roleta: sem nascimento não há novo giro");
@@ -287,6 +290,95 @@ public final class SelfTest {
                 && !after.canReroll(), "roleta/erro: giro gravado antes da falha não se repete");
     }
 
+    /**
+     * Etapa 4.8.4-C: maquina de estados da roleta comum a tela e a placa holografica (extraida da tela da 4.8.2):
+     * so a resposta com o requestId do pedido encerra a espera, ERROR na hora, timeout separado, resposta atrasada
+     * aplicada uma vez, a roda para na raridade da ficha e o novo giro so com giro sobrando.
+     */
+    private static void rouletteMachine(List<String> f) {
+        var reply = (java.util.function.BiFunction<BirthRoulette.Outcome, int[], com.respectcraft.network.GameplayNetworking.BirthRollReply>)
+                (o, a) -> new com.respectcraft.network.GameplayNetworking.BirthRollReply(o, a[0], a[1]);
+        CharacterProfile fresh = CharacterProfile.DEFAULT;
+        com.respectcraft.ui.RouletteMachine m = new com.respectcraft.ui.RouletteMachine(fresh);
+        check(f, m.phase() == com.respectcraft.ui.RouletteMachine.Phase.IDLE && m.canSpin(fresh) && !m.canContinue(fresh),
+                "roleta/máquina: ficha nova começa aguardando o giro");
+        var req = m.spin(fresh, 41);
+        check(f, req != null && !req.reroll() && req.expectedRollCount() == fresh.rollCount() && req.requestId() == 41
+                && m.busy() && !m.canSpin(fresh) && m.spin(fresh, 42) == null, "roleta/máquina: pedido único com requestId");
+        // resposta de outro pedido nao encerra a espera
+        m.tick(fresh, reply.apply(BirthRoulette.Outcome.ROLLED, new int[] {1, 40}), null);
+        check(f, m.phase() == com.respectcraft.ui.RouletteMachine.Phase.WAITING, "roleta/máquina: resposta de outro pedido ignorada");
+        // erro do servidor: aviso na hora, ficha intacta, pode tentar de novo
+        m.tick(fresh, reply.apply(BirthRoulette.Outcome.ERROR, new int[] {0, 41}), null);
+        check(f, m.status() == com.respectcraft.ui.RouletteMachine.Status.ERROR && m.statusRequestId() == 41,
+                "roleta/máquina: ERROR mostrado com o número do pedido");
+        for (int i = 0; i < 40; i++) m.tick(fresh, null, null);
+        check(f, m.phase() == com.respectcraft.ui.RouletteMachine.Phase.IDLE && m.canSpin(fresh), "roleta/máquina: depois do ERROR volta a girar");
+
+        // giro com resultado: desacelera ate a raridade da ficha, revela os 6 atributos uma vez e libera Continuar
+        CharacterProfile born = fresh.withBirth(new BirthRoulette.Result(Speciality.DOMINANTS, new int[] {4, 5, 6, 7, 3, 5},
+                List.of()), BirthRoulette.FREE_REROLLS);
+        m.spin(fresh, 43);
+        m.tick(fresh, null, null);
+        int[] revealed = new int[1], steps = new int[1];
+        com.respectcraft.ui.RouletteMachine.Listener l = new com.respectcraft.ui.RouletteMachine.Listener() {
+            @Override public void revealed(CharacterProfile p) { revealed[0]++; }
+            @Override public void revealStep(int step) { steps[0]++; }
+        };
+        m.tick(born, reply.apply(BirthRoulette.Outcome.ROLLED, new int[] {born.rollCount(), 43}), l);
+        for (int i = 0; i < 200 && m.phase() != com.respectcraft.ui.RouletteMachine.Phase.DONE; i++) m.tick(born, null, l);
+        check(f, m.phase() == com.respectcraft.ui.RouletteMachine.Phase.DONE && revealed[0] == 1
+                && steps[0] == CharacterAttribute.values().length && m.attributesShown() == CharacterAttribute.values().length
+                && m.attributeValue(born, 3, 0F) == 7, "roleta/máquina: revelação única dos 6 atributos");
+        check(f, com.respectcraft.profile.RouletteLayout.rarityAtPointer(m.angle(1F)) == Speciality.DOMINANTS.rarity(),
+                "roleta/máquina: a roda para na raridade da ficha");
+        check(f, m.canContinue(born) && m.canSpin(born), "roleta/máquina: resultado com Continuar e novo giro");
+        var again = m.spin(born, 44);
+        check(f, again != null && again.reroll() && again.expectedRollCount() == born.rollCount(), "roleta/máquina: novo giro pede reroll");
+        // sem resposta: timeout separado, depois a resposta atrasada (ficha nova) e aplicada uma vez
+        for (int i = 0; i <= com.respectcraft.ui.RouletteMachine.TIMEOUT_TICKS; i++) m.tick(born, null, null);
+        check(f, m.status() == com.respectcraft.ui.RouletteMachine.Status.TIMEOUT && m.statusRequestId() == 44,
+                "roleta/máquina: timeout com o número do pedido");
+        for (int i = 0; i < 60; i++) m.tick(born, null, null);
+        CharacterProfile late = born.withBirth(new BirthRoulette.Result(Speciality.VANILLA, new int[] {5, 5, 5, 5, 5, 5},
+                List.of()), BirthRoulette.rerollsAfter(born));
+        revealed[0] = 0;
+        for (int i = 0; i < 200; i++) m.tick(late, null, l);
+        check(f, revealed[0] == 1 && m.phase() == com.respectcraft.ui.RouletteMachine.Phase.DONE && !m.canSpin(late)
+                && m.canContinue(late) && com.respectcraft.profile.RouletteLayout.rarityAtPointer(m.angle(1F)) == Speciality.VANILLA.rarity(),
+                "roleta/máquina: resposta atrasada aplicada uma vez, sem novo giro");
+        // reabrir com resultado: pronto, parado na raridade
+        com.respectcraft.ui.RouletteMachine reopened = new com.respectcraft.ui.RouletteMachine(late);
+        check(f, reopened.phase() == com.respectcraft.ui.RouletteMachine.Phase.DONE && reopened.canContinue(late) && !reopened.canSpin(late),
+                "roleta/máquina: reabrir mostra o resultado salvo");
+    }
+
+    /**
+     * Causa confirmada do erro da roleta: {@code RandomGenerator.of("L64X128MixRandom")} exige o modulo opcional
+     * {@code jdk.random}. O gerador dos sorteios tem de vir do {@code java.base} e sortear normalmente.
+     */
+    private static void rouletteRandom(List<String> f) {
+        RandomGenerator random = BirthRoulette.newRandom();
+        check(f, random instanceof java.util.SplittableRandom && "java.base".equals(random.getClass().getModule().getName()),
+                "roleta/rng: gerador do java.base (sem jdk.random)");
+        BirthRoulette.Result r = BirthRoulette.roll(random, BirthTrait.Body.FEMALE, SpecialityOdds.DEFAULT, null);
+        check(f, r.speciality() != null && r.attributes().length == CharacterAttribute.values().length
+                && r.traits().size() == BirthTrait.PER_BIRTH, "roleta/rng: sorteio completo com o gerador portátil");
+    }
+
+    /** Etapa 4.8.4-C: Skin e Face sairam do criador; aparencias antigas continuam validas e passam a usar a skin da conta. */
+    private static void creatorOptions(List<String> f) {
+        var old = new com.respectcraft.character.CharacterAppearance(true, 1, 3, 2, 0, 1);
+        var back = com.respectcraft.character.CharacterAppearance.fromPacked(old.pack());
+        check(f, back != null && back.equals(old), "criador: aparência antiga com pele/rosto continua válida");
+        check(f, !old.customSkinTone() && !old.customFace(), "criador: pele e rosto antigos não aparecem mais");
+        var norm = old.withAccountSkinAndFace();
+        check(f, norm.bodyType() == 1 && norm.hairStyle() == 3 && norm.hairColor() == 2 && norm.created()
+                && norm.skinTone() == com.respectcraft.character.CharacterAppearance.SKIN_FROM_ACCOUNT
+                && norm.face() == com.respectcraft.character.CharacterAppearance.FACE_FROM_ACCOUNT && norm.valid(),
+                "criador: salvar mantém corpo e cabelo e usa a pele/rosto da conta");
+    }
+
     /** Etapa 4.5: tracos de nascimento (sistema separado da origem, dos atributos e das necessidades). */
     private static void traits(List<String> f, CharacterProfile born, CharacterProfile afterReroll) {
         check(f, born.birthTraits().size() == BirthTrait.PER_BIRTH,
@@ -294,7 +386,7 @@ public final class SelfTest {
         check(f, afterReroll.traits().size() == BirthTrait.PER_BIRTH,
                 "traços: novo giro substitui (não soma) = " + afterReroll.traits());
         Map<BirthTrait, Integer> seen = new EnumMap<>(BirthTrait.class);
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         for (int i = 0; i < 4_000; i++) {
             for (BirthTrait t : BirthTrait.roll(random, i % 2 == 0 ? BirthTrait.Body.MALE : BirthTrait.Body.FEMALE)) seen.merge(t, 1, Integer::sum);
         }
@@ -328,7 +420,7 @@ public final class SelfTest {
         // 1. Sorteio masculino: todos os tracos, um por nascimento.
         Map<BirthTrait, Integer> maleSeen = new EnumMap<>(BirthTrait.class);
         Map<BirthTrait, Integer> femaleSeen = new EnumMap<>(BirthTrait.class);
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         boolean onePerBirth = true;
         for (int i = 0; i < 6_000; i++) {
             List<BirthTrait> m = BirthRoulette.roll(random, male).traits();
@@ -448,7 +540,7 @@ public final class SelfTest {
         check(f, Math.abs(o[0]) < 1e-6 && Math.abs(o[2] - 2) < 1e-6, "câmera: offset frontal");
         double[] side = CameraTrack.offset(track.sample(10), 0);
         check(f, Math.abs(side[0] + 4) < 1e-6, "câmera: offset lateral");
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         for (int i = 0; i < 32; i++) {
             check(f, Finishers.pick(s -> false, random).requiresSkill() == null, "finalizações: sem habilidade só as livres");
         }
@@ -646,7 +738,7 @@ public final class SelfTest {
 
         // Amostra: a raridade sai com a chance aprovada mesmo com raridades vazias (sem redistribuicao).
         Specialities partial = Specialities.of(List.of(Speciality.VANILLA, Speciality.SCATBORN));
-        RandomGenerator random = RandomGenerator.of("L64X128MixRandom");
+        RandomGenerator random = BirthRoulette.newRandom();
         int samples = 200_000;
         int[] counts = new int[all.length];
         int empty = 0;

@@ -25,11 +25,19 @@ public record CharacterAppearance(boolean created, int bodyType, int hairStyle, 
         return new CharacterAppearance(false, 0, 1, 1, 1, 0);
     }
 
-    /** Tom de pele escolhido no criador (nao o da skin da conta) aparece no modelo 3D. */
-    public boolean customSkinTone() { return created && skinTone != SKIN_FROM_ACCOUNT; }
+    /**
+     * Etapa 4.8.4-C: as opcoes Skin e Face sairam do criador. O modelo 3D sempre mostra a pele e o rosto da skin da
+     * conta; valores antigos gravados continuam validos no pacote (nada e invalidado), so nao aparecem mais.
+     */
+    public boolean customSkinTone() { return false; }
 
-    /** Rosto escolhido no criador aparece no modelo 3D. */
-    public boolean customFace() { return created && face != FACE_FROM_ACCOUNT; }
+    /** Etapa 4.8.4-C: rosto do criador removido; sempre o rosto da skin da conta (ver {@link #customSkinTone}). */
+    public boolean customFace() { return false; }
+
+    /** Mesma aparencia com pele e rosto da skin da conta (as opcoes removidas na Etapa 4.8.4-C). */
+    public CharacterAppearance withAccountSkinAndFace() {
+        return new CharacterAppearance(created, bodyType, hairStyle, hairColor, SKIN_FROM_ACCOUNT, FACE_FROM_ACCOUNT);
+    }
 
     public boolean valid() {
         return in(bodyType, BODY_IDS.length) && in(hairStyle, HAIR_IDS.length)
