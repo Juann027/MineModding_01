@@ -11,12 +11,12 @@ import net.minecraft.network.chat.Component;
 abstract class HoloView {
     static final float HEADER = 26F;
 
-    final HoloCharacterScreen screen;
+    final HoloMenu menu;
     private final HoloCharacterScreen.Section section;
     private float scroll, target, contentHeight, viewportHeight;
 
-    HoloView(HoloCharacterScreen screen, HoloCharacterScreen.Section section) {
-        this.screen = screen;
+    HoloView(HoloMenu menu, HoloCharacterScreen.Section section) {
+        this.menu = menu;
         this.section = section;
     }
 

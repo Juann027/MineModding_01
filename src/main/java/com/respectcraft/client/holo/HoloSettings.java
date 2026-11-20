@@ -13,9 +13,9 @@ import net.minecraft.network.chat.Component;
  */
 final class HoloSettings {
     private static final String KEY = "gui.respectcraft.holo.settings.";
-    private final HoloCharacterScreen screen;
+    private final HoloMenu menu;
 
-    HoloSettings(HoloCharacterScreen screen) { this.screen = screen; }
+    HoloSettings(HoloMenu menu) { this.menu = menu; }
 
     void draw(HoloCanvas c, float w, float h) {
         c.glass(w, h, HoloStyle.VIOLET);
@@ -45,7 +45,7 @@ final class HoloSettings {
         float doneY = h - 20F;
         if (y + 10 <= doneY - 2) c.wrap(Component.translatable(KEY + "hint"), x, y, sw, Math.max(1, (int) ((doneY - y - 2) / 10)), c.dim());
         c.button("settings.done", HoloView.tr(KEY + "done"), w / 2F - 40F, doneY, 80F, 14F, null, HoloStyle.VIOLET, true, false, "",
-                screen::closeSettings);
+                menu::closeSettings);
     }
 
     private void slider(HoloCanvas c, String id, float x, float y, float w, float value, String shown, Consumer<Float> set,
@@ -70,11 +70,11 @@ final class HoloSettings {
             @Override public void release(float px, float py, boolean click) {
                 apply(px);
                 Ui.playClick(1.1F);
-                if (relayoutOnRelease) screen.relayout();
+                if (relayoutOnRelease) menu.relayout();
             }
             private void apply(float px) {
                 set.accept(HoloAnim.clamp01((px - zx) / w));
-                screen.settingsChanged();
+                menu.settingsChanged();
             }
         };
         if (hot) c.tooltip(List.of(Component.translatable(KEY + id).withStyle(ChatFormatting.BOLD),
@@ -91,7 +91,7 @@ final class HoloSettings {
         HoloZone z = c.zone(x - 2, y - 2, w + 4, 13);
         z.click = () -> {
             flip.run();
-            screen.settingsChanged();
+            menu.settingsChanged();
         };
         if (hot) c.tooltip(List.of(Component.translatable(KEY + id).withStyle(ChatFormatting.BOLD),
                 Component.translatable(KEY + id + ".desc").withStyle(ChatFormatting.GRAY)));

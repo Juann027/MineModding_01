@@ -18,7 +18,7 @@ import net.minecraft.network.chat.Component;
  * Nenhum botao de troca: a troca de Speciality nao existe no jogo.
  */
 final class SpecialityView extends HoloView {
-    SpecialityView(HoloCharacterScreen screen) { super(screen, HoloCharacterScreen.Section.SPECIALITY); }
+    SpecialityView(HoloMenu menu) { super(menu, HoloCharacterScreen.Section.SPECIALITY); }
 
     @Override
     int accent() {
@@ -80,7 +80,7 @@ final class SpecialityView extends HoloView {
         } else {
             y += c.wrap(Component.translatable("gui.respectcraft.hub.unborn"), x, y, iw, 2, HoloStyle.GOLD) + 4F;
             c.button("sp.birth", tr("gui.respectcraft.hub.birth"), x, y, Math.min(iw, 130F), 14F, SkillDef.iconTexture("trevo"),
-                    HoloStyle.GREEN, true, false, "!", screen::openRoulette);
+                    HoloStyle.GREEN, true, false, "!", menu::openRoulette);
             y += 22F;
         }
 

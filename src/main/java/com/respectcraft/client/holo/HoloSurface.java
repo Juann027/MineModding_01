@@ -9,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
 
 /**
  * Superficie de um painel: um {@link TextureTarget} transparente, reaproveitado entre quadros (so realoca quando o
@@ -57,10 +58,13 @@ final class HoloSurface {
     /** Coordenada V da borda de baixo (a textura do framebuffer comeca embaixo). */
     float vBottom(float logicalH) { return Math.max(0F, 1F - logicalH * density() / pxH); }
 
-    /** Limpa e passa a desenhar na superficie. Sempre em par com {@link #end()}. */
+    /**
+     * Limpa e passa a desenhar na superficie. Sempre em par com {@link #end()}. {@code screen} = o desenho da tela
+     * em andamento (descarregado antes de trocar de alvo), ou null fora de uma tela (modo mundo).
+     */
     GuiGraphics begin(GuiGraphics screen) {
         Minecraft mc = Minecraft.getInstance();
-        screen.flush();
+        if (screen != null) screen.flush();
         target.clear(Minecraft.ON_OSX);
         target.bindWrite(true);
         savedProjection.set(RenderSystem.getProjectionMatrix());
@@ -86,6 +90,19 @@ final class HoloSurface {
         RenderSystem.setProjectionMatrix(savedProjection, savedSorting);
         RenderSystem.defaultBlendFunc();
         Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
+    }
+
+    /**
+     * Gera os niveis menores da textura (modo mundo): o texto continua legivel a alguns blocos sem serrilhar. Chamar
+     * depois de {@link #end()}; a textura passa a usar filtro trilinear.
+     */
+    void mipmap() {
+        if (target == null) return;
+        int id = target.getColorTextureId();
+        GlStateManager._bindTexture(id);
+        GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
+        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR_MIPMAP_LINEAR);
+        GlStateManager._bindTexture(0);
     }
 
     /** Recorte em unidades logicas do painel (o recorte do GuiGraphics usa a janela, nao este alvo). */
