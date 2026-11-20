@@ -47,6 +47,8 @@ final class HoloMenu {
     /** Ultima altura de conteudo de cada secao (cache so visual): a placa ja abre no tamanho certo. */
     private static final float[] FIT_CACHE = new float[Section.values().length];
     static final float CLOSE_TIME = 0.3F;
+    /** Quanto a janela (criador/roleta) fica mais perto do olho que as placas (unidades de layout). */
+    static final float POPUP_DZ = 80F;
 
     final Minecraft mc = Minecraft.getInstance();
     private final Host host;
@@ -504,7 +506,7 @@ final class HoloMenu {
         popup.rect(centerX - popup.w / 2F, plateTop + plateMaxH / 2F - popup.h / 2F, popup.w, popup.h);
         float k = HoloAnim.outCubic(popupAmt);
         float since = time - popupStart;
-        popup.dz = HoloAnim.lerp(k, -90F, 50F);
+        popup.dz = HoloAnim.lerp(k, -90F, POPUP_DZ);
         popup.scaleX = HoloAnim.lerp(k, 0.82F, 1F);
         popup.scaleY = HoloAnim.lerp(HoloAnim.outBack(Math.min(1F, popupAmt * 1.1F), 1.05F), 0.1F, 1F);
         if (!reduced) popup.yaw = (1F - k) * 24F;

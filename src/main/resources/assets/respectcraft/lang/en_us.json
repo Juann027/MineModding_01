@@ -351,5 +351,5 @@
   "gui.respectcraft.holo.popup.roulette.spin.desc": "The server rolls your Speciality, attributes and birth trait.",
   "gui.respectcraft.holo.popup.roulette.reroll.desc": "Your one re-roll: replaces the whole result. Click twice to confirm.",
   "gui.respectcraft.holo.popup.roulette.continue.desc": "Keeps this result and opens the character panels.",
-  "gui.respectcraft.holo.popup.confirm": "Click again to confirm"
+  "gui.respectcraft.holo.popup.confirm": "Confirm?"
 }

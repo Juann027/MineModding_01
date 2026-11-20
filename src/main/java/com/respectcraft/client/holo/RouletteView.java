@@ -114,7 +114,7 @@ final class RouletteView extends HoloPopup {
     @Override
     void draw(HoloCanvas c, float w, float h, float since) {
         CharacterProfile p = session.profile();
-        header(c, w, since, KEY + "roulette", !p.born() ? 2 : 0);
+        header(c, w, since, KEY + "roulette", !p.birthConfirmed() ? 2 : 0);
         float partial = c.mc.getTimer().getGameTimeDeltaPartialTick(false);
         int i = 1;
 

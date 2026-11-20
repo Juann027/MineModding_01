@@ -49,8 +49,8 @@ final class CreatorView extends HoloPopup {
 
     /** Pes do holograma no palco (local) e a altura dele (unidades de layout). */
     static float feetX() { return STAGE_X + STAGE_W / 2F; }
-    static float feetY() { return STAGE_Y + STAGE_H - 30F; }
-    static float hologramHeight() { return STAGE_H - 62F; }
+    static float feetY() { return STAGE_Y + STAGE_H - 50F; }
+    static float hologramHeight() { return STAGE_H - 92F; }
 
     @Override
     void tick() {
@@ -86,7 +86,7 @@ final class CreatorView extends HoloPopup {
         c.caption(HoloView.tr("gui.respectcraft.holo.preview"), x + 7F, y + 6F, c.muted());
         c.zone(x, y, sw, sh).drag = rotate;
         String hint = HoloView.tr("gui.respectcraft.holo.drag_rotate");
-        c.text(Ui.fit(c.font, hint, (int) (sw - 12)), x + 6F, y + sh - 38F, c.dim(), false);
+        c.text(Ui.fit(c.font, hint, (int) (sw - 14)), x + 7F, y + 17F, c.dim(), false);
         c.stage(since, i++);
         boolean randHot = c.button("cr.random", HoloView.tr(K + "random"), x + 8F, y + sh - 25F, sw - 16F, 17F, null, 0xFF8FB3C9,
                 !draft.saving(), false, "", () -> {
@@ -177,7 +177,11 @@ final class CreatorView extends HoloPopup {
         String label = HoloView.tr(K + "hair_color");
         String name = HoloView.tr(K + "color." + CharacterAppearance.COLOR_IDS[draft.hairColor()]);
         c.caption(label, x, y + 1F, c.muted());
-        c.textRight(Ui.fit(c.font, name, (int) (w * 0.5F)), x + w, y, CharacterAppearance.COLOR_ARGB[draft.hairColor()] | 0xFF000000, true);
+        String shownName = Ui.fit(c.font, name, (int) (w * 0.5F) - 12);
+        float nameX = x + w - c.font.width(shownName);
+        c.text(shownName, nameX, y, c.text(), false);
+        c.fill(nameX - 11F, y, 8F, 8F, 0xFF000000);
+        c.fill(nameX - 10F, y + 1F, 6F, 6F, CharacterAppearance.COLOR_ARGB[draft.hairColor()] | 0xFF000000);
         y += 12F;
         int count = CharacterAppearance.COLOR_IDS.length;
         float gap = 5F, s = Math.min(30F, (w - gap * (count - 1)) / count), h = 22F;
