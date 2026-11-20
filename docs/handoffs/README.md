@@ -31,6 +31,7 @@ e o `CLAUDE.md`.
 | 4.8.4-A | Menu K **no mundo**: núcleo `HoloMenu` + casca `HoloWorld` (âncora fixa, passada AFTER_LEVEL com profundidade do cenário), posição contra paredes, K/Recall (R), ciclo de vida, tela 4.8.1 como reserva | [HANDOFF_STAGE4_8_4A_WORLD_HOLO.md](HANDOFF_STAGE4_8_4A_WORLD_HOLO.md) | Concluída (PR #38) | Só llvmpipe/Fast |
 | 4.8.4-B | Interação no mundo: clique, arrasto, roda e dicas nas placas pela mira, dono da entrada por aperto (`HoloWorldInput`, `ui.HoloInputArbiter`), modo cursor (Alt) | [HANDOFF_STAGE4_8_4B_WORLD_HOLO_INPUT.md](HANDOFF_STAGE4_8_4B_WORLD_HOLO_INPUT.md) | Concluída (PR #39) | Alt+clique engolido por gerenciadores de janela Linux com Alt-arrastar |
 | 4.8.4-C | Criador e roleta como **janelas holográficas** no arco do mundo (`CreatorView`, `RouletteView`), fluxo criador → roleta → Hub pela tecla K, Skin/Face removidos, lógica comum `AppearanceDraft`/`RouletteSession`/`ui.RouletteMachine` (rede da 4.8.2) | [HANDOFF_STAGE4_8_4C_HOLO_CREATOR_ROULETTE.md](HANDOFF_STAGE4_8_4C_HOLO_CREATOR_ROULETTE.md) | Concluída (PR #40) | Telas antigas só na reserva `SCREEN` até a 4.8.5; partículas de Totem do giro visíveis no mundo |
+| 4.8.4-C (visual) | Roda da roleta como roda de prêmios: fatias na cor da raridade com degradê, aro com lâmpadas, pinos, miolo com joia, ponteiro que bate nos pinos, destaque da vencedora (`client.roulette.PrizeWheel`, comum à janela e à tela de reserva) | [HANDOFF_ROULETTE_PRIZE_WHEEL.md](HANDOFF_ROULETTE_PRIZE_WHEEL.md) | Implementada; só visual (lógica e chances intactas) | Só llvmpipe/Fast |
 
 Não há handoff da Etapa 4.3 neste repositório.
 
@@ -51,4 +52,5 @@ Não há handoff da Etapa 4.3 neste repositório.
 - Menu K no mundo (âncora, posição contra paredes, passada no mundo, K/Recall, plano da interação) → 4.8.3 e 4.8.4-A.
 - Clique/arrasto/roda nas placas no mundo, dono da entrada, ganchos de entrada do NeoForge, modo cursor → 4.8.4-B.
 - Criador e roleta no mundo (janelas do arco), fluxo do primeiro personagem, Skin/Face removidos → 4.8.4-C.
+- Visual da roda da roleta (cores, aro, ponteiro, destaque da vencedora) → roda de prêmios (4.8.4-C visual).
 - Ids aposentados e compatibilidade de saves → Etapa 4.4 (antes do corte de compatibilidade da 4.7.1).

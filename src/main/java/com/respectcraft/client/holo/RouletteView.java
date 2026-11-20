@@ -1,6 +1,6 @@
 package com.respectcraft.client.holo;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.respectcraft.client.roulette.PrizeWheel;
 import com.respectcraft.client.roulette.RouletteSession;
 import com.respectcraft.client.ui.Ui;
 import com.respectcraft.network.ProfileClientCache;
@@ -17,10 +17,8 @@ import com.respectcraft.ui.RouletteMachine;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
-import org.joml.Matrix4f;
 
 /**
  * Roleta de nascimento holografica (Etapa 4.8.4-C), janela na frente do arco no mundo. Mesma roleta da tela antiga
@@ -40,6 +38,7 @@ final class RouletteView extends HoloPopup {
 
     private final RouletteSession session = new RouletteSession();
     private final RouletteMachine machine = session.machine();
+    private final PrizeWheel wheel = new PrizeWheel();
     /** Botao armado esperando o segundo clique ("spin" / "continue") e quando foi armado (relogio do menu). */
     private String armed;
     private float armedAt;
@@ -287,92 +286,27 @@ final class RouletteView extends HoloPopup {
 
     private void drawWheel(HoloCanvas c, float rotation, CharacterProfile p) {
         boolean boner = session.bonerTick() >= 0;
-        int glow = boner ? Ui.alpha(SpecialityRarity.BONER.color(), 0.35F + 0.25F * Mth.sin(c.time * 10F)) : 0x40FFE27A;
-        c.glow(WX, WY, R + (boner ? 34F : 24F), glow);
-        disc(c, WX, WY, R + 5F, 0xFF06080A);
-        disc(c, WX, WY, R + 3F, 0xFFD6B84A);
-        SpecialityOdds odds = ProfileClientCache.odds();
         RouletteMachine.Phase phase = machine.phase();
-        int highlighted = (phase == RouletteMachine.Phase.REVEAL || phase == RouletteMachine.Phase.DONE) && p.specialityOrNull() != null
-                ? RouletteLayout.rarityAtPointer(rotation).ordinal() : -1;
+        SpecialityRarity winner = (phase == RouletteMachine.Phase.REVEAL || phase == RouletteMachine.Phase.DONE)
+                && p.specialityOrNull() != null ? RouletteLayout.rarityAtPointer(rotation) : null;
+        PrizeWheel.Mode mode = winner != null ? PrizeWheel.Mode.WINNER
+                : phase == RouletteMachine.Phase.SPINNING || phase == RouletteMachine.Phase.WAITING ? PrizeWheel.Mode.SPINNING
+                : PrizeWheel.Mode.IDLE;
+        int glow = boner ? Ui.alpha(SpecialityRarity.BONER.color(), 0.35F + 0.25F * Mth.sin(c.time * 10F))
+                : winner != null ? Ui.alpha(winner.color(), 0.4F) : 0x40FFE27A;
+        c.glow(WX, WY, R + (boner ? 34F : 24F), glow);
+        SpecialityOdds odds = ProfileClientCache.odds();
         // Fatias iguais (so visual): a chance real de cada raridade vem escrita na fatia.
-        for (SpecialityRarity r : SpecialityRarity.values()) {
-            float start = rotation + RouletteLayout.sliceStart(r);
-            int color = Ui.lerpColor(r.color(), 0xFF000000, 0.38F);
-            if (highlighted == r.ordinal()) color = Ui.lerpColor(r.color(), 0xFFFFFFFF, 0.15F + 0.1F * Mth.sin(c.time * 6F));
-            sector(c, WX, WY, R, start, start + RouletteLayout.SLICE, color);
-            sector(c, WX, WY, R * 0.34F, start, start + RouletteLayout.SLICE, Ui.lerpColor(color, 0xFF000000, 0.35F));
-            float mid = (float) Math.toRadians(start + RouletteLayout.SLICE / 2F - 90F);
-            float lx = WX + Mth.cos(mid) * R * 0.64F, ly = WY + Mth.sin(mid) * R * 0.64F;
-            int text = Ui.readableOn(color);
-            boolean shadow = text == 0xFFFFFFFF;
+        wheel.draw(c.g, c::c, WX, WY, R, rotation, c.time, mode, winner, boner, HoloConfig.motion(), (r, lx, ly, text, shadow) -> {
             String label = HoloView.tr(r.translationKey());
             String chance = SpecialityOdds.formatPercent(odds.permille(r));
-            float scale = Math.min(0.72F, R * 0.62F / Math.max(1, c.font.width(label)));
+            float scale = Math.min(0.72F, R * 0.58F / Math.max(1, c.font.width(label)));
             c.g.pose().pushPose();
             c.g.pose().translate(lx, ly, 0F);
             c.g.pose().scale(scale, scale, 1F);
             c.text(label, -c.font.width(label) / 2F, -9F, text, shadow);
-            c.text(chance, -c.font.width(chance) / 2F, 2F, shadow ? Ui.lerpColor(text, color, 0.15F) : text, shadow);
+            c.text(chance, -c.font.width(chance) / 2F, 2F, text, shadow);
             c.g.pose().popPose();
-        }
-        for (int s = 0; s < RouletteLayout.SLICES; s++) {
-            float edge = (float) Math.toRadians(rotation + s * RouletteLayout.SLICE - 90F);
-            line(c, WX, WY, WX + Mth.cos(edge) * R, WY + Mth.sin(edge) * R, 0xE006080A);
-        }
-        disc(c, WX, WY, 13F, 0xFF06080A);
-        disc(c, WX, WY, 11F, boner ? Ui.lerpColor(0xFF1D5C3A, SpecialityRarity.BONER.color(), 0.7F) : 0xFF1D5C3A);
-        disc(c, WX, WY, 5F, 0xFFFFE27A);
-        // ponteiro no topo
-        float py = WY - R - 9F;
-        for (int k = 0; k < 9; k++) c.fill(WX - 8F + k, py + k, 17F - 2F * k, 1F, k < 1 ? 0xFF06080A : 0xFFFFE27A);
-        c.fill(WX - 1F, py, 3F, 6F, 0xFFFFFFFF);
-        c.glow(WX, py + 4F, 10F, Ui.alpha(0xFFFFE27A, 0.5F));
-    }
-
-    private static void disc(HoloCanvas c, float x, float y, float r, int color) { sector(c, x, y, r, 0F, 360F, color); }
-
-    /** Fatia de circulo (graus, 0 = topo, sentido horario) com a opacidade de revelacao do canvas. */
-    private static void sector(HoloCanvas c, float x, float y, float r, float from, float to, int argb) {
-        int col = c.c(argb);
-        if ((col >>> 24) == 0) return;
-        VertexConsumer vc = c.g.bufferSource().getBuffer(RenderType.gui());
-        Matrix4f m = c.g.pose().last().pose();
-        int steps = Math.max(2, Math.round((to - from) / 4F));
-        for (int i = 0; i < steps; i++) {
-            float a0 = (float) Math.toRadians(from + (to - from) * i / steps - 90F);
-            float a1 = (float) Math.toRadians(from + (to - from) * (i + 1) / steps - 90F);
-            float x0 = x + Mth.cos(a0) * r, y0 = y + Mth.sin(a0) * r;
-            float x1 = x + Mth.cos(a1) * r, y1 = y + Mth.sin(a1) * r;
-            // as duas ordens de vertices: o tipo de render da GUI pode descartar faces "de costas"
-            vc.addVertex(m, x, y, 0).setColor(col);
-            vc.addVertex(m, x0, y0, 0).setColor(col);
-            vc.addVertex(m, x1, y1, 0).setColor(col);
-            vc.addVertex(m, x, y, 0).setColor(col);
-            vc.addVertex(m, x, y, 0).setColor(col);
-            vc.addVertex(m, x1, y1, 0).setColor(col);
-            vc.addVertex(m, x0, y0, 0).setColor(col);
-            vc.addVertex(m, x, y, 0).setColor(col);
-        }
-        c.g.flush();
-    }
-
-    /** Divisoria fina entre fatias (quad de 1 unidade de largura). */
-    private static void line(HoloCanvas c, float x0, float y0, float x1, float y1, int argb) {
-        int col = c.c(argb);
-        float dx = x1 - x0, dy = y1 - y0, len = Mth.sqrt(dx * dx + dy * dy);
-        if (len < 0.01F || (col >>> 24) == 0) return;
-        float nx = -dy / len * 0.5F, ny = dx / len * 0.5F;
-        VertexConsumer vc = c.g.bufferSource().getBuffer(RenderType.gui());
-        Matrix4f m = c.g.pose().last().pose();
-        vc.addVertex(m, x0 + nx, y0 + ny, 0).setColor(col);
-        vc.addVertex(m, x0 - nx, y0 - ny, 0).setColor(col);
-        vc.addVertex(m, x1 - nx, y1 - ny, 0).setColor(col);
-        vc.addVertex(m, x1 + nx, y1 + ny, 0).setColor(col);
-        vc.addVertex(m, x1 + nx, y1 + ny, 0).setColor(col);
-        vc.addVertex(m, x1 - nx, y1 - ny, 0).setColor(col);
-        vc.addVertex(m, x0 - nx, y0 - ny, 0).setColor(col);
-        vc.addVertex(m, x0 + nx, y0 + ny, 0).setColor(col);
-        c.g.flush();
+        });
     }
 }

@@ -1,6 +1,5 @@
 package com.respectcraft.client.roulette;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.respectcraft.client.holo.HoloCharacterScreen;
 import com.respectcraft.client.ui.RespectButton;
 import com.respectcraft.client.ui.RespectScreen;
@@ -16,13 +15,12 @@ import com.respectcraft.profile.SpecialityOdds;
 import com.respectcraft.profile.SpecialityRarity;
 import com.respectcraft.skill.SkillDef;
 import com.respectcraft.ui.RouletteMachine;
+import java.util.function.IntUnaryOperator;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import org.joml.Matrix4f;
 
 /**
  * Roleta de nascimento. O sorteio e do servidor: a tela gira enquanto espera a resposta e depois desacelera ate
@@ -44,6 +42,7 @@ public final class BirthRouletteScreen extends RespectScreen {
     /** Estado, pedidos, sons e log: comuns a placa holografica (Etapa 4.8.4-C). */
     private final RouletteSession session = new RouletteSession();
     private final RouletteMachine machine = session.machine();
+    private final PrizeWheel wheel = new PrizeWheel();
     private int cx, cy, radius;
     private RespectButton spinButton, continueButton;
     private boolean continueWarns;
@@ -127,10 +126,6 @@ public final class BirthRouletteScreen extends RespectScreen {
         updateButtons();
     }
 
-    private static int segmentAtPointer(float angle) {
-        return RouletteLayout.rarityAtPointer(angle).ordinal();
-    }
-
     /**
      * BONER: chuva de faiscas rosa e brilho pulsante por ~2 s depois da revelacao. Puramente visual (particulas da
      * propria tela, sem texturas novas) e fora da maquina de estados: nao muda fase, botoes nem tempo da revelacao.
@@ -155,7 +150,7 @@ public final class BirthRouletteScreen extends RespectScreen {
     @Override
     protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         float a = machine.angle(partialTick);
-        drawWheel(g, a);
+        drawWheel(g, a, partialTick);
         CharacterProfile p = session.profile();
         RouletteMachine.Phase phase = machine.phase();
         int bonerTick = session.bonerTick();
@@ -261,53 +256,32 @@ public final class BirthRouletteScreen extends RespectScreen {
         }
     }
 
-    private void drawWheel(GuiGraphics g, float rotation) {
+    private void drawWheel(GuiGraphics g, float rotation, float partialTick) {
         boolean boner = session.bonerTick() >= 0;
-        int glow = boner ? Ui.alpha(SpecialityRarity.BONER.color(), 0.35F + 0.25F * Mth.sin(ticks * 0.5F)) : 0x40FFE27A;
-        Ui.glow(g, cx, cy, radius + (boner ? 34 : 26), glow);
-        // Aro externo
-        disc(g, cx, cy, radius + 5, 0xFF06080A);
-        disc(g, cx, cy, radius + 3, 0xFFD6B84A);
         CharacterProfile p = session.profile();
+        RouletteMachine.Phase phase = machine.phase();
+        SpecialityRarity winner = (phase == RouletteMachine.Phase.REVEAL || phase == RouletteMachine.Phase.DONE)
+                && p.specialityOrNull() != null ? RouletteLayout.rarityAtPointer(rotation) : null;
+        PrizeWheel.Mode mode = winner != null ? PrizeWheel.Mode.WINNER
+                : phase == RouletteMachine.Phase.SPINNING || phase == RouletteMachine.Phase.WAITING ? PrizeWheel.Mode.SPINNING
+                : PrizeWheel.Mode.IDLE;
+        int glow = boner ? Ui.alpha(SpecialityRarity.BONER.color(), 0.35F + 0.25F * Mth.sin(ticks * 0.5F))
+                : winner != null ? Ui.alpha(winner.color(), 0.4F) : 0x40FFE27A;
+        Ui.glow(g, cx, cy, radius + (boner ? 34 : 26), glow);
         SpecialityOdds odds = ProfileClientCache.odds();
-        int highlighted = (machine.phase() == RouletteMachine.Phase.REVEAL || machine.phase() == RouletteMachine.Phase.DONE)
-                && p.specialityOrNull() != null
-                ? segmentAtPointer(rotation) : -1;
         // Fatias iguais (so visual): a chance real de cada raridade vem escrita na fatia.
-        for (SpecialityRarity r : SpecialityRarity.values()) {
-            float start = rotation + RouletteLayout.sliceStart(r);
-            int color = Ui.lerpColor(r.color(), 0xFF000000, 0.38F);
-            if (highlighted == r.ordinal()) color = Ui.lerpColor(r.color(), 0xFFFFFFFF, 0.15F + 0.1F * Mth.sin(ticks * 0.3F));
-            sector(g, cx, cy, radius, start, start + RouletteLayout.SLICE, color);
-            // miolo de cada fatia mais escuro: da profundidade sem textura
-            sector(g, cx, cy, radius * 0.34F, start, start + RouletteLayout.SLICE, Ui.lerpColor(color, 0xFF000000, 0.35F));
-            float mid = (float) Math.toRadians(start + RouletteLayout.SLICE / 2F - 90F);
-            int lx = Math.round(cx + Mth.cos(mid) * radius * 0.64F), ly = Math.round(cy + Mth.sin(mid) * radius * 0.64F);
-            int text = Ui.readableOn(color);
-            boolean shadow = text == 0xFFFFFFFF;
-            String label = Component.translatable(r.translationKey()).getString();
-            String chance = SpecialityOdds.formatPercent(odds.permille(r));
-            float scale = crispScale(Math.min(0.75F, radius * 0.62F / Math.max(1, font.width(label))));
-            g.pose().pushPose();
-            g.pose().translate(lx, ly, 0);
-            g.pose().scale(scale, scale, 1F);
-            g.drawString(font, label, -font.width(label) / 2, -9, text, shadow);
-            g.drawString(font, chance, -font.width(chance) / 2, 2, shadow ? Ui.lerpColor(text, color, 0.15F) : text, shadow);
-            g.pose().popPose();
-        }
-        // divisorias por cima das fatias
-        for (int i = 0; i < RouletteLayout.SLICES; i++) {
-            float edge = (float) Math.toRadians(rotation + i * RouletteLayout.SLICE - 90F);
-            Ui.line(g, cx, cy, cx + Mth.cos(edge) * radius, cy + Mth.sin(edge) * radius, 1, 0xE006080A);
-        }
-        // Miolo
-        disc(g, cx, cy, 13, 0xFF06080A);
-        disc(g, cx, cy, 11, boner ? Ui.lerpColor(0xFF1D5C3A, SpecialityRarity.BONER.color(), 0.7F) : 0xFF1D5C3A);
-        disc(g, cx, cy, 5, 0xFFFFE27A);
-        // Ponteiro no topo
-        int py = cy - radius - 8;
-        for (int i = 0; i < 9; i++) g.fill(cx - 8 + i, py + i, cx + 9 - i, py + i + 1, i < 1 ? 0xFF06080A : 0xFFFFE27A);
-        g.fill(cx - 1, py, cx + 2, py + 6, 0xFFFFFFFF);
+        wheel.draw(g, IntUnaryOperator.identity(), cx, cy, radius + 4, rotation, (ticks + partialTick) / 20F, mode, winner,
+                boner, 1F, (r, lx, ly, text, shadow) -> {
+                    String label = Component.translatable(r.translationKey()).getString();
+                    String chance = SpecialityOdds.formatPercent(odds.permille(r));
+                    float scale = crispScale(Math.min(0.75F, radius * 0.58F / Math.max(1, font.width(label))));
+                    g.pose().pushPose();
+                    g.pose().translate(Math.round(lx), Math.round(ly), 0);
+                    g.pose().scale(scale, scale, 1F);
+                    g.drawString(font, label, -font.width(label) / 2, -9, text, shadow);
+                    g.drawString(font, chance, -font.width(chance) / 2, 2, text, shadow);
+                    g.pose().popPose();
+                });
         // Aviso: fatias iguais nao sao chances iguais.
         Component note = Component.translatable(KEY + "odds_note");
         float ns = crispScale(Math.min(0.75F, (radius * 2F + 16F) / Math.max(1, font.width(note))));
@@ -344,32 +318,5 @@ public final class BirthRouletteScreen extends RespectScreen {
         }
         lines.add(Component.translatable(KEY + "odds_hint").withStyle(net.minecraft.ChatFormatting.GRAY));
         g.renderComponentTooltip(font, lines, mouseX, mouseY);
-    }
-
-    private static void disc(GuiGraphics g, int x, int y, int r, int color) {
-        sector(g, x, y, r, 0, 360, color);
-    }
-
-    /** Fatia de circulo (angulos em graus, 0 = topo, sentido horario). */
-    private static void sector(GuiGraphics g, float x, float y, float r, float from, float to, int argb) {
-        VertexConsumer vc = g.bufferSource().getBuffer(RenderType.gui());
-        Matrix4f m = g.pose().last().pose();
-        int steps = Math.max(2, Math.round((to - from) / 4F));
-        for (int i = 0; i < steps; i++) {
-            float a0 = (float) Math.toRadians(from + (to - from) * i / steps - 90F);
-            float a1 = (float) Math.toRadians(from + (to - from) * (i + 1) / steps - 90F);
-            float x0 = x + Mth.cos(a0) * r, y0 = y + Mth.sin(a0) * r;
-            float x1 = x + Mth.cos(a1) * r, y1 = y + Mth.sin(a1) * r;
-            // As duas ordens de vertices: o tipo de render da GUI pode descartar faces "de costas".
-            vc.addVertex(m, x, y, 0).setColor(argb);
-            vc.addVertex(m, x0, y0, 0).setColor(argb);
-            vc.addVertex(m, x1, y1, 0).setColor(argb);
-            vc.addVertex(m, x, y, 0).setColor(argb);
-            vc.addVertex(m, x, y, 0).setColor(argb);
-            vc.addVertex(m, x1, y1, 0).setColor(argb);
-            vc.addVertex(m, x0, y0, 0).setColor(argb);
-            vc.addVertex(m, x, y, 0).setColor(argb);
-        }
-        g.flush();
     }
 }
