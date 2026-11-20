@@ -10,7 +10,7 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 
 ## Funcionalidades
 
-- **Menu holográfico do personagem** (tecla **K**, Etapas 4.8.1, 4.8.4-A e 4.8.4-B): placas flutuantes num arco, **paradas no
+- **Menu holográfico do personagem** (tecla **K**, Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C): placas flutuantes num arco, **paradas no
   mundo** na frente de onde o jogador olhava (ele continua andando, pulando e olhando em volta; dá para dar a volta
   nelas). **K** invoca e dispensa; **R** (*Recall*, configurável em Controles) traz as placas para a frente da mira
   atual. A posição evita paredes (em sala pequena as placas chegam mais perto, com o mesmo tamanho aparente). Seções
@@ -20,8 +20,11 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
   que está atrás dela, e fora das placas os controles do Minecraft continuam normais. Segurar **Alt esquerdo** (modo
   cursor, configurável) solta o mouse para apontar com o cursor sem girar a câmera. A tela antiga da 4.8.1 fica como
   reserva de desenvolvimento (`mode = "SCREEN"`). Opções em `config/respectcraft-holomenu-client.toml`.
-- **Character Creator** (primeira vez na tecla **K**, depois em Appearance no menu): prévia 3D, corpo, pele, rosto,
-  cabelos e cores.
+- **Character Creator** (primeira vez na tecla **K**, depois em Appearance no menu): janela holográfica no mesmo arco
+  do menu, no mundo (o jogador continua andando e olhando), com o próprio jogador em 3D como prévia ao vivo (arrastar
+  gira) e só **Body**, **Hairstyle** e **Hair Color** (setas, clique no valor ou a roda do mouse sobre a opção; botão
+  Random). A pele e o rosto são sempre os da skin da conta. Save só termina com a confirmação do servidor; o primeiro
+  personagem segue direto para a roleta (Character Creator → Birth Roulette → Hub, tudo no mundo).
 - **Roleta de nascimento:** sorteio no servidor de uma **Speciality** (15, em seis raridades: Common 41,5%,
   Uncommon 25%, Rare 20%, Epic 10%, Legendary 3%, BONER 0,5% — a raridade sai primeiro, depois a Speciality dela), dos
   6 atributos (Força, Agilidade, Vigor, Inteligência, Carisma, Sorte) e de um **traço de nascimento** (buff, debuff ou

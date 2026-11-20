@@ -40,8 +40,8 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `client.bodylayer` | **Body Layers**: busto, cabelo, pele, rosto e acessórios como `BodyLayerDefinition` em `BodyLayers`. |
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/respectcraft anim`. |
 | `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/respectcraft test` (e `/stopitstopnow`). |
-| `character`, `client.character` | **Character Creator** (primeira vez na tecla K): aparência (`CharacterAppearance`, `CharacterAppearanceService`). |
-| `client.holo`, `ui` | **Menu holográfico da tecla K** (Etapas 4.8.1, 4.8.4-A e 4.8.4-B). Núcleo `HoloMenu` (arco das seções Overview, Character, Body & Traits, Speciality, Skills, superfícies por painel, passada 3D `Holo3D`, `press` comum de clique) com duas cascas: **`HoloWorld`** (padrão: placas paradas no mundo, `RenderFrameEvent.Pre` + `RenderLevelStageEvent` AFTER_LEVEL, K/Recall, posição sem paredes `ui.HoloPlacement`, mira/clique/arrasto/roda/dica) e `HoloCharacterScreen` (tela da 4.8.1, reserva temporária `mode = "SCREEN"`). Entrada no mundo: **`HoloWorldInput`** (dono por aperto com `ui.HoloInputArbiter`, modo cursor). Geometria pura em `ui.HoloGeometry` (no `SelfTest`); config de cliente `respectcraft-holomenu-client.toml`. |
+| `character`, `client.character` | **Character Creator** (primeira vez na tecla K): aparência (`CharacterAppearance`, `CharacterAppearanceService`), só Body, Hairstyle e Hair Color (Etapa 4.8.4-C); rascunho sem desenho `AppearanceDraft`. |
+| `client.holo`, `ui` | **Menu holográfico da tecla K** (Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C). Criador e roleta são **janelas** do mesmo arco (`HoloPopup`: `CreatorView`, `RouletteView`); roleta sem desenho em `ui.RouletteMachine` (pura, no `SelfTest`) + `client.roulette.RouletteSession`. Núcleo `HoloMenu` (arco das seções Overview, Character, Body & Traits, Speciality, Skills, superfícies por painel, passada 3D `Holo3D`, `press` comum de clique) com duas cascas: **`HoloWorld`** (padrão: placas paradas no mundo, `RenderFrameEvent.Pre` + `RenderLevelStageEvent` AFTER_LEVEL, K/Recall, posição sem paredes `ui.HoloPlacement`, mira/clique/arrasto/roda/dica) e `HoloCharacterScreen` (tela da 4.8.1, reserva temporária `mode = "SCREEN"`). Entrada no mundo: **`HoloWorldInput`** (dono por aperto com `ui.HoloInputArbiter`, modo cursor). Geometria pura em `ui.HoloGeometry` (no `SelfTest`); config de cliente `respectcraft-holomenu-client.toml`. |
 | `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`), **traços de nascimento** (`BirthTrait`) e **Specialities** (`Speciality`, `SpecialityRarity`, `SpecialityOdds`, `SpecialityRoll`, `Specialities`, `SpecialityConfig`). |
 | `skill` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`; a árvore é a seção Skills do menu K (`client.holo.SkillsView`). |
 | `needs`, `client.hud` | **Necessidades** (`Needs`, `NeedsRules`, `NeedsService`) e **consumíveis** (`NeedEffects`/`NeedEffectDef`, `ConsumableItem`, `ChamberPotItem`). Orbe de Emoção na tela; painel Body & Traits no inventário. |
@@ -96,7 +96,10 @@ sistema em que vai mexer; veja o fim deste arquivo).
   resultado (`ProfileClientCache.odds()`). O cliente nunca envia chances. A roda sempre para na raridade da ficha.
 - **Rig/render:** não cancele `RenderPlayerEvent.Pre` nem desenhe o jogador fora do renderer vanilla. Em
   `PlayerRigModel.compose` mantenha o `GeoBone::resetStateChanges` no fim. Peça de corpo nova = `BodyLayerDefinition`
-  (não crie `RenderLayer` por peça). Pele/rosto do criador são Body Layers sobre a skin da conta; não troque a textura.
+  (não crie `RenderLayer` por peça). Não troque a textura da skin da conta. **Skin e Face saíram do criador
+  (Etapa 4.8.4-C):** o servidor grava sempre pele/rosto "conta" (`withAccountSkinAndFace`) e
+  `customSkinTone()/customFace()` são sempre falsos (valores antigos continuam válidos no pacote, só não aparecem).
+  Não reintroduza essas opções sem pedido.
 - **Cenas de dois participantes:** um clip `FULL_BODY` por participante, mesmo comprimento, iniciados por
   `playTogether`; posição no mundo é da sessão, keyframes só com deslocamentos que voltam a zero.
 - **Vários rigs (Etapa 4.8):** cada participante resolve o próprio clip (`FinisherParticipants.resolve`): jogador →
@@ -113,7 +116,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
   são **dados legados inativos** (`Need.active() == false`): continuam no Codec, mas não mudam, não afetam a Emoção,
   não penalizam e não aparecem. Não as reative sem pedido. Medidores detalhados só no painel do inventário e no
   menu K; na tela de jogo, só o orbe de Emoção. Consumível novo = entrada em `NeedEffects`.
-- **Menu K holográfico (Etapas 4.8.1, 4.8.4-A e 4.8.4-B):** desenho e clique/hover usam as mesmas matrizes do quadro
+- **Menu K holográfico (Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C):** desenho e clique/hover usam as mesmas matrizes do quadro
   (`HoloPanel`); conteúdo novo entra numa `HoloView` desenhada com `HoloCanvas` (regiões registradas no desenho) e
   vale para as duas cascas (`HoloMenu`). **Modo mundo (padrão):** nada de `Screen` nem entrada capturada; a âncora
   (olho + yaw, `HoloWorld`) só muda por K/Recall; o depth buffer do mundo nunca é limpo (`Holo3D.beginWorld/endWorld`);
@@ -128,6 +131,13 @@ sistema em que vai mexer; veja o fim deste arquivo).
   estado GL em `Holo3D.end`/`endWorld`. Fundo do mundo pelo Rimulib
   com passada própria (`FxApi` + `shaders/fx/holo_backdrop.fsh`): os campos de `Frame.screen()` sozinhos não fazem nada
   no 1.3.0. Fontes do Rimulib: o `y` do `UiApi.text` é a linha de base (`HoloCanvas.capHeight`).
+  **Criador e roleta no mundo (4.8.4-C):** são janelas (`HoloMenu.popup`, como o Display) na frente do arco; enquanto
+  abertas só elas respondem (`HoloMenu.exclusive()`), o resto recua e o clique nele é só consumido. No modo mundo
+  **nunca** abra `CharacterCreationScreen`/`BirthRouletteScreen` (`HoloWorld.onScreenOpening` os troca pela janela).
+  K segue o fluxo: sem aparência → criador; sem nascimento → roleta; nascido → Hub. Estado do criador só em
+  `AppearanceDraft` e da roleta só em `RouletteSession`/`RouletteMachine` (as telas de reserva usam os mesmos): não
+  duplique pedido, `requestId`, erro ou timeout da 4.8.2. Novo giro e Continuar com giro sobrando pedem segundo clique.
+  As telas antigas saem na 4.8.5.
 - **Telas** herdam `client.ui.RespectScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
   Texto nunca passa da coluna/painel: quebre ou encurte com `Ui.wrap`/`Ui.fit` e ofereça a dica com o texto inteiro
   (Etapa 4.7.2). Confira GUI 2, GUI 3 e a menor GUI (320×240).
@@ -219,5 +229,6 @@ python3 tools/player_anim/test_export.py # proteção do exportador
   roleta com chances do servidor → 4.7.1; erro estruturado da roleta e `requestId` → 4.8.2; layout de texto do Hub e do painel Body & Traits → 4.7.2; menu holográfico da
   tecla K (projeção, clique, Rimulib UiApi/FxApi) → 4.8.1; auditoria e plano do menu no mundo → 4.8.3; menu K no mundo
   (âncora, posição, passada no mundo, K/Recall) → 4.8.4-A; clique, arrasto, roda, dicas, dono da entrada e modo cursor
-  no mundo → 4.8.4-B.
+  no mundo → 4.8.4-B; criador e roleta como janelas holográficas, fluxo do primeiro personagem, Skin/Face removidos →
+  4.8.4-C.
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.
