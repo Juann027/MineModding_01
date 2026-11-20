@@ -496,16 +496,21 @@ final class HoloMenu {
     }
 
     /**
-     * Painel mais perto atingido pelo raio da mira (origem no olho, direcao -z do espaco do olho), ate {@code reach}
-     * unidades do olho. {@code out} = (x local, y local, distancia).
+     * Painel mais perto atingido pela face da frente por um raio do espaco do olho do quadro (origem {@code o},
+     * direcao unitaria {@code d}), ate {@code reach} unidades do olho. {@code out} = (x local, y local, distancia).
+     *
+     * <p>{@code interactive = true}: so placas que respondem (o Display aberto captura tudo), como o clique da tela.
+     * {@code false}: qualquer placa que se ve de fato (inclusive montando, dissolvendo ou atras do Display): decide se
+     * o holograma e o dono do clique, para nada atravessar uma placa visivel e atingir o mundo atras dela.
      */
-    HoloPanel pickRay(float reach, Vector3f out) {
-        if (closing) return null;
+    HoloPanel pickRay(Vector3f o, Vector3f d, float reach, boolean interactive, Vector3f out) {
+        if (interactive && closing) return null;
         HoloPanel best = null;
         float bestT = reach, bx = 0, by = 0;
         for (HoloPanel p : all) {
-            if (!p.visible || !p.interactive || (modalOpen && p != modal)) continue;
-            if (p.rayHit(out) && out.z < bestT) {
+            if (!p.visible) continue;
+            if (interactive ? !p.interactive || (modalOpen && p != modal) : p.alpha <= 0.05F) continue;
+            if (p.rayHit(o.x, o.y, o.z, d.x, d.y, d.z, out) && out.z < bestT) {
                 bestT = out.z;
                 best = p;
                 bx = out.x;
@@ -529,6 +534,38 @@ final class HoloMenu {
         p.cursorX = x;
         p.cursorY = y;
         hotPanel = p;
+    }
+
+    /**
+     * Aperto num ponto local de um painel interativo (mesmo caminho na tela e no mundo): placa lateral vem para a
+     * frente; regiao de arrasto e capturada (devolvida, ja com {@code press}); regiao de clique roda a acao com som e
+     * faiscas. Devolve a regiao capturada ou null.
+     */
+    HoloZone press(HoloPanel p, float x, float y) {
+        if (isPlate(p) && sectionOf(p) != section) {
+            select(sectionOf(p));
+            return null;
+        }
+        HoloZone z = p.zoneAt(x, y);
+        if (z == null || !z.enabled) return null;
+        if (z.drag != null) {
+            z.drag.press(x, y);
+            return z;
+        }
+        if (z.click != null) {
+            Ui.playClick(z.pitch);
+            clickBurst(p, x, y);
+            z.click.run();
+        }
+        return null;
+    }
+
+    /** Dica da placa lateral sob o cursor (o conteudo dela nao tem hover): o clique a traz para a frente. */
+    void sidePlateTooltip() {
+        HoloPanel hot = hotPanel;
+        if (hot == null || !isPlate(hot) || sectionOf(hot) == section) return;
+        tooltip = List.of(Component.translatable(sectionOf(hot).key()).withStyle(net.minecraft.ChatFormatting.BOLD),
+                Component.translatable("gui.respectcraft.holo.bring_forward").withStyle(net.minecraft.ChatFormatting.GRAY));
     }
 
     /** Toca o som de hover quando o cursor entra num chip novo. */

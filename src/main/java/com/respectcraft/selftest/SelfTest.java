@@ -866,6 +866,7 @@ public final class SelfTest {
                         0F, 0F, 0F, 1F, 1F)).invert(), 0F, 0F, 200F, 100F, b);
         check(f, hitNear && hitFlat && a.z < b.z, "holo: painel mais perto vence a sobreposicao");
         holoWorld(f);
+        holoInput(f);
     }
 
     /**
@@ -874,6 +875,66 @@ public final class SelfTest {
      * a escolha da posicao encolhe a distancia diante de uma parede, gira o arco quando a frente esta bloqueada e
      * avisa quando nada cabe.
      */
+    /**
+     * Etapa 4.8.4-B: dono da entrada do holograma no mundo (decidido no aperto, segurado ate soltar) e o raio da mira
+     * fora do olho (olhos do jogador != camera, ex.: terceira pessoa) caindo no mesmo ponto local pela face da frente.
+     */
+    private static void holoInput(List<String> f) {
+        double inf = Double.POSITIVE_INFINITY;
+        check(f, com.respectcraft.ui.HoloInputArbiter.hologramWins(true, 2.0, inf, 6.0), "holo entrada: placa sem nada atras ganha");
+        check(f, com.respectcraft.ui.HoloInputArbiter.hologramWins(true, 2.0, 3.5, 6.0), "holo entrada: placa na frente do bloco ganha");
+        check(f, !com.respectcraft.ui.HoloInputArbiter.hologramWins(true, 2.0, 1.4, 6.0), "holo entrada: mob/bloco na frente da placa = mundo");
+        check(f, !com.respectcraft.ui.HoloInputArbiter.hologramWins(true, 6.5, inf, 6.0), "holo entrada: placa fora do alcance = mundo");
+        check(f, !com.respectcraft.ui.HoloInputArbiter.hologramWins(false, -1.0, inf, 6.0), "holo entrada: sem placa = mundo");
+
+        com.respectcraft.ui.HoloInputArbiter a = new com.respectcraft.ui.HoloInputArbiter();
+        var HOLO = com.respectcraft.ui.HoloInputArbiter.Owner.HOLO;
+        var WORLD = com.respectcraft.ui.HoloInputArbiter.Owner.WORLD;
+        var NONE = com.respectcraft.ui.HoloInputArbiter.Owner.NONE;
+        // apertou na placa: segue do holograma mesmo com a mira fora (o soltar tambem e dele)
+        check(f, a.press(0, true) == HOLO && a.owner(0) == HOLO && a.anyHolo(), "holo entrada: aperto na placa = holograma");
+        check(f, a.release(0) == HOLO && a.owner(0) == NONE && !a.anyHolo(), "holo entrada: soltar vai para o mesmo dono");
+        // apertou no mundo: a placa entrar na mira no meio nao muda o dono
+        check(f, a.press(0, false) == WORLD && a.owner(0) == WORLD && !a.anyHolo(), "holo entrada: aperto no mundo = mundo");
+        check(f, a.release(0) == WORLD, "holo entrada: mineracao segurada continua do mundo ate soltar");
+        // fontes independentes: botao direito do holograma, esquerdo do mundo, ataque no teclado
+        int key = com.respectcraft.ui.HoloInputArbiter.keySource(com.respectcraft.ui.HoloInputArbiter.ATTACK);
+        a.press(1, true);
+        a.press(0, false);
+        a.press(key, true);
+        check(f, a.owner(1) == HOLO && a.owner(0) == WORLD && a.owner(key) == HOLO, "holo entrada: fontes independentes");
+        check(f, a.release(5) == NONE && a.release(99) == NONE && a.press(99, true) == WORLD, "holo entrada: fonte sem aperto/invalida");
+        a.clear();
+        check(f, !a.anyHolo() && a.owner(1) == NONE && a.owner(key) == NONE, "holo entrada: logout limpa os donos");
+
+        // Raio dos olhos do jogador (fora da camera) no espaco do olho do quadro: mesmo ponto local da placa.
+        float cx = 320F, cy = 180F, eyeZ = 469F, s = 2F / 469F;
+        org.joml.Matrix4f panel = com.respectcraft.ui.HoloGeometry.panel(new org.joml.Matrix4f(), cx - 147F, 48F, 294F, 264F,
+                0.5F, 0.5F, 0F, -31F, 3F, 1F, 1F);
+        org.joml.Matrix4f view = new org.joml.Matrix4f().rotationX(0.2F).rotateY(-0.7F);
+        float ax = 10.5F, ay = 66.62F, az = 4.25F, camX = 12F, camY = 67.5F, camZ = 7F;
+        org.joml.Matrix4f mv = new org.joml.Matrix4f(view).mul(com.respectcraft.ui.HoloGeometry.layoutToWorld(new org.joml.Matrix4f(),
+                ax - camX, ay - camY, az - camZ, 15F, s, cx, cy, eyeZ)).mul(panel);
+        org.joml.Matrix4f inv = new org.joml.Matrix4f(mv).invert();
+        org.joml.Vector3f out = new org.joml.Vector3f();
+        org.joml.Vector3f eye = view.transformPosition(new org.joml.Vector3f(ax - camX, ay - camY, az - camZ));
+        org.joml.Vector3f target = mv.transformPosition(new org.joml.Vector3f(200F, 30F, 0F));
+        org.joml.Vector3f dir = new org.joml.Vector3f(target).sub(eye).normalize();
+        boolean front = inv.transformPosition(new org.joml.Vector3f(eye)).z > 0F;
+        boolean ok = com.respectcraft.ui.HoloGeometry.rayHit(inv, eye.x, eye.y, eye.z, dir.x, dir.y, dir.z, 294F, 264F, out);
+        check(f, front && ok && Math.abs(out.x - 200F) < 0.05F && Math.abs(out.y - 30F) < 0.05F
+                && Math.abs(out.z - target.distance(eye)) < 1e-3F, "holo entrada: raio dos olhos -> ponto local = " + out);
+        // atras da placa: a origem fica do lado -z local (face de tras nao clica)
+        org.joml.Vector3f behind = mv.transformPosition(new org.joml.Vector3f(147F, 132F, -60F));
+        check(f, inv.transformPosition(new org.joml.Vector3f(behind)).z < 0F, "holo entrada: olho atras da placa e detectado");
+        // arrasto capturado: o raio fora do retangulo ainda cai no plano (sem recorte) e da x local fora de 0..w
+        org.joml.Vector3f outside = mv.transformPosition(new org.joml.Vector3f(340F, 30F, 0F));
+        org.joml.Vector3f d2 = new org.joml.Vector3f(outside).sub(eye).normalize();
+        check(f, !com.respectcraft.ui.HoloGeometry.rayHit(inv, eye.x, eye.y, eye.z, d2.x, d2.y, d2.z, 294F, 264F, out)
+                && com.respectcraft.ui.HoloGeometry.rayLocal(inv, eye.x, eye.y, eye.z, d2.x, d2.y, d2.z, out)
+                && Math.abs(out.x - 340F) < 0.05F, "holo entrada: arrasto fora da placa continua no plano = " + out);
+    }
+
     private static void holoWorld(List<String> f) {
         float cx = 320F, cy = 180F, eyeZ = 469F, s = 2F / 469F;
         org.joml.Vector3f out = new org.joml.Vector3f();
