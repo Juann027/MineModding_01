@@ -46,6 +46,7 @@ public final class SelfTest {
         List<String> f = new ArrayList<>();
         try {
             roulette(f);
+            rouletteFailures(f);
             needs(f);
             coomAndEffects(f);
             skills(f);
@@ -241,6 +242,49 @@ public final class SelfTest {
         check(f, BirthRoulette.confirm(born, born.rollCount() - 1) == born && BirthRoulette.confirm(fresh, 0) == fresh,
                 "roleta: confirmação atrasada ou sem nascimento não muda a ficha");
         traits(f, born, afterReroll);
+    }
+
+    /**
+     * Etapa 4.8.2: falha inesperada no servidor vira resposta estruturada. Ordinais estaveis na rede, decisao
+     * ERROR x ROLLED depois da excecao, requestId de ida e volta e nenhum giro duplicado ou gasto ao tentar de novo.
+     */
+    private static void rouletteFailures(List<String> f) {
+        BirthRoulette.Outcome[] o = BirthRoulette.Outcome.values();
+        check(f, o.length == 4 && o[0] == BirthRoulette.Outcome.ROLLED && o[1] == BirthRoulette.Outcome.NO_REROLLS
+                && o[2] == BirthRoulette.Outcome.STALE && o[3] == BirthRoulette.Outcome.ERROR
+                && BirthRoulette.Outcome.byOrdinal(3) == BirthRoulette.Outcome.ERROR,
+                "roleta/erro: ordinais da resposta estaveis (ERROR no fim)");
+        check(f, BirthRoulette.afterFailure(2, 2) == BirthRoulette.Outcome.ERROR, "roleta/erro: falha antes de gravar = ERROR");
+        check(f, BirthRoulette.afterFailure(2, 3) == BirthRoulette.Outcome.ROLLED, "roleta/erro: falha depois de gravar = ROLLED");
+        check(f, BirthRoulette.afterFailure(-1, -1) == BirthRoulette.Outcome.ERROR
+                && BirthRoulette.afterFailure(2, -1) == BirthRoulette.Outcome.ERROR
+                && BirthRoulette.afterFailure(-1, 3) == BirthRoulette.Outcome.ERROR, "roleta/erro: ficha ilegivel = ERROR");
+
+        var reply = new com.respectcraft.network.GameplayNetworking.BirthRollReply(BirthRoulette.Outcome.ERROR, 4, 77);
+        ByteBuf buf = Unpooled.buffer();
+        com.respectcraft.network.GameplayNetworking.BirthRollReply.STREAM_CODEC.encode(buf, reply);
+        var back = com.respectcraft.network.GameplayNetworking.BirthRollReply.STREAM_CODEC.decode(buf);
+        check(f, back.equals(reply) && back.answers(77) && !back.answers(76), "roleta/erro: resposta ERROR com requestId na rede");
+        var request = new com.respectcraft.network.GameplayNetworking.BirthRollRequest(true, 3, 77);
+        ByteBuf rb = Unpooled.buffer();
+        com.respectcraft.network.GameplayNetworking.BirthRollRequest.STREAM_CODEC.encode(rb, request);
+        check(f, com.respectcraft.network.GameplayNetworking.BirthRollRequest.STREAM_CODEC.decode(rb).equals(request),
+                "roleta/erro: pedido com requestId na rede");
+
+        // ERROR = ficha intacta: tentar de novo e aceito e so entao gasta o novo giro (uma vez).
+        CharacterProfile born = CharacterProfile.DEFAULT.withBirth(new BirthRoulette.Result(Speciality.VANILLA,
+                new int[] {5, 5, 5, 5, 5, 5}, List.of()), BirthRoulette.FREE_REROLLS);
+        check(f, BirthRoulette.afterFailure(born.rollCount(), born.rollCount()) == BirthRoulette.Outcome.ERROR
+                && born.canReroll() && BirthRoulette.validate(born, true, born.rollCount()) == BirthRoulette.Outcome.ROLLED
+                && BirthRoulette.rerollsAfter(born) == 0, "roleta/erro: depois de ERROR o novo giro continua e a nova tentativa vale");
+        check(f, BirthRoulette.validate(CharacterProfile.DEFAULT, false, 0) == BirthRoulette.Outcome.ROLLED,
+                "roleta/erro: primeiro giro com erro pode ser repetido");
+        // Gravou e depois falhou: ROLLED; repetir o pedido sobre a ficha antiga e STALE (sem giro duplicado).
+        CharacterProfile after = born.withBirth(new BirthRoulette.Result(Speciality.DOMINANTS, new int[] {4, 5, 5, 6, 4, 3},
+                List.of()), BirthRoulette.rerollsAfter(born));
+        check(f, BirthRoulette.afterFailure(born.rollCount(), after.rollCount()) == BirthRoulette.Outcome.ROLLED
+                && BirthRoulette.validate(after, true, born.rollCount()) == BirthRoulette.Outcome.STALE
+                && !after.canReroll(), "roleta/erro: giro gravado antes da falha não se repete");
     }
 
     /** Etapa 4.5: tracos de nascimento (sistema separado da origem, dos atributos e das necessidades). */

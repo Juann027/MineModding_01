@@ -67,8 +67,9 @@ sistema em que vai mexer; veja o fim deste arquivo).
 - **Roleta:** sorteia Speciality, atributos e traços no servidor (as 8 origens com bônus de `BirthOrigin` são
   legadas); no máximo **1** novo giro (`CharacterProfile.canReroll`), que zera habilidades, devolve os pontos e
   sorteia Speciality, atributos e traços de novo. Continuar envia `BirthConfirmRequest` e descarta o novo giro restante (`birthConfirmed`). A tela só
-  apresenta o resultado. Todo `BirthRollRequest` (com o `rollCount` esperado) recebe um `BirthRollReply`; nunca
-  descarte pedido em silêncio.
+  apresenta o resultado. Todo `BirthRollRequest` (com o `rollCount` esperado e um `requestId`) recebe um
+  `BirthRollReply` com o mesmo `requestId`; nunca descarte pedido em silêncio. Exceção no servidor vira resposta
+  `ERROR` (nada gravado) ou `ROLLED` (já gravado) com log do `requestId`, sem a ficha inteira (Etapa 4.8.2).
 - **Três conceitos separados:** **atributos** (`CharacterAttribute`: Força, Agilidade, Vigor, Inteligência,
   Carisma, Sorte — vêm do sorteio; fichas antigas incluem o bônus da origem legada), **necessidades** (`Need`, medidores que mudam no jogo) e
   **traços de nascimento** (`BirthTrait`, sorteados à parte, nunca derivados da origem; gravados em
@@ -147,7 +148,7 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 | Dado | Onde fica |
 |---|---|
 | `respectcraft:character_profile`, `respectcraft:needs`, `respectcraft:need_effects`, `respectcraft:player_animation` | attachments (`ModAttachments`); nomes de campos dos Codecs também são estáveis (incl. `birth_traits`, `birth_speciality`, `current_speciality` e os legados `hidratacao`/`energia`) |
-| `respectcraft_character_appearance_v1`, `respectcraft_special_defeats`, `respectcraft_allow_mob_finishers_test` | `persistentData` do jogador |
+| `respectcraft_character_appearance_v1`, `respectcraft_special_defeats`, `respectcraft_allow_mob_finishers_test`, `respectcraft_debug_fail_next_roll` | `persistentData` do jogador |
 | `respectcraft_boss_finisher_credit`, `respectcraft_boss_defeat_posted` | `persistentData` de entidades chefe (Etapa 4.8) |
 | ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
 | itens, `respectcraft:leao_do_fim` | registries |
@@ -215,7 +216,7 @@ python3 tools/player_anim/test_export.py # proteção do exportador
   (preparação) → 4.8; legado, saves e ids aposentados → 4.4; marca RespectCraft e protocolo da
   roleta → 4.5; criador limpo, traços de nascimento e Hidratação/Energia inativas → 4.5 revisada; traços por corpo
   (universais × só masculinos) e textos em inglês → 4.6; rebrand técnico (mod id/pacote/comandos/configs) e roda da
-  roleta com chances do servidor → 4.7.1; layout de texto do Hub e do painel Body & Traits → 4.7.2; menu holográfico da
+  roleta com chances do servidor → 4.7.1; erro estruturado da roleta e `requestId` → 4.8.2; layout de texto do Hub e do painel Body & Traits → 4.7.2; menu holográfico da
   tecla K (projeção, clique, Rimulib UiApi/FxApi) → 4.8.1; auditoria e plano do menu no mundo → 4.8.3; menu K no mundo
   (âncora, posição, passada no mundo, K/Recall) → 4.8.4-A; clique, arrasto, roda, dicas, dono da entrada e modo cursor
   no mundo → 4.8.4-B.

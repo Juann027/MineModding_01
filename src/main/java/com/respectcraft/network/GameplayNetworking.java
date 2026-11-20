@@ -51,26 +51,36 @@ public final class GameplayNetworking {
     /**
      * Cliente -> servidor: girar a roleta de nascimento (primeiro giro ou o novo giro). {@code expectedRollCount}
      * e o {@code rollCount} da ficha que o cliente via: pedidos repetidos ou atrasados sao recusados.
+     * {@code requestId} (Etapa 4.8.2) so identifica o pedido: volta na resposta e aparece nos logs do cliente e do
+     * servidor para casar os dois; nunca decide nada.
      */
-    public record BirthRollRequest(boolean reroll, int expectedRollCount) implements CustomPacketPayload {
+    public record BirthRollRequest(boolean reroll, int expectedRollCount, int requestId) implements CustomPacketPayload {
         public static final Type<BirthRollRequest> TYPE = new Type<>(RespectCraft.id("birth_roll_request"));
         public static final StreamCodec<ByteBuf, BirthRollRequest> STREAM_CODEC = StreamCodec.composite(
                 ByteBufCodecs.BOOL, BirthRollRequest::reroll,
                 ByteBufCodecs.VAR_INT, BirthRollRequest::expectedRollCount,
+                ByteBufCodecs.VAR_INT, BirthRollRequest::requestId,
                 BirthRollRequest::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
     /**
-     * Servidor -> dono: resposta a todo {@link BirthRollRequest} (sempre depois do {@link ProfileSync}).
-     * {@code rollCount} e o da ficha ja enviada; a tela usa a resposta para sair do estado "girando".
+     * Servidor -> dono: resposta a todo {@link BirthRollRequest} (sempre depois do {@link ProfileSync}), inclusive
+     * quando o servidor falha por excecao inesperada ({@link BirthRoulette.Outcome#ERROR}, Etapa 4.8.2).
+     * {@code rollCount} e o da ficha ja enviada; {@code requestId} e o do pedido respondido. A tela usa a resposta
+     * ao seu pedido para sair do estado "girando".
      */
-    public record BirthRollReply(BirthRoulette.Outcome outcome, int rollCount) implements CustomPacketPayload {
+    public record BirthRollReply(BirthRoulette.Outcome outcome, int rollCount, int requestId) implements CustomPacketPayload {
         public static final Type<BirthRollReply> TYPE = new Type<>(RespectCraft.id("birth_roll_reply"));
         public static final StreamCodec<ByteBuf, BirthRollReply> STREAM_CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_INT.map(BirthRoulette.Outcome::byOrdinal, BirthRoulette.Outcome::ordinal), BirthRollReply::outcome,
                 ByteBufCodecs.VAR_INT, BirthRollReply::rollCount,
+                ByteBufCodecs.VAR_INT, BirthRollReply::requestId,
                 BirthRollReply::new);
+
+        /** Esta resposta e a do pedido {@code requestId}? (respostas de pedidos antigos sao ignoradas pela tela) */
+        public boolean answers(int requestId) { return this.requestId == requestId; }
+
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
@@ -119,7 +129,8 @@ public final class GameplayNetworking {
         // "2": a roleta passou a ter pedido com rollCount esperado e resposta explicita (Etapa 4.5).
         // "3": ficha com tracos de nascimento e confirmacao do resultado (Etapa 4.5 revisada).
         // "4": mod id respectcraft e chances de raridade sincronizadas para a roleta (Etapa 4.7.1).
-        var registrar = event.registrar("4");
+        // "5": pedido/resposta da roleta com requestId e resposta de erro do servidor (Etapa 4.8.2).
+        var registrar = event.registrar("5");
         registrar.playToClient(ProfileSync.TYPE, ProfileSync.STREAM_CODEC,
                 (payload, context) -> ProfileClientCache.receive(payload.profile()));
         registrar.playToClient(NeedsSync.TYPE, NeedsSync.STREAM_CODEC,
@@ -131,7 +142,7 @@ public final class GameplayNetworking {
         registrar.playToClient(SpecialityOddsSync.TYPE, SpecialityOddsSync.STREAM_CODEC,
                 (payload, context) -> ProfileClientCache.receive(payload.odds()));
         registrar.playToServer(BirthRollRequest.TYPE, BirthRollRequest.STREAM_CODEC, (payload, context) -> {
-            if (context.player() instanceof ServerPlayer player) ProfileService.requestRoll(player, payload.reroll(), payload.expectedRollCount());
+            if (context.player() instanceof ServerPlayer player) ProfileService.requestRoll(player, payload.reroll(), payload.expectedRollCount(), payload.requestId());
         });
         registrar.playToServer(BirthConfirmRequest.TYPE, BirthConfirmRequest.STREAM_CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) ProfileService.confirmBirth(player, payload.expectedRollCount());

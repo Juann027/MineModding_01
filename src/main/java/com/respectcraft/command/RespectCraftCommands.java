@@ -78,6 +78,15 @@ public final class RespectCraftCommands {
                                         }))))
                         .then(Commands.literal("reset").then(Commands.argument("player", EntityArgument.player())
                                 .executes(RespectCraftCommands::reset)))
+                        // Etapa 4.8.2: diagnostico; o proximo pedido de giro do jogador falha no servidor (nada muda).
+                        .then(Commands.literal("roulette_fail").then(Commands.argument("player", EntityArgument.player())
+                                .executes(c -> {
+                                    ServerPlayer target = EntityArgument.getPlayer(c, "player");
+                                    ProfileService.armInjectedFailure(target);
+                                    c.getSource().sendSuccess(() -> Component.literal("The next Birth Roulette request of "
+                                            + target.getGameProfile().getName() + " will fail on the server (test)."), true);
+                                    return 1;
+                                })))
                         .then(Commands.literal("skill").then(Commands.argument("player", EntityArgument.player())
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
                                         .suggests((c, b) -> SharedSuggestionProvider.suggestResource(
