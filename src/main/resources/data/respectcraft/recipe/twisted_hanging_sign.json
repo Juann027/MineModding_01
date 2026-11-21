@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "hanging_sign",
+  "key": {
+    "X": {
+      "item": "minecraft:chain"
+    },
+    "#": {
+      "item": "respectcraft:stripped_twisted_log"
+    }
+  },
+  "pattern": [
+    "X X",
+    "###",
+    "###"
+  ],
+  "result": {
+    "count": 6,
+    "id": "respectcraft:twisted_hanging_sign"
+  }
+}

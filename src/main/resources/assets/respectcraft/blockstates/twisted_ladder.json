@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "respectcraft:block/twisted_ladder",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "respectcraft:block/twisted_ladder"
+    },
+    "facing=south": {
+      "model": "respectcraft:block/twisted_ladder",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "respectcraft:block/twisted_ladder",
+      "y": 270
+    }
+  }
+}

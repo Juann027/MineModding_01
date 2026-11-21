@@ -1,0 +1,25 @@
+{
+  "replace": false,
+  "values": [
+    "respectcraft:twisted_log",
+    "respectcraft:twisted_wood",
+    "respectcraft:stripped_twisted_log",
+    "respectcraft:stripped_twisted_wood",
+    "respectcraft:twisted_planks",
+    "respectcraft:twisted_stairs",
+    "respectcraft:twisted_slab",
+    "respectcraft:twisted_fence",
+    "respectcraft:twisted_fence_gate",
+    "respectcraft:twisted_door",
+    "respectcraft:twisted_trapdoor",
+    "respectcraft:twisted_button",
+    "respectcraft:twisted_pressure_plate",
+    "respectcraft:twisted_ladder",
+    "respectcraft:twisted_sign",
+    "respectcraft:twisted_hanging_sign",
+    "respectcraft:twisted_bookshelf",
+    "respectcraft:twisted_crafting_table",
+    "respectcraft:twisted_wall_sign",
+    "respectcraft:twisted_wall_hanging_sign"
+  ]
+}

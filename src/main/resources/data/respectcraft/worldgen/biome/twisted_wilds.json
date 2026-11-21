@@ -1,0 +1,111 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.8,
+  "downfall": 0.0,
+  "effects": {
+    "sky_color": 11032055,
+    "fog_color": 11559640,
+    "water_color": 12602367,
+    "water_fog_color": 3870566,
+    "grass_color": 10178520,
+    "foliage_color": 14698650,
+    "particle": {
+      "options": {
+        "type": "minecraft:dust_color_transition",
+        "from_color": [
+          0.95,
+          0.4,
+          0.9
+        ],
+        "to_color": [
+          0.55,
+          0.3,
+          1.0
+        ],
+        "scale": 0.8
+      },
+      "probability": 0.004
+    },
+    "ambient_sound": "minecraft:ambient.warped_forest.loop",
+    "mood_sound": {
+      "sound": "minecraft:ambient.warped_forest.mood",
+      "tick_delay": 6000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    },
+    "additions_sound": {
+      "sound": "minecraft:ambient.warped_forest.additions",
+      "tick_chance": 0.0111
+    },
+    "music": {
+      "sound": "minecraft:music.end",
+      "min_delay": 6000,
+      "max_delay": 24000,
+      "replace_current_music": true
+    }
+  },
+  "spawners": {
+    "monster": [],
+    "creature": [],
+    "ambient": [
+      {
+        "type": "respectcraft:agua_viva_filhote",
+        "weight": 12,
+        "minCount": 2,
+        "maxCount": 4
+      },
+      {
+        "type": "respectcraft:agua_viva",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      }
+    ],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
+  },
+  "spawn_costs": {},
+  "carvers": {
+    "air": [
+      "minecraft:cave",
+      "minecraft:canyon"
+    ]
+  },
+  "features": [
+    [],
+    [],
+    [
+      "minecraft:amethyst_geode"
+    ],
+    [],
+    [],
+    [],
+    [
+      "minecraft:ore_coal_lower",
+      "minecraft:ore_iron_middle",
+      "minecraft:ore_iron_small",
+      "minecraft:ore_copper",
+      "minecraft:ore_gold",
+      "minecraft:ore_redstone",
+      "minecraft:ore_lapis",
+      "minecraft:ore_diamond"
+    ],
+    [],
+    [
+      "minecraft:spring_water"
+    ],
+    [
+      "minecraft:glow_lichen",
+      "respectcraft:amethyst_rock",
+      "respectcraft:twisted_trees",
+      "minecraft:patch_grass_plain",
+      "minecraft:patch_tall_grass_2",
+      "respectcraft:patch_violet_flowers",
+      "respectcraft:patch_crystal_sprouts"
+    ],
+    []
+  ]
+}

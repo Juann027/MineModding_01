@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/button",
+  "textures": {
+    "texture": "respectcraft:block/twisted_planks"
+  }
+}

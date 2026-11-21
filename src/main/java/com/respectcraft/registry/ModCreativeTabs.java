@@ -8,7 +8,7 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/** Aba do mod: ovo do Leão do Fim e consumíveis. */
+/** Aba do mod: ovos, consumíveis e a Madeira Retorcida (Etapa 4.9). */
 public final class ModCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, RespectCraft.MOD_ID);
@@ -19,7 +19,10 @@ public final class ModCreativeTabs {
                     .withTabsBefore(CreativeModeTabs.TOOLS_AND_UTILITIES)
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.LEAO_DO_FIM_SPAWN_EGG.get());
+                        output.accept(ModItems.AGUA_VIVA_SPAWN_EGG.get());
+                        output.accept(ModItems.AGUA_VIVA_FILHOTE_SPAWN_EGG.get());
                         for (var item : ModItems.consumables()) output.accept(item.get());
+                        for (var item : com.respectcraft.block.wood.TwistedWoodBlocks.CREATIVE_ORDER) output.accept(item.get());
                     }).build());
     private ModCreativeTabs() {}
 }

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "crafting_table",
+  "ingredients": [
+    {
+      "item": "minecraft:crafting_table"
+    },
+    {
+      "item": "respectcraft:twisted_planks"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "respectcraft:twisted_crafting_table"
+  }
+}
