@@ -128,6 +128,57 @@ neoForge {
     }
 }
 
+// ---- Calamidade_Awakening como dependencia, sem Maven (Etapa 4.10) ---------------------------------------------
+// O jar vem do release do GitHub e fica em libs/ (fora do git), conferido por SHA-256. A RimuLib NAO e baixada aqui:
+// o RespectCraft ja a recebe pelo CurseMaven (acima). compileOnly + runtimeOnly: compila contra a api.v1 e carrega o
+// mod no runClient/runServer, sem embutir nada no jar do RespectCraft (quem joga instala o Calamidade ao lado).
+// -Pcalamidade.url=file:///caminho/calamidade_awakening-<versao>.jar troca o endereco (o SHA-256 continua valendo).
+abstract class BaixarVerificado extends DefaultTask {
+    @Input abstract Property<String> getUrl()
+    @Input abstract Property<String> getSha256()
+    @OutputFile abstract RegularFileProperty getDestino()
+
+    private static String hashDe(File arquivo) {
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        arquivo.withInputStream { input ->
+            byte[] buffer = new byte[65536]
+            for (int lidos = input.read(buffer); lidos > 0; lidos = input.read(buffer)) digest.update(buffer, 0, lidos)
+        }
+        return digest.digest().encodeHex().toString()
+    }
+
+    @TaskAction
+    void baixar() {
+        File destino = destino.get().asFile
+        String esperado = sha256.get()
+        if (destino.exists() && hashDe(destino) == esperado) return
+        destino.parentFile.mkdirs()
+        File parcial = new File(destino.parentFile, destino.name + '.part')
+        logger.lifecycle("Baixando ${url.get()}")
+        new URI(url.get()).toURL().withInputStream { input -> parcial.withOutputStream { it << input } }
+        String baixado = hashDe(parcial)
+        if (baixado != esperado) {
+            parcial.delete()
+            throw new GradleException("SHA-256 de ${destino.name} nao confere: ${baixado} (esperado ${esperado})")
+        }
+        destino.delete()
+        if (!parcial.renameTo(destino)) throw new GradleException("Nao foi possivel gravar ${destino}")
+    }
+}
+def baixarCalamidade = tasks.register('baixarCalamidade', BaixarVerificado) {
+    group = 'build setup'
+    description = 'Baixa o Calamidade_Awakening (release do GitHub) para libs/ e confere o SHA-256.'
+    url = providers.gradleProperty('calamidade.url').orElse(
+            "https://github.com/Juann027/Calamidade_Awakening-Mod-1.21.1/releases/download/v${calamidade_version}/calamidade_awakening-${calamidade_version}.jar")
+    sha256 = calamidade_sha256
+    destino = layout.projectDirectory.file("libs/calamidade_awakening-${calamidade_version}.jar")
+}
+def calamidadeJar = files(baixarCalamidade.flatMap { it.destino }).builtBy(baixarCalamidade)
+dependencies {
+    compileOnly calamidadeJar
+    runtimeOnly calamidadeJar
+}
+
 // Sets up a dependency configuration called 'localRuntime'.
 // This configuration should be used instead of 'runtimeOnly' to declare
 // a dependency that will be present for runtime testing but that is
@@ -185,6 +236,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             geckolib_version       : geckolib_version,
             smartbrainlib_version  : smartbrainlib_version,
             rimulib_version        : rimulib_version,
+            calamidade_version_range: calamidade_version_range,
             mod_version            : mod_version,
     ]
     inputs.properties replaceProperties
