@@ -48,6 +48,11 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 - **Finalizações cinematográficas** entre dois personagens, com câmera dinâmica. Desde a Etapa 4.8 o motor aceita
   participantes com rigs GeckoLib diferentes (jogador × jogador, jogador × mob, mob × jogador, chefe × jogador),
   cada um no próprio rig.
+- **Execuções reais (Etapa 4.10.1):** a finalização concluída mata o alvo como uma morte normal do Minecraft (loot, XP,
+  estatísticas, conquistas, mensagem de morte); totem, invulnerabilidade, PvP desligado e proteções do servidor
+  continuam valendo. Cancelar (Shift, `/stopitstopnow`, dano, saída) nunca mata. **Chefes** (Wither, Dragão do Fim e
+  qualquer `c:bosses`/`respectcraft:bosses`) morrem normalmente em combate, mas finalizações comuns são recusadas contra
+  eles antes da cena: no futuro cada chefe terá a própria finalização exclusiva, desbloqueada por progressão.
 - **Efeitos das finalizações (Etapa 4.10)** pelo motor **Calamidade_Awakening**: cada finalização tem um efeito
   protagonista (HERO) que acompanha a cena — linhas de foco no Takedown (discreto), arco rente ao chão na Rasteira
   (médio) e cúpula de pressão no Combo (o mais intenso) —, luz e anel no chão a cada golpe, impact frame no golpe de
@@ -97,7 +102,8 @@ python3 tools/fx/check_shaders.py         # compila os shaders fx como a Rimulib
 
 O `./gradlew build` baixa o Calamidade_Awakening do release do GitHub para `libs/` (fora do git) e confere o SHA-256.
 O CI do GitHub roda os quatro primeiros em cada push e PR. Comandos úteis no jogo (árvore única `/respectcraft`):
-`/respectcraft profile`, `/respectcraft skills list`, `/respectcraft finishers`,
+`/respectcraft profile`, `/respectcraft skills list`, `/respectcraft finishers` (admins: `/respectcraft finishers <alvo>`
+mostra quais finalizações podem executar aquele alvo),
 `/respectcraft test finisher accept|deny` e, para admins, `/respectcraft selftest`, `/respectcraft speciality list|odds|simulate <rolls>`,
 `/respectcraft anim list|play|together|sequence|next|stop`, `/respectcraft realm enter|leave [players]|check [radius]`
 e `/respectcraft admin profile|points|roulette|reset|skill|finisher|effect|need ...`

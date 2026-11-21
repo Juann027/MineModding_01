@@ -34,6 +34,12 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   `SkillEffect.VISUAL_FX` são só infraestrutura.
 - **Finalizações (Etapa 4.8):** cada participante usa o próprio rig (`FinisherParticipants`, `EntityFinisherClip`);
   sessão sempre com um jogador; contador só de jogador; `BossDefeatEvent` é só preparação (nada concedido).
+- **Execuções e chefes (Etapa 4.10.1):** cena concluída = um golpe final real (`FinisherExecution`, dano comum
+  `respectcraft:finisher_execution`: loot, XP, estatísticas, totem, PvP e proteções do Minecraft); cancelamento nunca
+  executa; `SUCCESS` só com morte confirmada. **Regra permanente:** chefes (`c:bosses` ou `respectcraft:bosses`) morrem
+  normalmente em combate, mas só a finalização **exclusiva** deles (`FinisherTargeting.exclusiveTo`) pode executá-los;
+  finalizações comuns são recusadas no servidor antes da cena (também no comando de admin). Nenhum chefe ou exclusiva
+  existe ainda: não invente.
 - **Menu K (Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C):** holográfico em `client.holo`, núcleo `HoloMenu`. Padrão = **no mundo**
   (`HoloWorld`: placas paradas no mundo, jogador anda/pula/olha; K invoca/dispensa, R chama de volta; sem `Screen`).
   Clique/arrasto/roda pela mira (Alt segurado = modo cursor) via `HoloWorldInput`: o dono do botão é decidido no aperto
