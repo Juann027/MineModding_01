@@ -1,0 +1,6 @@
+[16:15:40] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
+[16:15:51] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
+[16:16:02] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
+[16:16:10] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 2 / 64
+[16:16:14] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
+[16:16:28] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
