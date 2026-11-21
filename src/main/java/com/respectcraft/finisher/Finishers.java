@@ -3,6 +3,7 @@ package com.respectcraft.finisher;
 import com.respectcraft.RespectCraft;
 import com.respectcraft.animation.PlayerAnimationDef;
 import com.respectcraft.animation.PlayerAnimations;
+import com.respectcraft.fx.FinisherFxDef;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -66,7 +67,9 @@ public final class Finishers {
                     new CameraTrack.Key(30, 75, 3.0, 1.2, 1.0, 0.95, -2),
                     new CameraTrack.Key(44, 40, 2.6, 0.9, 0.6, 0.85, -5),
                     new CameraTrack.Key(60, 20, 4.2, 2.3, 0.4, 1.0, 0)),
-            null, 3));
+            null, 3).withFx(new FinisherFxDef(RespectCraft.id("finisher_fx/takedown_scene"),
+                    FinisherFxDef.Look.TAKEDOWN_FOCUS, FinisherFxDef.Tier.SUBTLE,
+                    FinisherFxDef.Orientation.ARRIVING_FROM_ATTACKER)));
 
     public static final FinisherDef RASTEIRA = register(new FinisherDef(RASTEIRA_ID,
             PlayerAnimations.register(PlayerAnimationDef
@@ -87,7 +90,9 @@ public final class Finishers {
                     new CameraTrack.Key(0, 95, 4.0, 1.0, 0.9, 1.0, 0),
                     new CameraTrack.Key(14, 60, 2.8, 0.5, 0.5, 0.85, 4),
                     new CameraTrack.Key(40, 25, 4.3, 2.1, 0.3, 1.0, 0)),
-            com.respectcraft.RespectCraft.id("combate/rasteira"), 2));
+            com.respectcraft.RespectCraft.id("combate/rasteira"), 2)
+            .withFx(new FinisherFxDef(RespectCraft.id("finisher_fx/rasteira_scene"),
+                    FinisherFxDef.Look.RASTEIRA_SWEEP, FinisherFxDef.Tier.MEDIUM, FinisherFxDef.Orientation.ANCHOR_YAW)));
 
     /**
      * Queda da vitima (evento no clip da vitima): o servidor solta poeira do chao e o baque, vistos por todos.
@@ -138,7 +143,9 @@ public final class Finishers {
                     new CameraTrack.Key(92, 32, 4.0, 1.6, 0.5, 1.0, 0),      // orbita lenta com o alvo no chao
                     new CameraTrack.Key(122, 42, 4.4, 1.5, 1.0, 1.0, 0),     // alvo levantando
                     new CameraTrack.Key(140, 62, 4.8, 1.8, 1.1, 1.0, 0)),
-            null, 3, true));
+            null, 3, true).withFx(new FinisherFxDef(RespectCraft.id("finisher_fx/combo_scene"),
+                    FinisherFxDef.Look.COMBO_PRESSURE, FinisherFxDef.Tier.INTENSE,
+                    FinisherFxDef.Orientation.ARRIVING_FROM_ATTACKER)));
 
     private Finishers() {}
 

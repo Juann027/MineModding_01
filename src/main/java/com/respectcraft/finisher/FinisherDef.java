@@ -1,6 +1,7 @@
 package com.respectcraft.finisher;
 
 import com.respectcraft.animation.PlayerAnimationDef;
+import com.respectcraft.fx.FinisherFxDef;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -20,10 +21,12 @@ import net.minecraft.resources.ResourceLocation;
  * @param recoveryInScene a vitima ja se levanta dentro do proprio clip: no fim nao fica caida ({@code knocked_down})
  * @param entityClips   clips por tipo de entidade e papel, no rig GeckoLib da propria entidade (Etapa 4.8). Entidade
  *                      sem clip aqui fica parada (comportamento anterior). Todos com a duracao da cena.
+ * @param fxDef         efeitos visuais no Calamidade_Awakening (Etapa 4.10), ou null: sem eles a finalizacao usa as
+ *                      particulas e sons vanilla de antes. Quem os desenha e {@code fx.FinisherFx}.
  */
 public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
                           CameraTrack camera, ResourceLocation requiresSkill, int weight, boolean recoveryInScene,
-                          List<EntityFinisherClip> entityClips) {
+                          List<EntityFinisherClip> entityClips, FinisherFxDef fxDef) {
     public FinisherDef {
         entityClips = List.copyOf(entityClips);
         int scene = Math.max(attacker.durationTicks(), victim.durationTicks());
@@ -37,6 +40,12 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
                 throw new IllegalArgumentException("Clip repetido para " + clip.entityType() + " (" + clip.role() + ") em " + id);
             }
         }
+    }
+
+    public FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
+                       CameraTrack camera, ResourceLocation requiresSkill, int weight, boolean recoveryInScene,
+                       List<EntityFinisherClip> entityClips) {
+        this(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, null);
     }
 
     public FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
@@ -67,6 +76,14 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
     public FinisherDef withEntityClip(EntityFinisherClip clip) {
         List<EntityFinisherClip> clips = new ArrayList<>(entityClips);
         clips.add(clip);
-        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, clips);
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, clips, fxDef);
+    }
+
+    /** Efeitos visuais do Calamidade, se a finalizacao tiver. */
+    public Optional<FinisherFxDef> fx() { return Optional.ofNullable(fxDef); }
+
+    /** Copia com estes efeitos (null = sem efeitos; use antes de {@link Finishers#register}). */
+    public FinisherDef withFx(FinisherFxDef fx) {
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fx);
     }
 }

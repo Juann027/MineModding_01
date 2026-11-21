@@ -9,6 +9,8 @@ import com.respectcraft.finisher.FinisherParticipants;
 import com.respectcraft.finisher.FinisherRole;
 import com.respectcraft.finisher.FinisherSessionEvent;
 import com.respectcraft.finisher.Finishers;
+import com.respectcraft.fx.FinisherFx;
+import com.respectcraft.fx.FinisherFxRules;
 import com.respectcraft.network.FinisherVisualSyncPayload;
 import com.respectcraft.profile.ProfileService;
 import com.respectcraft.registry.ModSounds;
@@ -49,6 +51,10 @@ import java.util.UUID;
  * jogador, rig GeckoLib proprio da entidade ({@code triggerAnim} no controlador dela) ou parado. Combinacoes sem
  * jogador e participantes invalidos sao recusados antes de comecar. Fim e cancelamento postam
  * {@link FinisherSessionEvent} uma vez por sessao.
+ *
+ * <p>Etapa 4.10: os efeitos visuais sao do {@link FinisherFx} (Calamidade_Awakening), comecados aqui no inicio da
+ * sessao, avancados no tick da sessao e encerrados em {@link #abort} e {@link #complete}. Finalizacao sem
+ * {@code FinisherFxDef} continua com as particulas vanilla; os sons ficam aqui nos dois casos.
  */
 public final class FinisherTestMechanic {
     private static final double RANGE_SQUARED = 3.5 * 3.5;
@@ -71,7 +77,10 @@ public final class FinisherTestMechanic {
         final float attackerYaw;
         final float targetYaw;
         final long finishAt;
+        final long startedAt;
         long lastProcessed = Long.MIN_VALUE;
+        /** Efeitos do Calamidade desta sessao (null = finalizacao sem fx). */
+        FinisherFx.Scene fx;
 
         Session(LivingEntity attacker, LivingEntity target, FinisherDef finisher, FinisherParticipants.Interaction interaction,
                 FinisherParticipants.Clip attackerClip, FinisherParticipants.Clip targetClip,
@@ -87,6 +96,7 @@ public final class FinisherTestMechanic {
             this.attackerYaw = attackerYaw;
             this.targetYaw = targetYaw;
             this.finishAt = finishAt;
+            this.startedAt = finishAt - finisher.durationTicks();
         }
     }
 
@@ -291,6 +301,12 @@ public final class FinisherTestMechanic {
         triggerEntityClip(attacker, attackerClip);
         triggerEntityClip(target, targetClip);
         sendVisual(session, true);
+        // Calamidade: efeito HERO da cena no ponto da cena (o mesmo dos parametros da animacao) e, contra chefe,
+        // a atmosfera. Comeca no mesmo tick dos clips; golpes e quedas saem nos marcadores (onPlayerTick).
+        boolean boss = FinisherParticipants.kindOf(attacker) == FinisherParticipants.Kind.BOSS
+                || FinisherParticipants.kindOf(target) == FinisherParticipants.Kind.BOSS;
+        session.fx = FinisherFx.start(attacker, target, finisher,
+                new Vec3(middle.x, Math.min(attacker.getY(), targetAnchor.y), middle.z), yaw, boss);
         if (attacker instanceof ServerPlayer p) message(p, "Test finisher started. /stopitstopnow cancels.");
         if (target instanceof ServerPlayer p) message(p, "Test started. Press Shift or /stopitstopnow to cancel.");
         return true;
@@ -348,9 +364,13 @@ public final class FinisherTestMechanic {
         LivingEntity target = s.target;
         var level = player.serverLevel();
         double y = target.getY() + target.getBbHeight() * 0.6;
-        level.sendParticles(ParticleTypes.CRIT, target.getX(), y, target.getZ(), 10 * strength, 0.25, 0.25, 0.25, 0.4);
-        level.sendParticles(ParticleTypes.SWEEP_ATTACK, target.getX(), y, target.getZ(), 1, 0, 0, 0, 0);
-        if (strength >= 3) {
+        // Com FinisherFxDef o Calamidade desenha o golpe (FinisherFx, no marcador deste tick); sem ele, vanilla.
+        boolean vanilla = FinisherFxRules.vanillaParticles(s.finisher);
+        if (vanilla) {
+            level.sendParticles(ParticleTypes.CRIT, target.getX(), y, target.getZ(), 10 * strength, 0.25, 0.25, 0.25, 0.4);
+            level.sendParticles(ParticleTypes.SWEEP_ATTACK, target.getX(), y, target.getZ(), 1, 0, 0, 0, 0);
+        }
+        if (vanilla && strength >= 3) {
             level.sendParticles(ParticleTypes.EXPLOSION, target.getX(), target.getY() + 0.3, target.getZ(), 1, 0, 0, 0, 0);
             level.sendParticles(ParticleTypes.CLOUD, target.getX(), target.getY() + 0.1, target.getZ(), 20, 0.6, 0.05, 0.6, 0.05);
         }
@@ -365,28 +385,23 @@ public final class FinisherTestMechanic {
     private static void onFall(ServerPlayer player, String data) {
         Session s = SESSIONS.get(player.getUUID());
         if (s == null || s.target != player) return;
-        String[] parts = data.split(",");
-        int strength = Mth.clamp(parseInt(parts[0], 1), 1, 3);
-        double back = parts.length > 1 ? Mth.clamp(parseDouble(parts[1], 0), 0, 1.5) : 0;
+        double[] fall = FinisherFxRules.parseFall(data);
+        int strength = (int) fall[0];
+        double back = fall[1];
         Vec3 behind = Vec3.directionFromRotation(0, player.getYRot()).scale(-back);
         double x = player.getX() + behind.x, y = player.getY(), z = player.getZ() + behind.z;
         var level = player.serverLevel();
         var ground = level.getBlockState(net.minecraft.core.BlockPos.containing(x, y - 0.2, z));
-        if (!ground.isAir()) {
-            level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, ground),
-                    x, y + 0.05, z, 14 * strength, 0.35, 0.02, 0.35, 0.15);
+        // Com FinisherFxDef a onda de poeira e a luz no chao sao do Calamidade (FinisherFx); o baque fica aqui.
+        if (FinisherFxRules.vanillaParticles(s.finisher)) {
+            if (!ground.isAir()) {
+                level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, ground),
+                        x, y + 0.05, z, 14 * strength, 0.35, 0.02, 0.35, 0.15);
+            }
+            level.sendParticles(ParticleTypes.POOF, x, y + 0.1, z, 4 * strength, 0.3, 0.02, 0.3, 0.02);
         }
-        level.sendParticles(ParticleTypes.POOF, x, y + 0.1, z, 4 * strength, 0.3, 0.02, 0.3, 0.02);
         level.playSound(null, x, y, z, strength >= 2 ? net.minecraft.sounds.SoundEvents.PLAYER_BIG_FALL
                 : net.minecraft.sounds.SoundEvents.PLAYER_SMALL_FALL, SoundSource.PLAYERS, 0.9F, 0.9F);
-    }
-
-    private static double parseDouble(String text, double fallback) {
-        try {
-            return Double.parseDouble(text.trim());
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
     }
 
     private static int parseInt(String text, int fallback) {
@@ -415,6 +430,7 @@ public final class FinisherTestMechanic {
     private static void abort(Session s, String reason) {
         if (SESSIONS.get(s.attacker.getUUID()) != s) return;
         release(s);
+        FinisherFx.end(s.fx, FinisherFxRules.EndReason.ABORT);
         stopAnimations(s);
         if (s.attacker instanceof ServerPlayer p) message(p, "Finisher cancelled: " + reason);
         if (s.target instanceof ServerPlayer p) message(p, "Finisher cancelled: " + reason);
@@ -424,6 +440,7 @@ public final class FinisherTestMechanic {
     private static void complete(Session s) {
         if (SESSIONS.get(s.attacker.getUUID()) != s) return;
         release(s);
+        FinisherFx.end(s.fx, FinisherFxRules.EndReason.COMPLETE);
         long now = s.target.level().getGameTime();
         PAIR_COOLDOWNS.put(new Pair(s.attacker.getUUID(), s.target.getUUID()),
                 now + FinisherRules.SAME_PAIR_COOLDOWN_TICKS);
@@ -499,6 +516,7 @@ public final class FinisherTestMechanic {
             complete(s);
             return;
         }
+        FinisherFx.tick(s.fx, (int) (now - s.startedAt));
         hold(s.attacker, s.attackerAnchor, s.attackerYaw);
         hold(s.target, s.targetAnchor, s.targetYaw);
     }
