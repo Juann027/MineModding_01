@@ -55,6 +55,8 @@ public final class RespectCraftClient {
         NeoForge.EVENT_BUS.addListener(PlayerRigController::onRenderPost);
         NeoForge.EVENT_BUS.addListener(ClientPlayerAnimations::onTick);
         NeoForge.EVENT_BUS.addListener(ClientPlayerAnimations::onTimedEvent);
+        // Etapa 4.10: passes de pos (shaders) dos efeitos de finalizacao no Calamidade_Awakening.
+        modBus.addListener(com.respectcraft.client.fx.FinisherFxClient::onClientSetup);
         // Finisher Engine: camera dinamica, tremor e FOV dos participantes.
         NeoForge.EVENT_BUS.addListener(CinematicCamera::onClientTick);
         NeoForge.EVENT_BUS.addListener(CinematicCamera::onTimedEvent);
