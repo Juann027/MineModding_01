@@ -1,7 +1,8 @@
 # Handoff — Etapa 4.9.1: remoção do Leão do Fim
 
 Status: **implementada e testada** (`./gradlew build`, `bbsync.py`, `test_export.py` e teste de fumaça do servidor
-dedicado). Base: `main` em `2c829fa`. Versão continua `0.5.7` (sem release).
+dedicado). Base: `main` em `2c829fa`. PR [#45](https://github.com/Juann027/MineModding_01/pull/45), integrado na `main`
+pelo merge commit `f44408d` (CI **Build** verde). Versão continua `0.5.7` (sem release).
 
 ## 1. Pedido
 

@@ -2,7 +2,8 @@
 
 RPG de humor para **Minecraft Java 1.21.1 / NeoForge 21.1.x / Java 21**: criador de personagem, roleta de
 nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas,
-finalizações cinematográficas, contador de derrotas e (Etapa 4.9, MVP) a dimensão **Inverted Realm**
+finalizações cinematográficas (efeitos visuais pelo motor **Calamidade_Awakening**, Etapa 4.10), contador de derrotas e
+(Etapa 4.9, MVP) a dimensão **Inverted Realm**
 (céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
 
 **Nome: RespectCraft**, público e interno (Etapa 4.7.1): mod id `respectcraft`, pacote `com.respectcraft`, classes
@@ -24,6 +25,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | GeckoLib | **4.9.3** (`software.bernie.geckolib:geckolib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Não use a 5. |
 | SmartBrainLib | 1.16.11 (`net.tslat.smartbrainlib:SmartBrainLib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Sem uso no código desde a remoção do Leão do Fim (4.9.1); continua declarada até o dono decidir |
 | Rimulib | **1.3.0** NeoForge (Etapa 4.8; sem Maven público: `curse.maven:rimulib-1753907:9676532` pelo CurseMaven) — cliente e servidor, não embutido. Conectado em `RespectCraft.RIMULIB`. Só `cyou.rimuru.rimulib.mc1211.api` no código comum; `...mc1211.client.api` (ex.: `FxApi`) só em `client` |
+| Calamidade_Awakening | **0.10.0** (Etapa 4.10, obrigatório; aceita `[0.10.0,0.11.0)`). Sem Maven: a tarefa `baixarCalamidade` baixa o jar do release do GitHub para `libs/` (fora do git) e confere o SHA-256 (`gradle.properties`); `compileOnly` + `runtimeOnly`, nunca embutido. A RimuLib dele é a do CurseMaven acima (não baixe de novo). Servidor e clientes na **mesma versão**. Só `dev.calamidade_awakening.api.v1` no código comum; `api.v1.client` (`AddonLayers`) só em `client` |
 | UI Lib / Architectury | **Não são dependências.** As telas usam o framework próprio `client.ui`. Não reintroduza. |
 
 - Versões em `gradle.properties`; `neoforge.mods.toml` é gerado de `src/main/templates/`.
@@ -41,6 +43,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `client.bodylayer` | **Body Layers**: busto, cabelo, pele, rosto e acessórios como `BodyLayerDefinition` em `BodyLayers`. |
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/respectcraft anim`. |
 | `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/respectcraft test` (e `/stopitstopnow`). |
+| `fx`, `client.fx` | **Ponte com o Calamidade_Awakening** (Etapa 4.10). `FinisherFx` é o **único dono** dos efeitos de finalização (registro no construtor do mod, HERO da cena, golpes/quedas nos marcadores, fim/abort); dados em `FinisherFxDef` (campo opcional `FinisherDef.fx()`), regras puras em `FinisherFxRules` (no `SelfTest`). Gancho de mobs `GeoFxKeyframes` (keyframe `calamidade:<efeito>`, lido no servidor). Passes de pós e shaders só em `client.fx.FinisherFxClient` + `assets/respectcraft/shaders/fx/finisher_*.fsh` (com a cópia de `calamidade_fx.glsl`). |
 | `character`, `client.character` | **Character Creator** (primeira vez na tecla K): aparência (`CharacterAppearance`, `CharacterAppearanceService`), só Body, Hairstyle e Hair Color (Etapa 4.8.4-C); rascunho sem desenho `AppearanceDraft`. |
 | `client.holo`, `ui` | **Menu holográfico da tecla K** (Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C). Criador e roleta são **janelas** do mesmo arco (`HoloPopup`: `CreatorView`, `RouletteView`); roleta sem desenho em `ui.RouletteMachine` (pura, no `SelfTest`) + `client.roulette.RouletteSession`; desenho da roda só em `client.roulette.PrizeWheel` (janela e tela de reserva). Núcleo `HoloMenu` (arco das seções Overview, Character, Body & Traits, Speciality, Skills, superfícies por painel, passada 3D `Holo3D`, `press` comum de clique) com duas cascas: **`HoloWorld`** (padrão: placas paradas no mundo, `RenderFrameEvent.Pre` + `RenderLevelStageEvent` AFTER_LEVEL, K/Recall, posição sem paredes `ui.HoloPlacement`, mira/clique/arrasto/roda/dica) e `HoloCharacterScreen` (tela da 4.8.1, reserva temporária `mode = "SCREEN"`). Entrada no mundo: **`HoloWorldInput`** (dono por aperto com `ui.HoloInputArbiter`, modo cursor). Geometria pura em `ui.HoloGeometry` (no `SelfTest`); config de cliente `respectcraft-holomenu-client.toml`. |
 | `profile`, `client.roulette` | **Ficha** (`CharacterProfile`, `ProfileService`), **roleta de nascimento** (`BirthRoulette`, `BirthOrigin`, `LegacyOriginIds`), **traços de nascimento** (`BirthTrait`) e **Specialities** (`Speciality`, `SpecialityRarity`, `SpecialityOdds`, `SpecialityRoll`, `Specialities`, `SpecialityConfig`). |
@@ -115,6 +118,20 @@ sistema em que vai mexer; veja o fim deste arquivo).
   clips de mob: só registre `EntityFinisherClip` quando o asset existir. Chefe = tag `c:bosses`; `BossDefeatEvent`
   sai no máximo uma vez por chefe e **ninguém concede recompensa** até as regras serem pedidas.
 - **Câmera cinematográfica** segue o estado de animação sincronizado e restaura a perspectiva em qualquer saída.
+- **Efeitos de finalização (Etapa 4.10, Calamidade_Awakening):** só `fx.FinisherFx` começa/encerra efeitos de
+  finalização (não chame `Effects.start` para isso em outro lugar). `FinisherDef` sem `FinisherFxDef` = partículas
+  vanilla de antes (sons ficam no `FinisherTestMechanic` nos dois casos). Por sessão: um efeito **HERO** da cena
+  (timeline do tamanho da cena, no ponto da cena, `arrivingFrom` executor→vítima ou yaw da âncora); golpes (`EVENT_HIT`
+  1/2/3 → luz; + anel no chão a partir de 2; + impact frame só no 3) e quedas (`EVENT_FALL` → poeira e luz no chão)
+  nos **marcadores** da cena, que são os ticks dos eventos das animações; contra chefe (`c:bosses`), atmosfera. Fonte =
+  `EffectSource.player` do jogador participante (executor, senão vítima). Encerramento em `abort` (stop) e `complete`
+  (release, que cai para stop sem sustain): nada da cena fica ativo. **Nunca** `film`, conjurador nem `post.shake`
+  (câmera e tremor são da `CinematicCamera`). Sem ossos do GeckoLib: pontos pela âncora + deslocamentos no referencial
+  orientado. Passes próprios multiplicam por `post.screenEffects()`, não piscam sem `flashAllowed()` e não se mexem sem
+  `motionEffects()` (`FinisherFxRules.screenStrength`/`impactFrameInverts`). Estado da cena vive na sessão (`Scene`).
+  Keyframe `calamidade:<efeito>` em animação de mob só dispara por `GeoFxKeyframes.triggerAnim` no servidor (nunca por
+  handler de keyframe no cliente). `SkillEffect.Kind.VISUAL_FX` existe, mas nenhuma habilidade o usa e `SkillService`
+  não o aplica. Antes de usar algo novo do Calamidade/RimuLib, confira com `javap` no jar.
 - **Contador de derrotas:** +1 para o alvo **jogador** só em `FinisherTestMechanic.complete` (`abort` nunca conta;
   `FinisherRules.countsDefeat`: mob e chefe nunca têm contador, estatística ou plaqueta). A plaqueta
   replica a matemática do `renderNameTag` 1.21.1; ícones são a fonte bitmap `respectcraft:defeat_icons`, não emoji.
@@ -210,6 +227,7 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 bash .github/scripts/server-smoke-test.sh # servidor dedicado: zumbis vanilla, /respectcraft selftest, catálogos
 python3 tools/player_anim/bbsync.py      # .bbmodel x .animation.json
 python3 tools/player_anim/test_export.py # proteção do exportador
+python3 tools/fx/check_shaders.py        # shaders fx montados como a Rimulib + glslangValidator (roda no CI)
 ./gradlew runClient                      # cliente de desenvolvimento
 ./gradlew runServer                      # servidor dedicado (aceita comandos no console)
 ```
@@ -250,5 +268,7 @@ python3 tools/player_anim/test_export.py # proteção do exportador
   (âncora, posição, passada no mundo, K/Recall) → 4.8.4-A; clique, arrasto, roda, dicas, dono da entrada e modo cursor
   no mundo → 4.8.4-B; criador e roleta como janelas holográficas, fluxo do primeiro personagem, Skin/Face removidos →
   4.8.4-C; visual da roda da roleta (roda de prêmios) → `HANDOFF_ROULETTE_PRIZE_WHEEL.md`; dimensão Inverted Realm (céu
-  roxo, terreno, `/respectcraft realm`), Madeira Retorcida e agua-vivas → 4.9 (`HANDOFF_STAGE4_9_PURPLE_DIMENSION_MVP.md`).
+  roxo, terreno, `/respectcraft realm`), Madeira Retorcida e agua-vivas → 4.9 (`HANDOFF_STAGE4_9_PURPLE_DIMENSION_MVP.md`);
+  remoção do Leão do Fim → 4.9.1; efeitos das finalizações no Calamidade_Awakening (ponte `fx`, shaders, gancho
+  GeckoLib, dependência) → 4.10 (`HANDOFF_STAGE4_10_FINISHER_FX_CALAMIDADE.md`).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

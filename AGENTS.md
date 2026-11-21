@@ -6,7 +6,8 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   comando único `/respectcraft` (ramos `anim`, `test` e `realm`), configs `respectcraft-*-server.toml`. O nome antigo só fica em
   handoffs históricos; não o reintroduza nem como alias. Mundos anteriores à 4.7.1 não são compatíveis.
 - **Stack:** Minecraft 1.21.1, NeoForge 21.1.x (só APIs 21.1), Java 21, GeckoLib 4.9.3, SmartBrainLib 1.16.11 (sem uso no código desde a 4.9.1),
-  Rimulib 1.3.0 (Etapa 4.8; CurseMaven, não embutido; `mc1211.client.api` só em `client`).
+  Rimulib 1.3.0 (Etapa 4.8; CurseMaven, não embutido; `mc1211.client.api` só em `client`), Calamidade_Awakening 0.10.0
+  (Etapa 4.10; obrigatório, jar do release do GitHub em `libs/` com SHA-256, não embutido; `api.v1.client` só em `client`).
   Sem UI Lib/Architectury e sem dependências novas sem pedido.
 - **Comece por** `README.md`, `CLAUDE.md` e só os arquivos do pedido. Não faça auditorias gerais. Handoffs em
   `docs/handoffs/` (índice no `README.md` de lá): leia só o do sistema que a tarefa toca.
@@ -26,6 +27,11 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   reintroduza sem pedido explícito.
 - **Leão do Fim removido (Etapa 4.9.1):** entidade, ovo, `/leaodofim`, assets e scripts saíram; não reintroduza. Testes
   de finalização com mob usam zumbis vanilla; o `SelfTest` usa o id fictício `respectcraft:test_rig_mob`.
+- **Efeitos de finalização (Etapa 4.10):** pacote `fx`; `FinisherFx` é o único dono (HERO da cena, golpes e quedas nos
+  marcadores, atmosfera de chefe, stop no abort/release no fim). `FinisherDef.fx()` opcional (sem ele, partículas
+  vanilla). Câmera e tremor continuam só da `CinematicCamera` (nada de `film`/`shake` do Calamidade). Shaders e
+  `AddonLayers` só em `client.fx`. Gancho GeckoLib `calamidade:<efeito>` (`GeoFxKeyframes`, servidor) e
+  `SkillEffect.VISUAL_FX` são só infraestrutura.
 - **Finalizações (Etapa 4.8):** cada participante usa o próprio rig (`FinisherParticipants`, `EntityFinisherClip`);
   sessão sempre com um jogador; contador só de jogador; `BossDefeatEvent` é só preparação (nada concedido).
 - **Menu K (Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C):** holográfico em `client.holo`, núcleo `HoloMenu`. Padrão = **no mundo**
@@ -41,6 +47,7 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   Retorcida em `block.wood` (`ModBlocks` + `ModItems`); agua-vivas passivas (`AguaVivaEntity`), sem combate inventado.
 - **Animações:** dados em `PlayerAnimations`; `.bbmodel` em `model_sources/player/`; respeite
   `tools/player_anim/master.json` e nunca use `export.py --force` sobre edições do Blockbench.
-- **Validação:** `./gradlew build` e `bash .github/scripts/server-smoke-test.sh`; regras puras novas no `SelfTest`.
+- **Validação:** `./gradlew build`, `bash .github/scripts/server-smoke-test.sh` e (shaders fx) `python3 tools/fx/check_shaders.py`;
+  regras puras novas no `SelfTest`.
   Nunca diga que compilou ou testou sem rodar os comandos.
 - **Entrega:** branch própria, PR para a `main`, merge só com CI verde (fluxo completo no `CLAUDE.md`).

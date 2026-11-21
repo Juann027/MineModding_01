@@ -48,6 +48,11 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 - **Finalizações cinematográficas** entre dois personagens, com câmera dinâmica. Desde a Etapa 4.8 o motor aceita
   participantes com rigs GeckoLib diferentes (jogador × jogador, jogador × mob, mob × jogador, chefe × jogador),
   cada um no próprio rig.
+- **Efeitos das finalizações (Etapa 4.10)** pelo motor **Calamidade_Awakening**: cada finalização tem um efeito
+  protagonista (HERO) que acompanha a cena — linhas de foco no Takedown (discreto), arco rente ao chão na Rasteira
+  (médio) e cúpula de pressão no Combo (o mais intenso) —, luz e anel no chão a cada golpe, impact frame no golpe de
+  força 3, onda de poeira nas quedas e céu escurecido contra chefes. Respeitam as opções de acessibilidade do
+  Calamidade (intensidade dos efeitos de tela, ocultar clarões, efeitos de movimento). A câmera continua a do RespectCraft.
 - **Contador de derrotas** acima do nick, com ícones próprios 🍆💦.
 - **Inverted Realm (Etapa 4.9, MVP de teste):** dimensão de **céu roxo** em crepúsculo eterno (horizonte magenta,
   estrelas fracas, sem nuvens, luz levemente violeta), bioma Twisted Wilds com grama violeta, árvores retorcidas de copa
@@ -61,9 +66,13 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 ## Instalação
 
 1. NeoForge **21.1.265 ou mais novo (21.1.x)** para Minecraft 1.21.1, com **Java 21**.
-2. Na pasta `mods`: `respectcraft-<versão>.jar`, **GeckoLib 4.9.3** (não a 5), **SmartBrainLib 1.16.11** e
-   **Rimulib 1.3.0** para NeoForge ([CurseForge](https://www.curseforge.com/minecraft/mc-mods/rimulib/files/9676532)).
-3. Multiplayer: os mesmos quatro jars no servidor dedicado e em cada cliente.
+2. Na pasta `mods`, **cinco jars**: `respectcraft-<versão>.jar`, **GeckoLib 4.9.3** (não a 5), **SmartBrainLib 1.16.11**,
+   **Rimulib 1.3.0** para NeoForge ([CurseForge](https://www.curseforge.com/minecraft/mc-mods/rimulib/files/9676532)) e
+   **Calamidade_Awakening 0.10.x** (`calamidade_awakening-0.10.0.jar`, do
+   [release v0.10.0 no GitHub](https://github.com/Juann027/Calamidade_Awakening-Mod-1.21.1/releases/tag/v0.10.0);
+   aceita `[0.10.0,0.11.0)`).
+3. Multiplayer: os mesmos cinco jars no servidor dedicado e em cada cliente, com **a mesma versão do Calamidade** nos
+   dois lados (o protocolo de rede dele muda entre versões menores).
 
 UI Lib e Architectury **não** são mais necessários.
 
@@ -81,11 +90,13 @@ anteriores perdem os itens, entidades e dados do mod. As chances da roleta ficam
 ./gradlew build                           # jar em build/libs/
 bash .github/scripts/server-smoke-test.sh # sobe o servidor dedicado e roda /respectcraft selftest
 python3 tools/player_anim/bbsync.py       # confere .bbmodel x .animation.json
+python3 tools/fx/check_shaders.py         # compila os shaders fx como a Rimulib (precisa do glslangValidator)
 ./gradlew runClient                       # cliente de desenvolvimento
 ./gradlew runServer                       # servidor de desenvolvimento
 ```
 
-O CI do GitHub roda os três primeiros em cada push e PR. Comandos úteis no jogo (árvore única `/respectcraft`):
+O `./gradlew build` baixa o Calamidade_Awakening do release do GitHub para `libs/` (fora do git) e confere o SHA-256.
+O CI do GitHub roda os quatro primeiros em cada push e PR. Comandos úteis no jogo (árvore única `/respectcraft`):
 `/respectcraft profile`, `/respectcraft skills list`, `/respectcraft finishers`,
 `/respectcraft test finisher accept|deny` e, para admins, `/respectcraft selftest`, `/respectcraft speciality list|odds|simulate <rolls>`,
 `/respectcraft anim list|play|together|sequence|next|stop`, `/respectcraft realm enter|leave [players]|check [radius]`
