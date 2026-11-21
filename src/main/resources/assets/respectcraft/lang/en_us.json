@@ -77,6 +77,7 @@
   "skilleffect.respectcraft.need": "%s%% slower: %s",
   "skilleffect.respectcraft.mood": "+%s%% mood",
   "skilleffect.respectcraft.finisher": "Finisher: %s",
+  "skilleffect.respectcraft.visual_fx": "Visual effect",
   "finisher.respectcraft.takedown": "Takedown",
   "finisher.respectcraft.rasteira": "Leg sweep",
   "msg.respectcraft.skill_unlocked": "Skill unlocked: %s",

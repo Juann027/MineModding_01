@@ -35,5 +35,13 @@ public final class ModAttachments {
             ATTACHMENT_TYPES.register("need_effects",
                     () -> AttachmentType.builder(() -> ActiveNeedEffects.EMPTY).serialize(ActiveNeedEffects.CODEC).build());
 
+    /**
+     * Etapa 4.10: efeitos do Calamidade agendados por keyframes {@code calamidade:} de uma animacao GeckoLib
+     * ({@code fx.GeoFxKeyframes}). Sem serializador: nao e salvo; some com a entidade.
+     */
+    public static final Supplier<AttachmentType<com.respectcraft.fx.GeoFxKeyframes.Schedule>> GEO_FX_SCHEDULE =
+            ATTACHMENT_TYPES.register("geo_fx_schedule",
+                    () -> AttachmentType.builder(com.respectcraft.fx.GeoFxKeyframes.Schedule::new).build());
+
     private ModAttachments() {}
 }
