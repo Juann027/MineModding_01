@@ -110,6 +110,16 @@ public final class FinisherFxRules {
         return List.copyOf(out);
     }
 
+    /**
+     * Momentos que valem nesta sessao. Golpe: sempre (a vitima reage no proprio clip, e com executor mob o golpe e o da
+     * cena). Queda: so com vitima jogador — ela vem do clip de jogador da vitima; mob vitima fica parado e nao cai.
+     */
+    public static List<Cue> forSession(List<Cue> cues, boolean victimIsPlayer) {
+        List<Cue> out = new ArrayList<>();
+        for (Cue cue : cues) if (cue.kind() == CueKind.HIT || victimIsPlayer) out.add(cue);
+        return List.copyOf(out);
+    }
+
     /** Momentos com tick em (depois, ate]: cada um dispara uma vez, mesmo se um tick da sessao for pulado. */
     public static List<Cue> due(List<Cue> cues, int after, int upTo) {
         List<Cue> out = new ArrayList<>();

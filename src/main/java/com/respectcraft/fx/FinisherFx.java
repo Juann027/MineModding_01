@@ -71,7 +71,7 @@ public final class FinisherFx {
             this.attacker = attacker;
             this.target = target;
             this.source = source;
-            this.cues = FinisherFxRules.cues(def);
+            this.cues = FinisherFxRules.forSession(FinisherFxRules.cues(def), target instanceof ServerPlayer);
         }
 
         /** Instancias desta cena ainda vivas no servidor (diagnostico e teste). */

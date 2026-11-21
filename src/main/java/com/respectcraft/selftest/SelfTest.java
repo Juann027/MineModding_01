@@ -1248,6 +1248,10 @@ public final class SelfTest {
             check(f, com.respectcraft.fx.FinisherFx.sceneTimeline(Finishers.TAKEDOWN).hasPhase("impact_frame_hit_2")
                     && !com.respectcraft.fx.FinisherFx.sceneTimeline(Finishers.COMBO).phases().stream()
                     .anyMatch(p -> p.startsWith("impact_frame_")), "fx: a cena cede o passe só nos golpes de força 3");
+            check(f, com.respectcraft.fx.FinisherFxRules.forSession(combo, true).size() == 4
+                    && com.respectcraft.fx.FinisherFxRules.forSession(combo, false).size() == 2
+                    && com.respectcraft.fx.FinisherFxRules.forSession(combo, false).stream().allMatch(c -> c.kind() == hits),
+                    "fx: queda só com vítima jogador (mob vítima fica parado)");
             double[] bad = com.respectcraft.fx.FinisherFxRules.parseFall("x,y,z");
             double[] far = com.respectcraft.fx.FinisherFxRules.parseFall("7,9");
             check(f, bad[0] == 1 && bad[1] == 0 && far[0] == 3 && far[1] == 1.5, "fx: dados de queda inválidos são limitados");
