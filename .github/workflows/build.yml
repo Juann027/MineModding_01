@@ -27,6 +27,13 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
+      # Etapa 4.10: o build baixa o Calamidade_Awakening do release do GitHub (SHA-256 conferido, libs/ fora do git).
+      # Os shaders fx sao montados como a RimuLib faz e compilados em GLSL 1.50.
+      - name: Shaders fx (glslangValidator)
+        run: |
+          sudo apt-get install -y -q glslang-tools >/dev/null
+          python3 tools/fx/check_shaders.py --strict
+
       - name: Teste de fumaça no servidor dedicado
         run: bash .github/scripts/server-smoke-test.sh
 

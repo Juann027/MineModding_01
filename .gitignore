@@ -41,3 +41,5 @@ repo/
 
 ### RespectCraft ###
 smoke/
+# Jars de terceiros baixados pelo build (Calamidade_Awakening): nunca versionar.
+libs/

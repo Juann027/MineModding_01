@@ -34,7 +34,8 @@ e o `CLAUDE.md`.
 | 4.8.4-C (visual) | Roda da roleta como roda de prêmios: fatias na cor da raridade com degradê, aro com lâmpadas, pinos, miolo com joia, ponteiro que bate nos pinos, destaque da vencedora (`client.roulette.PrizeWheel`, comum à janela e à tela de reserva) | [HANDOFF_ROULETTE_PRIZE_WHEEL.md](HANDOFF_ROULETTE_PRIZE_WHEEL.md) | Implementada (#41); correção para roda **preta** com luz da raridade na seção 4 | Só llvmpipe/Fast |
 
 | 4.9 | **Inverted Realm** (MVP): dimensão de céu roxo em dados (crepúsculo fixo, terreno com ilhas flutuantes, bioma Twisted Wilds), `/respectcraft realm enter|leave|check`, Madeira Retorcida (pacote "O Avesso — Fase 2, Etapa A"), agua-vivas passivas | [HANDOFF_STAGE4_9_PURPLE_DIMENSION_MVP.md](HANDOFF_STAGE4_9_PURPLE_DIMENSION_MVP.md) | Concluída (PR #43) | `Blocks.zip` não chegou (chão vanilla tingido, `twisted_log` provisório); sem portal; agua-vivas sem ataque |
-| 4.9.1 | Remoção do Leão do Fim (entidade, ovo, `/leaodofim`, assets, scripts); `SelfTest` com id fictício `respectcraft:test_rig_mob`; teste de fumaça com zumbis vanilla | [HANDOFF_STAGE4_9_1_REMOVE_LEAO.md](HANDOFF_STAGE4_9_1_REMOVE_LEAO.md) | Concluída | **Leões e ovos de mundos salvos somem** |
+| 4.9.1 | Remoção do Leão do Fim (entidade, ovo, `/leaodofim`, assets, scripts); `SelfTest` com id fictício `respectcraft:test_rig_mob`; teste de fumaça com zumbis vanilla | [HANDOFF_STAGE4_9_1_REMOVE_LEAO.md](HANDOFF_STAGE4_9_1_REMOVE_LEAO.md) | Concluída (PR #45) | **Leões e ovos de mundos salvos somem** |
+| 4.10 | Finisher Engine com efeitos do **Calamidade_Awakening 0.10.0** (dependência obrigatória): ponte única `fx` (`FinisherFx` dono, `FinisherFxDef` opcional), HERO da cena, golpes por força, quedas e atmosfera de chefe nos marcadores; shaders `finisher_*`; gancho GeckoLib `calamidade:<efeito>` e `SkillEffect.VISUAL_FX` (só infraestrutura) | [HANDOFF_STAGE4_10_FINISHER_FX_CALAMIDADE.md](HANDOFF_STAGE4_10_FINISHER_FX_CALAMIDADE.md) | Concluída | Pontos pela âncora da cena (sem ossos); instalação com cinco jars, Calamidade na mesma versão nos dois lados |
 
 Não há handoff da Etapa 4.3 neste repositório.
 
@@ -59,3 +60,4 @@ Não há handoff da Etapa 4.3 neste repositório.
 - Ids aposentados e compatibilidade de saves → Etapa 4.4 (antes do corte de compatibilidade da 4.7.1).
 - Dimensão Inverted Realm (céu, terreno, bioma, acesso), Madeira Retorcida e agua-vivas → 4.9.
 - Remoção do Leão do Fim, ids aposentados `leao_do_fim*` → 4.9.1.
+- Efeitos visuais das finalizações (Calamidade_Awakening, ponte `fx`, shaders, gancho GeckoLib, dependência) → 4.10.

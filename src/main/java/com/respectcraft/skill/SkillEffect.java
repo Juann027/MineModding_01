@@ -6,7 +6,8 @@ import net.minecraft.resources.ResourceLocation;
  * Efeito de uma habilidade. So dados; quem aplica e o servidor ({@link SkillService}, {@code NeedsService}).
  *
  * @param kind   o que o efeito altera
- * @param target id do atributo vanilla ({@code minecraft:generic.attack_damage}), da necessidade ou da finalizacao
+ * @param target id do atributo vanilla ({@code minecraft:generic.attack_damage}), da necessidade, da finalizacao ou
+ *               do efeito do Calamidade_Awakening
  * @param amount valor (soma para atributo/humor; multiplicador para necessidade)
  */
 public record SkillEffect(Kind kind, String target, double amount) {
@@ -20,7 +21,13 @@ public record SkillEffect(Kind kind, String target, double amount) {
         /** Soma ao alvo do humor (unidades de Needs). */
         MOOD_BONUS,
         /** Libera uma finalizacao (target = id da finalizacao). */
-        FINISHER
+        FINISHER,
+        /**
+         * Etapa 4.10, so infraestrutura: efeito visual do Calamidade_Awakening ligado a habilidade (target = id do
+         * efeito registrado com {@code Effects.register}). Nenhuma habilidade usa ainda e {@code SkillService} nao o
+         * aplica (sem atributo, necessidade ou humor); quem o comecar no futuro passa por {@code fx}.
+         */
+        VISUAL_FX
     }
 
     public static SkillEffect add(ResourceLocation attribute, double amount) {
@@ -41,5 +48,16 @@ public record SkillEffect(Kind kind, String target, double amount) {
 
     public static SkillEffect finisher(ResourceLocation finisher) {
         return new SkillEffect(Kind.FINISHER, finisher.toString(), 1);
+    }
+
+    /** Referencia a um efeito do Calamidade (Etapa 4.10; nao aplicado em nenhuma habilidade ainda). */
+    public static SkillEffect visualFx(ResourceLocation effect) {
+        return new SkillEffect(Kind.VISUAL_FX, effect.toString(), 0);
+    }
+
+    /** Id do efeito do Calamidade, quando este e um {@link Kind#VISUAL_FX} valido. */
+    public java.util.Optional<ResourceLocation> visualFxId() {
+        return kind == Kind.VISUAL_FX ? java.util.Optional.ofNullable(ResourceLocation.tryParse(target))
+                : java.util.Optional.empty();
     }
 }

@@ -64,6 +64,9 @@ public final class RespectCraft {
         ModSounds.SOUNDS.register(modBus);
         PlayerAnimations.bootstrap();
         Finishers.bootstrap();
+        // Etapa 4.10: efeitos das finalizacoes no Calamidade_Awakening (lado comum: o servidor tambem os conhece).
+        com.respectcraft.fx.FinisherFx.register();
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.fx.GeoFxKeyframes::onEntityTick);
         Skills.bootstrap();
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(ModEntities::registerSpawnPlacements);

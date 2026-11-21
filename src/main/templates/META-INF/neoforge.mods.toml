@@ -50,6 +50,15 @@ RespectCraft: a comedy RPG with a character creator, birth roulette and birth tr
     ordering="AFTER"
     side="BOTH"
 
+# Calamidade_Awakening (Etapa 4.10): motor de efeitos visuais do Finisher Engine. Cliente e servidor, na mesma versao
+# (o protocolo de rede muda entre versoes menores); nao vai embutido no jar.
+[[dependencies.${mod_id}]]
+    modId="calamidade_awakening"
+    type="required"
+    versionRange="${calamidade_version_range}"
+    ordering="AFTER"
+    side="BOTH"
+
 # Access transformer (camera cinematografica das finalizacoes)
 [[accessTransformers]]
 file="META-INF/accesstransformer.cfg"

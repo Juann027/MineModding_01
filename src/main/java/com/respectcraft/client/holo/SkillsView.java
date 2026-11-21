@@ -320,6 +320,7 @@ final class SkillsView extends HoloView {
             case MOOD_BONUS -> Component.translatable("skilleffect.respectcraft.mood", Math.round(e.amount() / 100)).withStyle(ChatFormatting.AQUA);
             case FINISHER -> Component.translatable("skilleffect.respectcraft.finisher",
                     Component.translatable("finisher." + e.target().replace(':', '.'))).withStyle(ChatFormatting.LIGHT_PURPLE);
+            case VISUAL_FX -> Component.translatable("skilleffect.respectcraft.visual_fx").withStyle(ChatFormatting.DARK_AQUA);
         };
     }
 
