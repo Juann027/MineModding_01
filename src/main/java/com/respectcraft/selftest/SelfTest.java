@@ -782,6 +782,15 @@ public final class SelfTest {
         }
     }
 
+    private static boolean throwsIse(Runnable action) {
+        try {
+            action.run();
+            return false;
+        } catch (IllegalStateException e) {
+            return true;
+        }
+    }
+
     /** Etapa 4.1: sequencias de animacao (queda -> quatro apoios -> levantar) sem buraco entre os segmentos. */
     /**
      * Etapa 4.8: participantes com rigs diferentes. Cada lado resolve o proprio clip (rig do jogador, rig GeckoLib da
@@ -803,7 +812,8 @@ public final class SelfTest {
 
             var ATT = com.respectcraft.finisher.FinisherRole.ATTACKER;
             var VIC = com.respectcraft.finisher.FinisherRole.VICTIM;
-            net.minecraft.resources.ResourceLocation leao = com.respectcraft.RespectCraft.id("leao_do_fim");
+            // Id fictício de teste (nenhuma entidade registrada): as regras de vários rigs são puras e não precisam dela.
+            net.minecraft.resources.ResourceLocation testMob = com.respectcraft.RespectCraft.id("test_rig_mob");
             // Finalizacoes atuais: jogador toca o mesmo clip de antes; mob sem clip fica parado; nenhuma tem clip de mob.
             for (FinisherDef def : Finishers.all()) {
                 var a = com.respectcraft.finisher.FinisherParticipants.resolve(def, ATT, P, null, false);
@@ -812,7 +822,7 @@ public final class SelfTest {
                         && pa.def() == def.attacker(), "rigs: executor jogador mantém o clip " + def.id());
                 check(f, v.valid() && v.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.PlayerClip pv
                         && pv.def() == def.victim(), "rigs: vítima jogador mantém o clip " + def.id());
-                var mob = com.respectcraft.finisher.FinisherParticipants.resolve(def, VIC, M, leao, true);
+                var mob = com.respectcraft.finisher.FinisherParticipants.resolve(def, VIC, M, testMob, true);
                 check(f, mob.valid() && mob.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.Hold h
                         && h.durationTicks() == def.durationTicks(), "rigs: mob sem clip fica parado " + def.id());
                 check(f, def.entityClips().isEmpty(), "rigs: nenhuma finalizacao inventa clip de mob " + def.id());
@@ -834,19 +844,19 @@ public final class SelfTest {
 
             // Clip de entidade de teste (NAO registrado, nunca tocado): so valida a resolucao por tipo e papel.
             FinisherDef base = Finishers.TAKEDOWN;
-            var clip = new com.respectcraft.finisher.EntityFinisherClip(leao, ATT, "body", "selftest_only",
+            var clip = new com.respectcraft.finisher.EntityFinisherClip(testMob, ATT, "body", "selftest_only",
                     base.durationTicks(), fixed);
             FinisherDef withMob = base.withEntityClip(clip);
             check(f, Finishers.get(base.id()) == base && base.entityClips().isEmpty(), "rigs: cópia não altera o catálogo");
-            var geo = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, M, leao, true);
+            var geo = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, M, testMob, true);
             check(f, geo.valid() && geo.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.EntityClip ec
                     && ec.clip() == clip, "rigs: entidade GeckoLib recebe o clip do próprio rig");
-            var boss = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, B, leao, true);
+            var boss = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, B, testMob, true);
             check(f, boss.valid() && boss.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.EntityClip,
                     "rigs: chefe usa o mesmo caminho de clip por tipo");
-            var noRig = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, M, leao, false);
+            var noRig = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, M, testMob, false);
             check(f, !noRig.valid() && noRig.problem() != null, "rigs: clip sem GeoEntity é recusado");
-            var otherRole = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, VIC, M, leao, true);
+            var otherRole = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, VIC, M, testMob, true);
             check(f, otherRole.valid() && otherRole.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.Hold,
                     "rigs: clip vale só no próprio papel");
             var otherType = com.respectcraft.finisher.FinisherParticipants.resolve(withMob, ATT, M,
@@ -857,23 +867,29 @@ public final class SelfTest {
             var playerClip = a0(base);
             net.minecraft.resources.ResourceLocation zombie = net.minecraft.resources.ResourceLocation.withDefaultNamespace("zombie");
             check(f, com.respectcraft.finisher.FinisherParticipants.yawOffset(geo.clip().get()) == 90F
-                    && com.respectcraft.finisher.FinisherParticipants.alignment(geo.clip().get(), leao, hold, zombie) == fixed,
+                    && com.respectcraft.finisher.FinisherParticipants.alignment(geo.clip().get(), testMob, hold, zombie) == fixed,
                     "rigs: alinhamento do clip do executor vence");
-            // Palco por tipo (mob sem clip): Leao do Fim a 1,9 (cabeca alem da caixa); mob sem palco = automatico.
-            check(f, com.respectcraft.finisher.FinisherParticipants.staging(leao).orElse(null) == Finishers.LEAO_DO_FIM_STAGING
-                    && com.respectcraft.finisher.FinisherParticipants.alignment(playerClip, null, hold, leao) == Finishers.LEAO_DO_FIM_STAGING
-                    && com.respectcraft.finisher.FinisherParticipants.alignment(hold, leao, playerClip, null) == Finishers.LEAO_DO_FIM_STAGING,
-                    "rigs: palco do Leão do Fim nos dois papéis");
-            check(f, com.respectcraft.finisher.FinisherParticipants.stageDistance(Finishers.LEAO_DO_FIM_STAGING, 0.6, 1.4) == 1.9,
-                    "rigs: Leão do Fim a 1,9 blocos");
+            // Palco por tipo (mob sem clip): o tipo fictício a 1,9; mob sem palco = automatico. O registro do palco de
+            // teste é feito uma vez (o selftest pode rodar várias vezes) e nunca casa com uma entidade real.
+            var testStaging = com.respectcraft.finisher.FinisherParticipants.staging(testMob).orElseGet(() ->
+                    com.respectcraft.finisher.FinisherParticipants.registerStaging(testMob,
+                            new com.respectcraft.finisher.EntityFinisherClip.Alignment(1.9, 0.0, 0F)));
+            check(f, com.respectcraft.finisher.FinisherParticipants.staging(testMob).orElse(null) == testStaging
+                    && com.respectcraft.finisher.FinisherParticipants.alignment(playerClip, null, hold, testMob) == testStaging
+                    && com.respectcraft.finisher.FinisherParticipants.alignment(hold, testMob, playerClip, null) == testStaging,
+                    "rigs: palco por tipo nos dois papéis");
+            check(f, com.respectcraft.finisher.FinisherParticipants.stageDistance(testStaging, 0.6, 1.4) == 1.9,
+                    "rigs: palco por tipo a 1,9 blocos");
+            check(f, throwsIse(() -> com.respectcraft.finisher.FinisherParticipants.registerStaging(testMob,
+                    com.respectcraft.finisher.EntityFinisherClip.Alignment.AUTO)), "rigs: palco duplicado é recusado");
             check(f, com.respectcraft.finisher.FinisherParticipants.alignment(playerClip, null, hold, zombie)
                     == com.respectcraft.finisher.EntityFinisherClip.Alignment.AUTO
                     && com.respectcraft.finisher.FinisherParticipants.alignment(playerClip, null, playerClip, null)
                     == com.respectcraft.finisher.EntityFinisherClip.Alignment.AUTO, "rigs: sem palco próprio é automático");
-            check(f, throwsIae(() -> base.withEntityClip(new com.respectcraft.finisher.EntityFinisherClip(leao, VIC, "body",
+            check(f, throwsIae(() -> base.withEntityClip(new com.respectcraft.finisher.EntityFinisherClip(testMob, VIC, "body",
                     "x", base.durationTicks() + 1))), "rigs: clip com duração diferente da cena é recusado");
             check(f, throwsIae(() -> withMob.withEntityClip(clip)), "rigs: clip repetido é recusado");
-            check(f, throwsIae(() -> new com.respectcraft.finisher.EntityFinisherClip(leao, ATT, " ", "x", 10)),
+            check(f, throwsIae(() -> new com.respectcraft.finisher.EntityFinisherClip(testMob, ATT, " ", "x", 10)),
                     "rigs: controlador vazio é recusado");
             check(f, throwsIae(() -> new com.respectcraft.finisher.EntityFinisherClip.Alignment(9.0, 0, 0)),
                     "rigs: distância de palco absurda é recusada");

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Teste de fumaça do servidor dedicado: sobe o servidor, confirma carregamento sem classes de cliente,
-# invoca o Leão do Fim e consulta os catálogos e o autoteste das regras.
+# invoca zumbis vanilla e consulta os catálogos e o autoteste das regras.
 set -uo pipefail
 export LC_ALL=C.UTF-8
 
@@ -32,9 +32,10 @@ if [ "$ready" != 1 ]; then
   exec 3>&-; kill "$pid" 2>/dev/null; wait "$pid"
 else
   # O ultimo comando usa a raiz antiga de proposito: ela nao pode existir mais (Etapa 4.7.1).
-  # Etapa 4.8: dois Leoes do Fim marcados; uma finalizacao mob x mob precisa ser recusada (sem jogador nao ha sessao).
+  # Etapa 4.8: dois zumbis vanilla marcados (noite, para nao queimarem); uma finalizacao mob x mob precisa ser recusada
+  # (sem jogador nao ha sessao). O Leao do Fim saiu do mod: o teste usa so mobs vanilla.
   # Etapa 4.9: Inverted Realm (dimensao em dados: gera a chegada e uma amostra 5x5) e as agua-vivas.
-  for cmd in "summon respectcraft:leao_do_fim 0 -60 0" "summon respectcraft:leao_do_fim 0 -60 0 {Tags:[\"rc_a\"]}" "summon respectcraft:leao_do_fim 2 -60 0 {Tags:[\"rc_b\"]}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "tupini selftest"; do
+  for cmd in "time set midnight" "summon minecraft:zombie 0 -60 0" "summon minecraft:zombie 0 -60 0 {Tags:[\"rc_a\"],PersistenceRequired:1b}" "summon minecraft:zombie 2 -60 0 {Tags:[\"rc_b\"],PersistenceRequired:1b}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "tupini selftest"; do
     echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
@@ -44,7 +45,8 @@ else
 fi
 
 grep -v DEBUG "$log" | grep -E 'respectcraft|RespectCraft|Inverted Realm|Exception|Error|Summon|summon|Unknown|entity' | head -60
-[ "$(grep -c 'Summoned new' "$log")" -ge 1 ] || fail "Leão do Fim não foi invocado no servidor dedicado"
+grep -q 'Summoned new Zombie' "$log" || fail "zumbi vanilla não foi invocado no servidor dedicado"
+
 # Animation Manager carregado no servidor dedicado (catalogo e comando), sem classes de cliente.
 grep -q 'Player animations: respectcraft:idle, respectcraft:wave' "$log" || fail "catálogo de animações de jogador não respondeu no servidor"
 # Etapa 3: autoteste das regras (roleta, necessidades, habilidades, camera, Codecs) e catalogos.
@@ -72,6 +74,8 @@ grep -qE 'Summoned new (Giant Jellyfish|entity\.respectcraft\.agua_viva\b)' "$lo
 jar=$(ls build/libs/respectcraft-*.jar 2>/dev/null | grep -v -- '-sources' | head -1)
 if [ -z "$jar" ]; then fail "jar do RespectCraft não encontrado em build/libs"
 elif unzip -l "$jar" | grep -E 'cyou/rimuru|META-INF/jarjar'; then fail "o jar embute classes do Rimulib"; fi
+# O Leao do Fim foi removido do mod (pedido do dono): nenhum recurso ou classe dele pode voltar ao jar.
+if [ -n "$jar" ] && unzip -l "$jar" | grep -iE 'leao|lionxx'; then fail "o jar ainda contém recursos do Leão do Fim"; fi
 # Etapa 4.8: nada fora de client importa classes exclusivas do cliente (Minecraft ou client.api do Rimulib).
 if grep -rlE 'import (net\.minecraft\.client\.|cyou\.rimuru\.rimulib\.mc1211\.client\.)' src/main/java --include=*.java \
     | grep -v '^src/main/java/com/respectcraft/client/'; then
