@@ -16,7 +16,10 @@ public final class BossDefeatEvent extends Event {
     public enum Method {
         /** Morte comum (dano, sem finalizacao recente). */
         NORMAL,
-        /** Morte dentro da janela de credito de uma finalizacao concluida contra este chefe. */
+        /**
+         * Morte confirmada pelo golpe final da finalizacao EXCLUSIVA deste chefe (Etapa 4.10.1). Unico caminho que
+         * uma recompensa futura de "execucao do chefe" pode aceitar. Nenhuma finalizacao exclusiva existe ainda.
+         */
         FINISHER
     }
 

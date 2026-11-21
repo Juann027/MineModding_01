@@ -23,12 +23,15 @@ import net.minecraft.resources.ResourceLocation;
  *                      sem clip aqui fica parada (comportamento anterior). Todos com a duracao da cena.
  * @param fxDef         efeitos visuais no Calamidade_Awakening (Etapa 4.10), ou null: sem eles a finalizacao usa as
  *                      particulas e sons vanilla de antes. Quem os desenha e {@code fx.FinisherFx}.
+ * @param targeting     quem a finalizacao pode executar (Etapa 4.10.1): {@link FinisherTargeting#REGULAR} (padrao:
+ *                      jogadores e mobs, nunca chefes) ou exclusiva de um chefe ({@link FinisherTargeting#exclusiveTo})
  */
 public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
                           CameraTrack camera, ResourceLocation requiresSkill, int weight, boolean recoveryInScene,
-                          List<EntityFinisherClip> entityClips, FinisherFxDef fxDef) {
+                          List<EntityFinisherClip> entityClips, FinisherFxDef fxDef, FinisherTargeting targeting) {
     public FinisherDef {
         entityClips = List.copyOf(entityClips);
+        if (targeting == null) targeting = FinisherTargeting.REGULAR;
         int scene = Math.max(attacker.durationTicks(), victim.durationTicks());
         Set<String> seen = new HashSet<>();
         for (EntityFinisherClip clip : entityClips) {
@@ -40,6 +43,12 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
                 throw new IllegalArgumentException("Clip repetido para " + clip.entityType() + " (" + clip.role() + ") em " + id);
             }
         }
+    }
+
+    public FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
+                       CameraTrack camera, ResourceLocation requiresSkill, int weight, boolean recoveryInScene,
+                       List<EntityFinisherClip> entityClips, FinisherFxDef fxDef) {
+        this(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, FinisherTargeting.REGULAR);
     }
 
     public FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
@@ -76,7 +85,7 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
     public FinisherDef withEntityClip(EntityFinisherClip clip) {
         List<EntityFinisherClip> clips = new ArrayList<>(entityClips);
         clips.add(clip);
-        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, clips, fxDef);
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, clips, fxDef, targeting);
     }
 
     /** Efeitos visuais do Calamidade, se a finalizacao tiver. */
@@ -84,6 +93,14 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
 
     /** Copia com estes efeitos (null = sem efeitos; use antes de {@link Finishers#register}). */
     public FinisherDef withFx(FinisherFxDef fx) {
-        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fx);
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fx, targeting);
+    }
+
+    /**
+     * Copia com outra regra de alvos (use antes de {@link Finishers#register}). Uma finalizacao exclusiva de chefe so
+     * deve ser registrada quando o chefe, a animacao e a regra de desbloqueio existirem (nada de exclusiva provisoria).
+     */
+    public FinisherDef withTargeting(FinisherTargeting targeting) {
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting);
     }
 }

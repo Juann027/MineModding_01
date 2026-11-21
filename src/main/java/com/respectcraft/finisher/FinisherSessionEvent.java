@@ -5,8 +5,12 @@ import net.neoforged.bus.api.Event;
 
 /**
  * Fim de uma sessao de finalizacao, postado UMA vez por sessao no {@code NeoForge.EVENT_BUS}, so no servidor
- * (Etapa 4.8). Ponto de integracao para sistemas futuros (ex.: recompensas de chefe); hoje so
- * {@link BossDefeats} escuta {@link Completed}. Nao cancelavel: a sessao ja terminou quando o evento sai.
+ * (Etapa 4.8). Ponto de integracao para sistemas futuros (ex.: recompensas de chefe); hoje ninguem o escuta. Nao
+ * cancelavel: a sessao ja terminou quando o evento sai.
+ *
+ * <p>Etapa 4.10.1: todo evento tem um {@link FinisherExecution.Outcome}. {@link Aborted} = CANCELLED (nenhuma
+ * execucao); {@link Completed} = a CENA terminou e o golpe final foi tentado uma vez: SUCCESS so com a morte
+ * confirmada, FAILED se ela foi impedida (totem, invulnerabilidade, PvP, protecao, erro). Cena concluida nao e morte.
  */
 public abstract class FinisherSessionEvent extends Event {
     private final LivingEntity attacker;
@@ -26,13 +30,22 @@ public abstract class FinisherSessionEvent extends Event {
     public LivingEntity getVictim() { return victim; }
     public FinisherDef getFinisher() { return finisher; }
     public FinisherParticipants.Interaction getInteraction() { return interaction; }
+    public abstract FinisherExecution.Outcome getOutcome();
 
-    /** A cena chegou ao fim (o unico caminho que conta derrota de jogador). */
+    /** A cena chegou ao fim (o unico caminho que conta derrota de jogador) e o golpe final foi tentado. */
     public static final class Completed extends FinisherSessionEvent {
+        private final FinisherExecution.Result result;
+
         public Completed(LivingEntity attacker, LivingEntity victim, FinisherDef finisher,
-                         FinisherParticipants.Interaction interaction) {
+                         FinisherParticipants.Interaction interaction, FinisherExecution.Result result) {
             super(attacker, victim, finisher, interaction);
+            this.result = result;
         }
+
+        public FinisherExecution.Result getResult() { return result; }
+        @Override public FinisherExecution.Outcome getOutcome() { return result.outcome(); }
+        /** A vitima morreu pelo golpe final desta sessao (confirmado pelo servidor). */
+        public boolean killConfirmed() { return result.killConfirmed(); }
     }
 
     /** A cena foi interrompida (dano, morte, saida, troca de dimensao, distancia, Shift, comando). */
@@ -46,5 +59,6 @@ public abstract class FinisherSessionEvent extends Event {
         }
 
         public String getReason() { return reason; }
+        @Override public FinisherExecution.Outcome getOutcome() { return FinisherExecution.Outcome.CANCELLED; }
     }
 }

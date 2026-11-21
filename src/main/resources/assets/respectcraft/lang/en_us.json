@@ -377,5 +377,8 @@
   "entity.respectcraft.agua_viva": "Giant Jellyfish",
   "entity.respectcraft.agua_viva_filhote": "Baby Jellyfish",
   "item.respectcraft.agua_viva_spawn_egg": "Giant Jellyfish Spawn Egg",
-  "item.respectcraft.agua_viva_filhote_spawn_egg": "Baby Jellyfish Spawn Egg"
+  "item.respectcraft.agua_viva_filhote_spawn_egg": "Baby Jellyfish Spawn Egg",
+  "death.attack.respectcraft.finisher_execution": "%1$s was executed by %2$s",
+  "death.attack.respectcraft.finisher_execution.item": "%1$s was executed by %2$s using %3$s",
+  "death.attack.respectcraft.finisher_execution.player": "%1$s was executed by %2$s"
 }
