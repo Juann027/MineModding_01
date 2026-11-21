@@ -1,7 +1,8 @@
 # Handoff — Etapa 4.9: Inverted Realm (dimensão de céu roxo, MVP de teste)
 
 Status: **implementada e testada** (build, teste de fumaça do servidor dedicado e cliente real em Xvfb).
-Base: `main` em `f765e4b`. PR: _preenchido no merge_. Versão continua `0.5.7` (sem release).
+Base: `main` em `f765e4b`. PR [#43](https://github.com/Juann027/MineModding_01/pull/43), integrado na `main` pelo
+merge commit `5cd36e7` (CI **Build** verde: build + teste de fumaça). Versão continua `0.5.7` (sem release).
 
 ## 1. Pedido
 
