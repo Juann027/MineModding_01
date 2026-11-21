@@ -63,3 +63,21 @@ demais → escolha por contraste WCAG e escurecimento menor do texto.
 
 **Não verificado:** GPU real, *Fancy/Fabulous*, shaders; custo por quadro medido (malha ≈ 1 000 quads por quadro,
 sem alocação de GPU).
+
+## 4. Correção visual: roda preta (PR seguinte ao #41)
+
+Pedido do dono, com foto de referência (roda física preta fosca, divisórias finas claras, texto colorido): a roda do
+#41 tinha fatias inteiras coloridas. Agora:
+
+- Fatias **pretas** (`SURFACE` carvão); a raridade é só **luz colorida** que nasce perto do aro e some no preto, com
+  as laterais de cada fatia pretas; fio de luz junto do aro. Nunca cor chapada (luz máxima limitada a 72 %).
+- Texto das fatias na **cor da raridade** clareada (como o giz colorido da foto); a vencedora fica quase branca.
+- Divisórias finas e claras (prata) em vez de douradas; pinos, aro, lâmpadas, miolo, joia e ponteiro mantidos.
+- Vencedora: pouca luz a mais dentro da fatia; o destaque é brilho no aro por fora, fio na cor dela na borda e luz
+  nas divisórias. As outras apagam a luz em 55 %.
+- Legendary/BONER: a onda de luz que corre continua, agora como luz sobre o preto.
+- Reflexo de vidro mais discreto.
+
+Teste em cliente real (mesma configuração): parada, giro real até Uncommon, BONER e Legendary forçadas
+(`docs/evidencias/roleta_premios_preta/`; `00_antes_pr41.png` é o antes). Achado e corrigido: texto rosa sobre a luz
+rosa da BONER vencedora. A foto de referência não está no repositório (só veio pela conversa).
