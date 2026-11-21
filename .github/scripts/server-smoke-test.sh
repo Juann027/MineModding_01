@@ -33,7 +33,8 @@ if [ "$ready" != 1 ]; then
 else
   # O ultimo comando usa a raiz antiga de proposito: ela nao pode existir mais (Etapa 4.7.1).
   # Etapa 4.8: dois Leoes do Fim marcados; uma finalizacao mob x mob precisa ser recusada (sem jogador nao ha sessao).
-  for cmd in "summon respectcraft:leao_do_fim 0 -60 0" "summon respectcraft:leao_do_fim 0 -60 0 {Tags:[\"rc_a\"]}" "summon respectcraft:leao_do_fim 2 -60 0 {Tags:[\"rc_b\"]}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "tupini selftest"; do
+  # Etapa 4.9: Inverted Realm (dimensao em dados: gera a chegada e uma amostra 5x5) e as agua-vivas.
+  for cmd in "summon respectcraft:leao_do_fim 0 -60 0" "summon respectcraft:leao_do_fim 0 -60 0 {Tags:[\"rc_a\"]}" "summon respectcraft:leao_do_fim 2 -60 0 {Tags:[\"rc_b\"]}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "tupini selftest"; do
     echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
@@ -42,7 +43,7 @@ else
   kill "$pid" 2>/dev/null; wait "$pid"
 fi
 
-grep -v DEBUG "$log" | grep -E 'respectcraft|RespectCraft|Exception|Error|Summon|summon|Unknown|entity' | head -60
+grep -v DEBUG "$log" | grep -E 'respectcraft|RespectCraft|Inverted Realm|Exception|Error|Summon|summon|Unknown|entity' | head -60
 [ "$(grep -c 'Summoned new' "$log")" -ge 1 ] || fail "Leão do Fim não foi invocado no servidor dedicado"
 # Animation Manager carregado no servidor dedicado (catalogo e comando), sem classes de cliente.
 grep -q 'Player animations: respectcraft:idle, respectcraft:wave' "$log" || fail "catálogo de animações de jogador não respondeu no servidor"
@@ -61,6 +62,12 @@ grep -q 'RespectCraft connected to Rimulib 1\.3\.' "$log" || fail "Rimulib não 
 # Etapa 4.8: finalizacao sem jogador recusada antes de comecar (nenhum mob fica preso numa sessao).
 grep -q 'has no player participant' "$log" || fail "finalização mob x mob não foi recusada"
 grep -q 'Could not start' "$log" || fail "comando de finalização mob x mob não respondeu com recusa"
+# Etapa 4.9: a dimensao Inverted Realm carrega (dimension_type, noise_settings, bioma e features em dados), gera
+# terreno com o bioma certo e a hora fixa do ceu roxo; as agua-vivas sao invocadas no servidor dedicado.
+grep -q 'Inverted Realm ready: arrival .* biome respectcraft:twisted_wilds, fixed time 12400' "$log" \
+  || fail "dimensão Inverted Realm não carregou/gerou terreno"
+grep -qE 'Summoned new (Baby Jellyfish|entity\.respectcraft\.agua_viva_filhote)' "$log" || fail "Baby Jellyfish não foi invocada"
+grep -qE 'Summoned new (Giant Jellyfish|entity\.respectcraft\.agua_viva\b)' "$log" || fail "Giant Jellyfish não foi invocada"
 # Etapa 4.8: o jar do RespectCraft nao embute o Rimulib (o jogador instala ao lado).
 jar=$(ls build/libs/respectcraft-*.jar 2>/dev/null | grep -v -- '-sources' | head -1)
 if [ -z "$jar" ]; then fail "jar do RespectCraft não encontrado em build/libs"
