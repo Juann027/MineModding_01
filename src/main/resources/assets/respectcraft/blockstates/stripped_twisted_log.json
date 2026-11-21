@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "axis=x": [
+      {
+        "model": "respectcraft:block/stripped_twisted_log_horizontal",
+        "x": 90,
+        "y": 90
+      },
+      {
+        "model": "respectcraft:block/stripped_twisted_log_2_horizontal",
+        "x": 90,
+        "y": 90
+      }
+    ],
+    "axis=y": [
+      {
+        "model": "respectcraft:block/stripped_twisted_log"
+      },
+      {
+        "model": "respectcraft:block/stripped_twisted_log_2"
+      }
+    ],
+    "axis=z": [
+      {
+        "model": "respectcraft:block/stripped_twisted_log_horizontal",
+        "x": 90
+      },
+      {
+        "model": "respectcraft:block/stripped_twisted_log_2_horizontal",
+        "x": 90
+      }
+    ]
+  }
+}

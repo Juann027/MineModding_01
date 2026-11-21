@@ -19,6 +19,12 @@ public final class ModItems {
     public static final DeferredItem<DeferredSpawnEggItem> LEAO_DO_FIM_SPAWN_EGG = ITEMS.register(
             "leao_do_fim_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.LEAO_DO_FIM, 0xB87521, 0x6236D9, new Item.Properties()));
+    // Etapa 4.9: agua-vivas do Inverted Realm.
+    public static final DeferredItem<DeferredSpawnEggItem> AGUA_VIVA_SPAWN_EGG = ITEMS.register("agua_viva_spawn_egg",
+            () -> new DeferredSpawnEggItem(ModEntities.AGUA_VIVA, 0x5B2A9E, 0xFF5FA2, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> AGUA_VIVA_FILHOTE_SPAWN_EGG = ITEMS.register(
+            "agua_viva_filhote_spawn_egg",
+            () -> new DeferredSpawnEggItem(ModEntities.AGUA_VIVA_FILHOTE, 0xB38CFF, 0xFF8AB8, new Item.Properties()));
 
 
     // Consumiveis das necessidades (efeitos em NeedEffects; unidades: 100 = 1%).
@@ -67,6 +73,8 @@ public final class ModItems {
     public static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(LEAO_DO_FIM_SPAWN_EGG);
+            event.accept(AGUA_VIVA_SPAWN_EGG);
+            event.accept(AGUA_VIVA_FILHOTE_SPAWN_EGG);
         }
         if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
             for (DeferredItem<? extends Item> item : consumables()) event.accept(item);

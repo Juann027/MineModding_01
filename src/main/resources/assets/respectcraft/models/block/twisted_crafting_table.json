@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "respectcraft:block/twisted_crafting_table_front",
+    "down": "respectcraft:block/twisted_planks",
+    "up": "respectcraft:block/twisted_crafting_table_top",
+    "north": "respectcraft:block/twisted_crafting_table_front",
+    "south": "respectcraft:block/twisted_crafting_table_side",
+    "east": "respectcraft:block/twisted_crafting_table_side",
+    "west": "respectcraft:block/twisted_crafting_table_front"
+  }
+}

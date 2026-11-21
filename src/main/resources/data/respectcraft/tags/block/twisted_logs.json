@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "respectcraft:twisted_log",
+    "respectcraft:twisted_wood",
+    "respectcraft:stripped_twisted_log",
+    "respectcraft:stripped_twisted_wood"
+  ]
+}

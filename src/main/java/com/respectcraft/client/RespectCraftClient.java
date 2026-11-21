@@ -6,12 +6,15 @@ import com.respectcraft.client.animation.ClientPlayerAnimations;
 import com.respectcraft.client.bodylayer.BodyLayers;
 import com.respectcraft.client.bodylayer.BodyLayersRenderLayer;
 import com.respectcraft.client.cinematic.CinematicCamera;
+import com.respectcraft.client.dimension.InvertedRealmEffects;
 import com.respectcraft.client.holo.HoloClient;
 import com.respectcraft.network.ProfileClientCache;
 import com.respectcraft.client.playergeo.PlayerRigController;
 import com.respectcraft.client.hud.BodyStatusInventoryPanel;
 import com.respectcraft.client.hud.EmotionOrbOverlay;
+import com.respectcraft.client.render.AguaVivaRenderer;
 import com.respectcraft.client.render.LeaoDoFimRenderer;
+import com.respectcraft.client.render.TwistedWoodRenderers;
 import com.respectcraft.client.testgame.DefeatCounterNameplate;
 import com.respectcraft.network.CharacterAppearanceClientCache;
 import com.respectcraft.network.DefeatCountClientCache;
@@ -36,6 +39,11 @@ import net.neoforged.neoforge.common.NeoForge;
 public final class RespectCraftClient {
     public RespectCraftClient(IEventBus modBus, ModContainer container) {
         modBus.addListener(RespectCraftClient::registerRenderers);
+        // Etapa 4.9: placas da Madeira Retorcida.
+        modBus.addListener(TwistedWoodRenderers::onClientSetup);
+        modBus.addListener(TwistedWoodRenderers::registerRenderers);
+        // Etapa 4.9: ceu roxo, neblina e luz do Inverted Realm (id = "effects" do dimension_type).
+        modBus.addListener(InvertedRealmEffects::register);
         // Etapa 4.8.1: menu holografico da tecla K (config de cliente, fundo do Rimulib, limpeza no logout).
         HoloClient.register(modBus, container);
         modBus.addListener(CharacterCreatorKeybinds::register);
@@ -97,5 +105,7 @@ public final class RespectCraftClient {
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.LEAO_DO_FIM.get(), LeaoDoFimRenderer::new);
+        event.registerEntityRenderer(ModEntities.AGUA_VIVA.get(), AguaVivaRenderer::giant);
+        event.registerEntityRenderer(ModEntities.AGUA_VIVA_FILHOTE.get(), AguaVivaRenderer::hatchling);
     }
 }

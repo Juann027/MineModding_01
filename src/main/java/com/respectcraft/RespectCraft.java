@@ -3,6 +3,8 @@ package com.respectcraft;
 import com.mojang.logging.LogUtils;
 import com.respectcraft.animation.PlayerAnimationService;
 import com.respectcraft.animation.PlayerAnimations;
+import com.respectcraft.block.wood.TwistedWood;
+import com.respectcraft.registry.ModBlocks;
 import com.respectcraft.command.LeaoDoFimCommands;
 import com.respectcraft.command.RespectCraftCommands;
 import com.respectcraft.finisher.BossDefeats;
@@ -52,6 +54,10 @@ public final class RespectCraft {
                 com.respectcraft.profile.SpecialityConfig.SPEC, "respectcraft-speciality-server.toml");
         LOGGER.info("RespectCraft connected to Rimulib {} (API {}, loader {})",
                 RimulibApi.version(), RimulibApi.apiVersion(), RimulibApi.loader());
+        // Etapa 4.9: Madeira Retorcida (blocos em ModBlocks, itens em ModItems) e a dimensao Inverted Realm (dados).
+        TwistedWood.register(modBus);
+        ModBlocks.BLOCKS.register(modBus);
+        ModBlocks.BLOCK_ENTITY_TYPES.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
         ModEntities.ENTITY_TYPES.register(modBus);
@@ -61,6 +67,7 @@ public final class RespectCraft {
         Finishers.bootstrap();
         Skills.bootstrap();
         modBus.addListener(ModEntities::registerAttributes);
+        modBus.addListener(ModEntities::registerSpawnPlacements);
         modBus.addListener(ModItems::addToCreativeTabs);
         NeoForge.EVENT_BUS.addListener(LeaoDoFimCommands::register);
         // Contador e finisher de combate nao explicito para testes: somente eventos comuns.
@@ -111,7 +118,8 @@ public final class RespectCraft {
         NeoForge.EVENT_BUS.addListener(NeedsService::onItemFinished);
         NeoForge.EVENT_BUS.addListener(NeedsService::onLogin);
         NeoForge.EVENT_BUS.addListener(NeedsService::onRespawn);
-        // Biomas e dimensões ainda não foram implementados neste projeto.
+        // Etapa 4.9: Inverted Realm (dimensao e bioma em dados; aqui so o registro de volta do /respectcraft realm).
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.InvertedRealm::onClone);
     }
 
     public static ResourceLocation id(String path) {

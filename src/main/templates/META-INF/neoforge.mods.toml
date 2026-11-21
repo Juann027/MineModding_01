@@ -7,8 +7,10 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 authors="Juann027"
+# Etapa 4.9: Boat.Type estendido da Madeira Retorcida (block.wood.TwistedEnumParams).
+enumExtensions="META-INF/enumextensions.json"
 description='''
-RespectCraft: a comedy RPG with a character creator, birth roulette and birth traits, skill trees, needs and consumables, a GeckoLib player rig with synchronized animations, cinematic finishers and the End Lion mob.
+RespectCraft: a comedy RPG with a character creator, birth roulette and birth traits, skill trees, needs and consumables, a GeckoLib player rig with synchronized animations, cinematic finishers, the End Lion mob and the purple-sky Inverted Realm dimension (test preview).
 '''
 
 [[dependencies.${mod_id}]]

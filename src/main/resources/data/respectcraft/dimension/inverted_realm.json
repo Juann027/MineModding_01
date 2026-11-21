@@ -1,0 +1,11 @@
+{
+  "type": "respectcraft:inverted_realm",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "respectcraft:inverted_realm",
+    "biome_source": {
+      "type": "minecraft:fixed",
+      "biome": "respectcraft:twisted_wilds"
+    }
+  }
+}

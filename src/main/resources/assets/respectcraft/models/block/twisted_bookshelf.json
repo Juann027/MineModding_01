@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "respectcraft:block/twisted_planks",
+    "side": "respectcraft:block/twisted_bookshelf"
+  }
+}

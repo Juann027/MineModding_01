@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "axis=x": [
+      {
+        "model": "respectcraft:block/stripped_twisted_wood",
+        "x": 90,
+        "y": 90
+      },
+      {
+        "model": "respectcraft:block/stripped_twisted_wood_2",
+        "x": 90,
+        "y": 90
+      }
+    ],
+    "axis=y": [
+      {
+        "model": "respectcraft:block/stripped_twisted_wood"
+      },
+      {
+        "model": "respectcraft:block/stripped_twisted_wood_2"
+      }
+    ],
+    "axis=z": [
+      {
+        "model": "respectcraft:block/stripped_twisted_wood",
+        "x": 90
+      },
+      {
+        "model": "respectcraft:block/stripped_twisted_wood_2",
+        "x": 90
+      }
+    ]
+  }
+}

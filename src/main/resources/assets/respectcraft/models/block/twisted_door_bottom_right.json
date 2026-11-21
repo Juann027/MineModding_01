@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/door_bottom_right",
+  "textures": {
+    "bottom": "respectcraft:block/twisted_door_bottom",
+    "top": "respectcraft:block/twisted_door_top"
+  },
+  "render_type": "minecraft:cutout"
+}

@@ -111,7 +111,9 @@ public final class RespectCraftCommands {
                                         .then(Commands.argument("value", IntegerArgumentType.integer(0, 100))
                                                 .executes(RespectCraftCommands::setNeed))))))
                 .then(PlayerAnimationCommands.node())
-                .then(TestGameCommands.node()));
+                .then(TestGameCommands.node())
+                // Etapa 4.9: acesso de teste ao Inverted Realm (sem portal ainda).
+                .then(com.respectcraft.dimension.InvertedRealmCommands.node()));
     }
 
     private static int profile(CommandContext<CommandSourceStack> c, ServerPlayer player) {
