@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Etapa 4.8: cliente real x Leao do Fim (rig GeckoLib proprio). Sem clips de mob: o Leao fica parado (Hold).
+# HISTORICO: o Leao do Fim foi removido na Etapa 4.9.1; este roteiro nao roda mais (registro da evidencia da 4.8).
+# Para repetir o cenario hoje, troque respectcraft:leao_do_fim por minecraft:zombie.
 cd /home/user/MineModding_01
 export OUT=smoke/visual48
 . tools/visual-test/helpers.sh
