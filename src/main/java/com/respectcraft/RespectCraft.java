@@ -5,7 +5,6 @@ import com.respectcraft.animation.PlayerAnimationService;
 import com.respectcraft.animation.PlayerAnimations;
 import com.respectcraft.block.wood.TwistedWood;
 import com.respectcraft.registry.ModBlocks;
-import com.respectcraft.command.LeaoDoFimCommands;
 import com.respectcraft.command.RespectCraftCommands;
 import com.respectcraft.finisher.BossDefeats;
 import com.respectcraft.finisher.Finishers;
@@ -69,7 +68,6 @@ public final class RespectCraft {
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(ModEntities::registerSpawnPlacements);
         modBus.addListener(ModItems::addToCreativeTabs);
-        NeoForge.EVENT_BUS.addListener(LeaoDoFimCommands::register);
         // Contador e finisher de combate nao explicito para testes: somente eventos comuns.
         modBus.addListener(TestGameNetworking::register);
         NeoForge.EVENT_BUS.addListener(TestGameCommands::register);

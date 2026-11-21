@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
  * esqueleto, o seu controlador e o nome de animacao gatilho que ela mesma registra em {@code registerControllers}
  * ({@code AnimationController.triggerableAnim(animation, ...)}).
  *
- * @param entityType    id do tipo de entidade (ex.: {@code respectcraft:leao_do_fim})
+ * @param entityType    id do tipo de entidade (ex.: {@code respectcraft:agua_viva})
  * @param role          papel em que este clip vale (executor ou vitima)
  * @param controller    nome do controlador GeckoLib da entidade que toca o clip
  * @param animation     nome da animacao gatilho registrada nesse controlador

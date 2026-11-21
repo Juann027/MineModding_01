@@ -16,9 +16,6 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(RespectCraft.MOD_ID);
-    public static final DeferredItem<DeferredSpawnEggItem> LEAO_DO_FIM_SPAWN_EGG = ITEMS.register(
-            "leao_do_fim_spawn_egg",
-            () -> new DeferredSpawnEggItem(ModEntities.LEAO_DO_FIM, 0xB87521, 0x6236D9, new Item.Properties()));
     // Etapa 4.9: agua-vivas do Inverted Realm.
     public static final DeferredItem<DeferredSpawnEggItem> AGUA_VIVA_SPAWN_EGG = ITEMS.register("agua_viva_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.AGUA_VIVA, 0x5B2A9E, 0xFF5FA2, new Item.Properties()));
@@ -72,7 +69,6 @@ public final class ModItems {
 
     public static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
-            event.accept(LEAO_DO_FIM_SPAWN_EGG);
             event.accept(AGUA_VIVA_SPAWN_EGG);
             event.accept(AGUA_VIVA_FILHOTE_SPAWN_EGG);
         }

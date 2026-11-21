@@ -15,10 +15,9 @@ public final class ModCreativeTabs {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> RESPECTCRAFT = TABS.register(
             "respectcraft", () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.respectcraft"))
-                    .icon(() -> ModItems.LEAO_DO_FIM_SPAWN_EGG.get().getDefaultInstance())
+                    .icon(() -> ModItems.AGUA_VIVA_SPAWN_EGG.get().getDefaultInstance())
                     .withTabsBefore(CreativeModeTabs.TOOLS_AND_UTILITIES)
                     .displayItems((parameters, output) -> {
-                        output.accept(ModItems.LEAO_DO_FIM_SPAWN_EGG.get());
                         output.accept(ModItems.AGUA_VIVA_SPAWN_EGG.get());
                         output.accept(ModItems.AGUA_VIVA_FILHOTE_SPAWN_EGG.get());
                         for (var item : ModItems.consumables()) output.accept(item.get());
