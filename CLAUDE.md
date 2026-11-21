@@ -2,7 +2,8 @@
 
 RPG de humor para **Minecraft Java 1.21.1 / NeoForge 21.1.x / Java 21**: criador de personagem, roleta de
 nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas,
-finalizações cinematográficas, contador de derrotas e o mob Leão do Fim. Versão atual: `0.5.7` (`gradle.properties`).
+finalizações cinematográficas, contador de derrotas, o mob Leão do Fim e (Etapa 4.9, MVP) a dimensão **Inverted Realm**
+(céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
 
 **Nome: RespectCraft**, público e interno (Etapa 4.7.1): mod id `respectcraft`, pacote `com.respectcraft`, classes
 `RespectCraft*`, namespace de recursos `respectcraft`, comando `/respectcraft`, configs `respectcraft-*-server.toml` e
@@ -46,9 +47,11 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `skill` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`; a árvore é a seção Skills do menu K (`client.holo.SkillsView`). |
 | `needs`, `client.hud` | **Necessidades** (`Needs`, `NeedsRules`, `NeedsService`) e **consumíveis** (`NeedEffects`/`NeedEffectDef`, `ConsumableItem`, `ChamberPotItem`). Orbe de Emoção na tela; painel Body & Traits no inventário. |
 | `network` | Payloads (`GameplayNetworking`, `TestGameNetworking`) e caches de cliente. |
-| `entity`, `client.render`, `command` | Mob **Leão do Fim** (GeckoLib + SmartBrainLib), renderer e `/leaodofim`. `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim` e `test`). |
+| `entity`, `client.render`, `command` | Mobs **Leão do Fim** (GeckoLib + SmartBrainLib) e **agua-vivas** (`AguaVivaEntity`, Etapa 4.9), renderers e `/leaodofim`. `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim`, `test` e `realm`). |
+| `dimension`, `client.dimension` | **Inverted Realm** (Etapa 4.9, MVP): dimensão, bioma e features são **dados** (`data/respectcraft/dimension*`, `worldgen/...`); `InvertedRealm` (chave, viagem de teste, chão seguro) e `InvertedRealmCommands` (`/respectcraft realm`); céu/neblina/luz em `client.dimension.InvertedRealmEffects`. |
+| `block.wood`, `registry.ModBlocks` | **Madeira Retorcida** (Etapa 4.9, do pacote "O Avesso — Fase 2, Etapa A"): blocos em `ModBlocks`, itens em `ModItems`, placas/bancada em `TwistedFurniture`, barco por `enumextensions.json`; placas no cliente em `client.render.TwistedWoodRenderers`. |
 | `selftest` | `SelfTest`: regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
-| `biome`, `dimension`, `npc` | Só `LEIA-ME.md`: espaço reservado, sem código. |
+| `biome`, `npc` | Só `LEIA-ME.md`: sem código (biomas são dados desde a 4.9). |
 
 ## Regras importantes
 
@@ -150,6 +153,16 @@ sistema em que vai mexer; veja o fim deste arquivo).
 - **Mobs:** recursos `geo/entity/<nome>.geo.json`, `animations/entity/<nome>.animation.json`,
   `textures/entity/<nome>.png`; GeckoLib só anima, dano/alvo/IA no servidor. Registre em `ModEntities` + atributos,
   renderer em `client.render` registrado em `RespectCraftClient`.
+- **Inverted Realm (Etapa 4.9, MVP):** `respectcraft:inverted_realm` (tipo, gerador e `noise_settings` com o mesmo id),
+  bioma único `respectcraft:twisted_wilds`. Céu roxo = `sky_color` do bioma + `fixed_time` 12400 (crepúsculo eterno) +
+  `InvertedRealmEffects` (id = `effects` do tipo). Terreno: chão de 3D noise com saliências (y ≈ 60–115, mar em 60) e uma
+  faixa de ilhas flutuantes (y 148–236, `InvertedRealm.ISLAND_FLOOR`). Acesso **só** por `/respectcraft realm
+  enter|leave [players]` (permissão 2; chegada no chão de baixo, nunca no alto de uma ilha; sem chão seco num raio de 48,
+  plataforma 3×3) e `check [raio]` (usado no teste de fumaça). **Não há portal** ainda. O chão usa blocos vanilla
+  (grama/micélio tingidos pelo bioma, terracota roxa, deepslate) até a arte da Fase 1 chegar; `twisted_log` é
+  provisório (casca de `twisted_wood` + `twisted_log_top` gerado por `tools/inverted_realm/make_twisted_log_top.py`).
+  Agua-vivas (`agua_viva` gigante, `agua_viva_filhote`) são passivas e flutuam (categoria AMBIENT no bioma): os clips
+  `attack_beam` e `grab` existem mas **não** têm regra de combate — não invente.
 - **Tema:** o mod não tem mais eleições, política, partidos, mandatos, urna, economia ou símbolos nacionais. Não
   reintroduza (nem a partir do histórico do Git) sem pedido explícito.
 
@@ -163,8 +176,10 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 | `respectcraft:character_profile`, `respectcraft:needs`, `respectcraft:need_effects`, `respectcraft:player_animation` | attachments (`ModAttachments`); nomes de campos dos Codecs também são estáveis (incl. `birth_traits`, `birth_speciality`, `current_speciality` e os legados `hidratacao`/`energia`) |
 | `respectcraft_character_appearance_v1`, `respectcraft_special_defeats`, `respectcraft_allow_mob_finishers_test`, `respectcraft_debug_fail_next_roll` | `persistentData` do jogador |
 | `respectcraft_boss_finisher_credit`, `respectcraft_boss_defeat_posted` | `persistentData` de entidades chefe (Etapa 4.8) |
+| `respectcraft_realm_return` | `persistentData` do jogador: volta do `/respectcraft realm leave` (Etapa 4.9) |
 | ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
-| itens, `respectcraft:leao_do_fim` | registries |
+| itens, blocos (`twisted_*`), block entities `twisted_sign`/`twisted_hanging_sign`, `respectcraft:leao_do_fim`, `respectcraft:agua_viva`, `respectcraft:agua_viva_filhote` | registries |
+| dimensão `respectcraft:inverted_realm`, bioma `respectcraft:twisted_wilds`, `WoodType`/`BlockSetType` e `Boat.Type` `respectcraft:twisted` (enum `RESPECTCRAFT_TWISTED`) | pasta do mundo, chunks e NBT de barcos (Etapa 4.9) |
 
 - Id de origem aposentado: adicione o alias em `profile.LegacyOriginIds` (lido pelo Codec da ficha e regravado com o
   id novo) e um caso no `SelfTest`. Nunca converta um perfil inválido em "personagem não criado".
@@ -233,5 +248,6 @@ python3 tools/player_anim/test_export.py # proteção do exportador
   tecla K (projeção, clique, Rimulib UiApi/FxApi) → 4.8.1; auditoria e plano do menu no mundo → 4.8.3; menu K no mundo
   (âncora, posição, passada no mundo, K/Recall) → 4.8.4-A; clique, arrasto, roda, dicas, dono da entrada e modo cursor
   no mundo → 4.8.4-B; criador e roleta como janelas holográficas, fluxo do primeiro personagem, Skin/Face removidos →
-  4.8.4-C; visual da roda da roleta (roda de prêmios) → `HANDOFF_ROULETTE_PRIZE_WHEEL.md`.
+  4.8.4-C; visual da roda da roleta (roda de prêmios) → `HANDOFF_ROULETTE_PRIZE_WHEEL.md`; dimensão Inverted Realm (céu
+  roxo, terreno, `/respectcraft realm`), Madeira Retorcida e agua-vivas → 4.9 (`HANDOFF_STAGE4_9_PURPLE_DIMENSION_MVP.md`).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

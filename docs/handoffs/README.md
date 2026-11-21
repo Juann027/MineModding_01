@@ -33,6 +33,8 @@ e o `CLAUDE.md`.
 | 4.8.4-C | Criador e roleta como **janelas holográficas** no arco do mundo (`CreatorView`, `RouletteView`), fluxo criador → roleta → Hub pela tecla K, Skin/Face removidos, lógica comum `AppearanceDraft`/`RouletteSession`/`ui.RouletteMachine` (rede da 4.8.2) | [HANDOFF_STAGE4_8_4C_HOLO_CREATOR_ROULETTE.md](HANDOFF_STAGE4_8_4C_HOLO_CREATOR_ROULETTE.md) | Concluída (PR #40) | Telas antigas só na reserva `SCREEN` até a 4.8.5; partículas de Totem do giro visíveis no mundo |
 | 4.8.4-C (visual) | Roda da roleta como roda de prêmios: fatias na cor da raridade com degradê, aro com lâmpadas, pinos, miolo com joia, ponteiro que bate nos pinos, destaque da vencedora (`client.roulette.PrizeWheel`, comum à janela e à tela de reserva) | [HANDOFF_ROULETTE_PRIZE_WHEEL.md](HANDOFF_ROULETTE_PRIZE_WHEEL.md) | Implementada (#41); correção para roda **preta** com luz da raridade na seção 4 | Só llvmpipe/Fast |
 
+| 4.9 | **Inverted Realm** (MVP): dimensão de céu roxo em dados (crepúsculo fixo, terreno com ilhas flutuantes, bioma Twisted Wilds), `/respectcraft realm enter|leave|check`, Madeira Retorcida (pacote "O Avesso — Fase 2, Etapa A"), agua-vivas passivas | [HANDOFF_STAGE4_9_PURPLE_DIMENSION_MVP.md](HANDOFF_STAGE4_9_PURPLE_DIMENSION_MVP.md) | Concluída | `Blocks.zip` não chegou (chão vanilla tingido, `twisted_log` provisório); sem portal; agua-vivas sem ataque |
+
 Não há handoff da Etapa 4.3 neste repositório.
 
 ## Qual ler
@@ -54,3 +56,4 @@ Não há handoff da Etapa 4.3 neste repositório.
 - Criador e roleta no mundo (janelas do arco), fluxo do primeiro personagem, Skin/Face removidos → 4.8.4-C.
 - Visual da roda da roleta (cores, aro, ponteiro, destaque da vencedora) → roda de prêmios (4.8.4-C visual).
 - Ids aposentados e compatibilidade de saves → Etapa 4.4 (antes do corte de compatibilidade da 4.7.1).
+- Dimensão Inverted Realm (céu, terreno, bioma, acesso), Madeira Retorcida e agua-vivas → 4.9.

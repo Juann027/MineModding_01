@@ -50,6 +50,14 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
   cada um no próprio rig.
 - **Contador de derrotas** acima do nick, com ícones próprios 🍆💦.
 - **Leão do Fim:** mob neutro de teste (GeckoLib + SmartBrainLib), com ovo na aba do mod.
+- **Inverted Realm (Etapa 4.9, MVP de teste):** dimensão de **céu roxo** em crepúsculo eterno (horizonte magenta,
+  estrelas fracas, sem nuvens, luz levemente violeta), bioma Twisted Wilds com grama violeta, árvores retorcidas de copa
+  carmesim, penhascos de terracota roxa, brotos de ametista que brilham, lagos violeta e ilhas flutuantes no alto.
+  Entrada e saída por comando de admin: `/respectcraft realm enter` e `/respectcraft realm leave` (ainda sem portal).
+- **Madeira Retorcida:** conjunto completo (tronco, madeira, tábuas, escada, laje, cerca, portão, porta, alçapão, botão,
+  placa de pressão, escada de mão, placas, placa pendurada, estante, bancada, barco e barco com baú), na aba do mod.
+- **Agua-vivas:** Giant Jellyfish e Baby Jellyfish flutuam no céu do Inverted Realm (passivas por enquanto), com ovos
+  na aba do mod.
 
 ## Instalação
 
@@ -78,7 +86,8 @@ python3 tools/player_anim/bbsync.py       # confere .bbmodel x .animation.json
 O CI do GitHub roda os três primeiros em cada push e PR. Comandos úteis no jogo (árvore única `/respectcraft`):
 `/respectcraft profile`, `/respectcraft skills list`, `/respectcraft finishers`,
 `/respectcraft test finisher accept|deny` e, para admins, `/respectcraft selftest`, `/respectcraft speciality list|odds|simulate <rolls>`,
-`/respectcraft anim list|play|together|sequence|next|stop` e `/respectcraft admin profile|points|roulette|reset|skill|finisher|effect|need ...`
+`/respectcraft anim list|play|together|sequence|next|stop`, `/respectcraft realm enter|leave [players]|check [radius]`
+e `/respectcraft admin profile|points|roulette|reset|skill|finisher|effect|need ...`
 (ex.: `/respectcraft admin roulette <player> boner`). `/leaodofim` e `/stopitstopnow` continuam como estão.
 
 ## Animações no Blockbench
@@ -96,6 +105,8 @@ sem `--force`. Guia completo: [`tools/player_anim/README.md`](tools/player_anim/
 - Rimulib 1.3.0 está conectado, mas ainda não há efeito de tela que o use.
 - Pernas sem joelho tornam ajoelhar e quatro apoios aproximações.
 - Testado com renderização por software e até dois clientes simultâneos.
-- `biome`, `dimension` e `npc` são pastas reservadas, ainda sem conteúdo.
+- Inverted Realm é um MVP: sem portal (só o comando de admin), chão com blocos vanilla tingidos até a arte própria
+  chegar, tronco retorcido com arte provisória e agua-vivas sem ataque.
+- `npc` é pasta reservada, ainda sem conteúdo.
 
 Para desenvolvedores e agentes: [`CLAUDE.md`](CLAUDE.md) e [`AGENTS.md`](AGENTS.md).
