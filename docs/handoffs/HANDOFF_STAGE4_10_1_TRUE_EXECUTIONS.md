@@ -138,6 +138,23 @@ atributos não mudaram. Quando vier, a decisão de "finalização × invocação
 - Só um chefe por tipo de entidade pode ter exclusiva (chave = tipo de entidade).
 - Testes visuais só com llvmpipe (sem GPU real).
 
+### 5.1 Observações registradas para revisão futura (pedido do dono, NÃO alterar ainda)
+
+Comportamentos atuais, mantidos de propósito até o dono testar e decidir. Nenhum deles deve ser mudado sem pedido.
+
+1. **Contador de derrotas com golpe final impedido.** Em `FinisherTestMechanic.complete`, o contador 🍆💦 do jogador
+   vítima sobe **antes** do golpe final, só por a cena ter terminado (regra da Etapa 4.2). Se a morte for impedida por
+   um Totem da Imortalidade (ou proteção, PvP, invulnerabilidade), o resultado é `FAILED`, mas a derrota já foi contada.
+   Decisão pendente: contar só com `SUCCESS` ou manter "cena concluída = derrota".
+2. **`/kill` durante a cena é suprimido.** `FinisherTestMechanic.onIncomingDamage` cancela **todo** dano a um
+   participante de sessão ativa e cancela a cena (regra da Etapa 4.8), inclusive `/kill` (`minecraft:generic_kill`,
+   que ignora invulnerabilidade). A cena vira `CANCELLED (interrupted by damage)`, o alvo continua vivo e um segundo
+   `/kill` (fora da cena) mata normalmente. Visto no cliente real (cenário 5). Decisão pendente: deixar passar dano com
+   `bypasses_invulnerability` (ex.: `/kill`, vazio) ou manter a supressão.
+3. **PvP e execução com dois clientes sem validação real.** Execução de jogador × jogador, recusa com `pvp=false`,
+   times sem fogo amigo, totem em jogador vítima, recuperação caída de quem sobrevive e mob × jogador (opt-in) estão
+   cobertos por código e regras puras, mas **não** foram testados com dois clientes reais em multiplayer.
+
 ## 6. Resultados
 
 | Teste | Resultado |
