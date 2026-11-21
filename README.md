@@ -6,7 +6,7 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 > **Etapa 4.7.1 — migração de identidade (quebra compatibilidade).** O mod é RespectCraft também por dentro: mod id e
 > namespace `respectcraft`, pacote `com.respectcraft`, jar `respectcraft-<versão>.jar`, comando `/respectcraft` e configs
 > `respectcraft-*-server.toml`. Mundos, fichas e configs criados com o nome antigo **não** são carregados: itens,
-> o Leão do Fim e os dados do personagem desses mundos somem. Comece um mundo novo (e faça backup dos antigos).
+> as entidades e os dados do personagem desses mundos somem. Comece um mundo novo (e faça backup dos antigos).
 
 ## Funcionalidades
 
@@ -49,7 +49,6 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
   participantes com rigs GeckoLib diferentes (jogador × jogador, jogador × mob, mob × jogador, chefe × jogador),
   cada um no próprio rig.
 - **Contador de derrotas** acima do nick, com ícones próprios 🍆💦.
-- **Leão do Fim:** mob neutro de teste (GeckoLib + SmartBrainLib), com ovo na aba do mod.
 - **Inverted Realm (Etapa 4.9, MVP de teste):** dimensão de **céu roxo** em crepúsculo eterno (horizonte magenta,
   estrelas fracas, sem nuvens, luz levemente violeta), bioma Twisted Wilds com grama violeta, árvores retorcidas de copa
   carmesim, penhascos de terracota roxa, brotos de ametista que brilham, lagos violeta e ilhas flutuantes no alto.
@@ -67,6 +66,9 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 3. Multiplayer: os mesmos quatro jars no servidor dedicado e em cada cliente.
 
 UI Lib e Architectury **não** são mais necessários.
+
+**Leão do Fim removido (Etapa 4.9.1):** o mob de teste Leão do Fim, o ovo e o comando `/leaodofim` saíram do mod.
+Leões que existiam em mundos salvos **somem** ao carregar o mundo com esta versão (e o ovo some dos inventários).
 
 **Faça backup dos mundos antes de atualizar.** Desde a Etapa 4.7.1 o namespace mudou para `respectcraft`: mundos
 anteriores perdem os itens, entidades e dados do mod. As chances da roleta ficam em
@@ -88,7 +90,7 @@ O CI do GitHub roda os três primeiros em cada push e PR. Comandos úteis no jog
 `/respectcraft test finisher accept|deny` e, para admins, `/respectcraft selftest`, `/respectcraft speciality list|odds|simulate <rolls>`,
 `/respectcraft anim list|play|together|sequence|next|stop`, `/respectcraft realm enter|leave [players]|check [radius]`
 e `/respectcraft admin profile|points|roulette|reset|skill|finisher|effect|need ...`
-(ex.: `/respectcraft admin roulette <player> boner`). `/leaodofim` e `/stopitstopnow` continuam como estão.
+(ex.: `/respectcraft admin roulette <player> boner`). `/stopitstopnow` continua como está.
 
 ## Animações no Blockbench
 

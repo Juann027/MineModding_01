@@ -13,7 +13,6 @@ import com.respectcraft.client.playergeo.PlayerRigController;
 import com.respectcraft.client.hud.BodyStatusInventoryPanel;
 import com.respectcraft.client.hud.EmotionOrbOverlay;
 import com.respectcraft.client.render.AguaVivaRenderer;
-import com.respectcraft.client.render.LeaoDoFimRenderer;
 import com.respectcraft.client.render.TwistedWoodRenderers;
 import com.respectcraft.client.testgame.DefeatCounterNameplate;
 import com.respectcraft.network.CharacterAppearanceClientCache;
@@ -104,7 +103,6 @@ public final class RespectCraftClient {
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerEntityRenderer(ModEntities.LEAO_DO_FIM.get(), LeaoDoFimRenderer::new);
         event.registerEntityRenderer(ModEntities.AGUA_VIVA.get(), AguaVivaRenderer::giant);
         event.registerEntityRenderer(ModEntities.AGUA_VIVA_FILHOTE.get(), AguaVivaRenderer::hatchling);
     }

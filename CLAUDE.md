@@ -2,7 +2,7 @@
 
 RPG de humor para **Minecraft Java 1.21.1 / NeoForge 21.1.x / Java 21**: criador de personagem, roleta de
 nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas,
-finalizações cinematográficas, contador de derrotas, o mob Leão do Fim e (Etapa 4.9, MVP) a dimensão **Inverted Realm**
+finalizações cinematográficas, contador de derrotas e (Etapa 4.9, MVP) a dimensão **Inverted Realm**
 (céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
 
 **Nome: RespectCraft**, público e interno (Etapa 4.7.1): mod id `respectcraft`, pacote `com.respectcraft`, classes
@@ -22,7 +22,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | Minecraft / NeoForge | 1.21.1 / 21.1.265 (ModDevGradle, Parchment 2024.11.17), Gradle wrapper 9.2.1 |
 | Java | 21 (toolchain no `build.gradle`) |
 | GeckoLib | **4.9.3** (`software.bernie.geckolib:geckolib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Não use a 5. |
-| SmartBrainLib | 1.16.11 (`net.tslat.smartbrainlib:SmartBrainLib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor |
+| SmartBrainLib | 1.16.11 (`net.tslat.smartbrainlib:SmartBrainLib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Sem uso no código desde a remoção do Leão do Fim (4.9.1); continua declarada até o dono decidir |
 | Rimulib | **1.3.0** NeoForge (Etapa 4.8; sem Maven público: `curse.maven:rimulib-1753907:9676532` pelo CurseMaven) — cliente e servidor, não embutido. Conectado em `RespectCraft.RIMULIB`. Só `cyou.rimuru.rimulib.mc1211.api` no código comum; `...mc1211.client.api` (ex.: `FxApi`) só em `client` |
 | UI Lib / Architectury | **Não são dependências.** As telas usam o framework próprio `client.ui`. Não reintroduza. |
 
@@ -47,7 +47,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `skill` | **Skill Trees**: 3 abas (`SkillBranch`), 18 habilidades em código (`Skills`), compra e modificadores em `SkillService`; a árvore é a seção Skills do menu K (`client.holo.SkillsView`). |
 | `needs`, `client.hud` | **Necessidades** (`Needs`, `NeedsRules`, `NeedsService`) e **consumíveis** (`NeedEffects`/`NeedEffectDef`, `ConsumableItem`, `ChamberPotItem`). Orbe de Emoção na tela; painel Body & Traits no inventário. |
 | `network` | Payloads (`GameplayNetworking`, `TestGameNetworking`) e caches de cliente. |
-| `entity`, `client.render`, `command` | Mobs **Leão do Fim** (GeckoLib + SmartBrainLib) e **agua-vivas** (`AguaVivaEntity`, Etapa 4.9), renderers e `/leaodofim`. `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim`, `test` e `realm`). |
+| `entity`, `client.render`, `command` | Mobs **agua-vivas** (`AguaVivaEntity`, Etapa 4.9) e renderers. O Leão do Fim foi removido na Etapa 4.9.1 (não o reintroduza). `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim`, `test` e `realm`). |
 | `dimension`, `client.dimension` | **Inverted Realm** (Etapa 4.9, MVP): dimensão, bioma e features são **dados** (`data/respectcraft/dimension*`, `worldgen/...`); `InvertedRealm` (chave, viagem de teste, chão seguro) e `InvertedRealmCommands` (`/respectcraft realm`); céu/neblina/luz em `client.dimension.InvertedRealmEffects`. |
 | `block.wood`, `registry.ModBlocks` | **Madeira Retorcida** (Etapa 4.9, do pacote "O Avesso — Fase 2, Etapa A"): blocos em `ModBlocks`, itens em `ModItems`, placas/bancada em `TwistedFurniture`, barco por `enumextensions.json`; placas no cliente em `client.render.TwistedWoodRenderers`. |
 | `selftest` | `SelfTest`: regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
@@ -178,19 +178,20 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 | `respectcraft_boss_finisher_credit`, `respectcraft_boss_defeat_posted` | `persistentData` de entidades chefe (Etapa 4.8) |
 | `respectcraft_realm_return` | `persistentData` do jogador: volta do `/respectcraft realm leave` (Etapa 4.9) |
 | ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
-| itens, blocos (`twisted_*`), block entities `twisted_sign`/`twisted_hanging_sign`, `respectcraft:leao_do_fim`, `respectcraft:agua_viva`, `respectcraft:agua_viva_filhote` | registries |
+| itens, blocos (`twisted_*`), block entities `twisted_sign`/`twisted_hanging_sign`, `respectcraft:agua_viva`, `respectcraft:agua_viva_filhote` | registries |
 | dimensão `respectcraft:inverted_realm`, bioma `respectcraft:twisted_wilds`, `WoodType`/`BlockSetType` e `Boat.Type` `respectcraft:twisted` (enum `RESPECTCRAFT_TWISTED`) | pasta do mundo, chunks e NBT de barcos (Etapa 4.9) |
 
 - Id de origem aposentado: adicione o alias em `profile.LegacyOriginIds` (lido pelo Codec da ficha e regravado com o
   id novo) e um caso no `SelfTest`. Nunca converta um perfil inválido em "personagem não criado".
 - Remover item/entidade registrado apaga essas instâncias em mundos antigos: avise no PR e no handoff.
+- Aposentados (não reutilize os ids): entidade `respectcraft:leao_do_fim` e item `respectcraft:leao_do_fim_spawn_egg`
+  (Leão do Fim removido na Etapa 4.9.1, pedido do dono; Leões e ovos de mundos salvos somem).
 - Recomende sempre backup dos mundos antes de atualizar.
 
 ## Blockbench e animações do jogador
 
 - Projetos `.bbmodel` do jogador em `model_sources/player/` (`respectcraft_animated_player`, `respectcraft_player_combat`,
-  `respectcraft_combo_scene` — este só para ajustar o tempo da cena). Leão do Fim: `model_sources/leao_do_fim.bbmodel`
-  (`tools/export_leao.py`, `tools/validate_leao.py`).
+  `respectcraft_combo_scene` — este só para ajustar o tempo da cena).
 - `tools/player_anim/export.py` gera a biblioteca de combate (`assets/respectcraft/animations/player/
   respectcraft_player_combat.animation.json`, `PlayerAnimations.COMBAT_FILE`) e os `.bbmodel` a partir de
   `poses.py`/`clips.py`.
@@ -206,7 +207,7 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 
 ```bash
 ./gradlew build                          # compila e empacota (build/libs/respectcraft-<versão>.jar)
-bash .github/scripts/server-smoke-test.sh # servidor dedicado: Leão do Fim, /respectcraft selftest, catálogos
+bash .github/scripts/server-smoke-test.sh # servidor dedicado: zumbis vanilla, /respectcraft selftest, catálogos
 python3 tools/player_anim/bbsync.py      # .bbmodel x .animation.json
 python3 tools/player_anim/test_export.py # proteção do exportador
 ./gradlew runClient                      # cliente de desenvolvimento
