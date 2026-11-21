@@ -35,7 +35,8 @@ else
   # Etapa 4.8: dois zumbis vanilla marcados (noite, para nao queimarem); uma finalizacao mob x mob precisa ser recusada
   # (sem jogador nao ha sessao). O Leao do Fim saiu do mod: o teste usa so mobs vanilla.
   # Etapa 4.9: Inverted Realm (dimensao em dados: gera a chegada e uma amostra 5x5) e as agua-vivas.
-  for cmd in "time set midnight" "summon minecraft:zombie 0 -60 0" "summon minecraft:zombie 0 -60 0 {Tags:[\"rc_a\"],PersistenceRequired:1b}" "summon minecraft:zombie 2 -60 0 {Tags:[\"rc_b\"],PersistenceRequired:1b}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "tupini selftest"; do
+  # Etapa 4.10: /calamidade status confirma o Calamidade_Awakening carregado e nenhum efeito preso no servidor.
+  for cmd in "time set midnight" "summon minecraft:zombie 0 -60 0" "summon minecraft:zombie 0 -60 0 {Tags:[\"rc_a\"],PersistenceRequired:1b}" "summon minecraft:zombie 2 -60 0 {Tags:[\"rc_b\"],PersistenceRequired:1b}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "calamidade status" "tupini selftest"; do
     echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
@@ -70,14 +71,25 @@ grep -q 'Inverted Realm ready: arrival .* biome respectcraft:twisted_wilds, fixe
   || fail "dimensão Inverted Realm não carregou/gerou terreno"
 grep -qE 'Summoned new (Baby Jellyfish|entity\.respectcraft\.agua_viva_filhote)' "$log" || fail "Baby Jellyfish não foi invocada"
 grep -qE 'Summoned new (Giant Jellyfish|entity\.respectcraft\.agua_viva\b)' "$log" || fail "Giant Jellyfish não foi invocada"
+# Etapa 4.10: Calamidade_Awakening 0.10.x carregado no servidor dedicado, efeitos das finalizacoes registrados no lado
+# comum e nenhuma instancia ativa sem sessao (a recusa mob x mob acima nao comeca efeito nenhum).
+grep -qE 'Calamidade_Awakening 0\.10\.[0-9]+ \(calamidade_awakening\)' "$log" \
+  || fail "Calamidade_Awakening 0.10.x não foi carregado no servidor dedicado"
+grep -q 'RespectCraft finisher FX registered on Calamidade_Awakening' "$log" \
+  || fail "efeitos das finalizações não foram registrados no Calamidade"
+grep -q 'Live instances on server: 0 / 64' "$log" || fail "/calamidade status não respondeu ou há efeito preso"
 # Etapa 4.8: o jar do RespectCraft nao embute o Rimulib (o jogador instala ao lado).
 jar=$(ls build/libs/respectcraft-*.jar 2>/dev/null | grep -v -- '-sources' | head -1)
 if [ -z "$jar" ]; then fail "jar do RespectCraft não encontrado em build/libs"
 elif unzip -l "$jar" | grep -E 'cyou/rimuru|META-INF/jarjar'; then fail "o jar embute classes do Rimulib"; fi
+# Etapa 4.10: nem o Calamidade (o jogador instala ao lado; servidor e clientes na mesma versao).
+if [ -n "$jar" ] && unzip -l "$jar" | grep -E 'dev/calamidade_awakening|calamidade_awakening-'; then
+  fail "o jar embute o Calamidade_Awakening"
+fi
 # O Leao do Fim foi removido do mod (pedido do dono): nenhum recurso ou classe dele pode voltar ao jar.
 if [ -n "$jar" ] && unzip -l "$jar" | grep -iE 'leao|lionxx'; then fail "o jar ainda contém recursos do Leão do Fim"; fi
 # Etapa 4.8: nada fora de client importa classes exclusivas do cliente (Minecraft ou client.api do Rimulib).
-if grep -rlE 'import (net\.minecraft\.client\.|cyou\.rimuru\.rimulib\.mc1211\.client\.)' src/main/java --include=*.java \
+if grep -rlE 'import (net\.minecraft\.client\.|cyou\.rimuru\.rimulib\.mc1211\.client\.|dev\.calamidade_awakening\.api\.v1\.client\.)' src/main/java --include=*.java \
     | grep -v '^src/main/java/com/respectcraft/client/'; then
   fail "classe comum importando código exclusivo do cliente"
 fi

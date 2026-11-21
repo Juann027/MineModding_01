@@ -62,6 +62,7 @@ public final class SelfTest {
             multiRig(f);
             bossDefeats(f);
             rimulib(f);
+            finisherFx(f);
             holoGeometry(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
@@ -1162,6 +1163,149 @@ public final class SelfTest {
             check(f, com.respectcraft.RespectCraft.RIMULIB != null
                     && com.respectcraft.RespectCraft.MOD_ID.equals(com.respectcraft.RespectCraft.RIMULIB.id())
                     && "respectcraft:x".equals(com.respectcraft.RespectCraft.RIMULIB.id("x")), "rimulib: conexão do RespectCraft");
+        });
+    }
+
+    /**
+     * Etapa 4.10: ponte Finisher Engine → Calamidade_Awakening. Regras puras: escolha do efeito pela forca, FxDef
+     * opcional (sem ele, particulas vanilla), momentos da cena tirados das animacoes, encerramento, fonte,
+     * acessibilidade, keyframes {@code calamidade:} do GeckoLib e o {@code SkillEffect} de efeito visual.
+     */
+    private static void finisherFx(List<String> f) {
+        using(f, () -> {
+            var L = com.respectcraft.fx.FinisherFxRules.HitLayer.class;
+            var light = com.respectcraft.fx.FinisherFxRules.HitLayer.LIGHT;
+            var ring = com.respectcraft.fx.FinisherFxRules.HitLayer.RING;
+            var frame = com.respectcraft.fx.FinisherFxRules.HitLayer.IMPACT_FRAME;
+            check(f, com.respectcraft.fx.FinisherFxRules.layersFor(1).equals(java.util.EnumSet.of(light))
+                    && com.respectcraft.fx.FinisherFxRules.layersFor(2).equals(java.util.EnumSet.of(light, ring))
+                    && com.respectcraft.fx.FinisherFxRules.layersFor(3).equals(java.util.EnumSet.allOf(L)),
+                    "fx: luz breve; anel a partir da força 2; impact frame só na força 3");
+            check(f, com.respectcraft.fx.FinisherFxRules.layersFor(0).equals(com.respectcraft.fx.FinisherFxRules.layersFor(1))
+                    && com.respectcraft.fx.FinisherFxRules.layersFor(9).equals(com.respectcraft.fx.FinisherFxRules.layersFor(3)),
+                    "fx: força fora de 1..3 é limitada");
+            java.util.Set<net.minecraft.resources.ResourceLocation> hitIds = new java.util.HashSet<>();
+            for (var tier : com.respectcraft.fx.FinisherFxDef.Tier.values()) {
+                for (int s = 1; s <= 3; s++) hitIds.add(com.respectcraft.fx.FinisherFxDef.hitEffect(tier, s));
+                hitIds.add(com.respectcraft.fx.FinisherFxDef.fallEffect(tier));
+            }
+            check(f, hitIds.size() == 12, "fx: um efeito por intensidade e força, e um de queda por intensidade");
+
+            // FxDef opcional: as tres finalizacoes tem; sem ele, comportamento antigo (particulas vanilla).
+            var T = com.respectcraft.fx.FinisherFxDef.Tier.class;
+            check(f, Finishers.TAKEDOWN.fx().map(x -> x.tier() == com.respectcraft.fx.FinisherFxDef.Tier.SUBTLE).orElse(false)
+                    && Finishers.RASTEIRA.fx().map(x -> x.tier() == com.respectcraft.fx.FinisherFxDef.Tier.MEDIUM).orElse(false)
+                    && Finishers.COMBO.fx().map(x -> x.tier() == com.respectcraft.fx.FinisherFxDef.Tier.INTENSE).orElse(false),
+                    "fx: TAKEDOWN discreto, RASTEIRA médio, COMBO intenso");
+            var tiers = T.getEnumConstants();
+            check(f, tiers[0].strength() < tiers[1].strength() && tiers[1].strength() < tiers[2].strength(),
+                    "fx: intensidade crescente");
+            FinisherDef plain = Finishers.TAKEDOWN.withFx(null);
+            check(f, plain.fx().isEmpty() && com.respectcraft.fx.FinisherFxRules.vanillaParticles(plain)
+                    && !com.respectcraft.fx.FinisherFxRules.vanillaParticles(Finishers.TAKEDOWN),
+                    "fx: sem FinisherFxDef a finalização usa as partículas vanilla");
+            var clip = new com.respectcraft.finisher.EntityFinisherClip(com.respectcraft.RespectCraft.id("test_rig_mob"),
+                    com.respectcraft.finisher.FinisherRole.ATTACKER, "body", "selftest_only", Finishers.TAKEDOWN.durationTicks());
+            check(f, Finishers.TAKEDOWN.withEntityClip(clip).fx().equals(Finishers.TAKEDOWN.fx()),
+                    "fx: cópia com clip de mob mantém os efeitos");
+            check(f, throwsIae(() -> new com.respectcraft.fx.FinisherFxDef(
+                    net.minecraft.resources.ResourceLocation.withDefaultNamespace("x"),
+                    com.respectcraft.fx.FinisherFxDef.Look.TAKEDOWN_FOCUS, com.respectcraft.fx.FinisherFxDef.Tier.SUBTLE,
+                    com.respectcraft.fx.FinisherFxDef.Orientation.ANCHOR_YAW)), "fx: efeito de cena fora do namespace é recusado");
+
+            // Momentos da cena = eventos das animacoes (ticks e forcas), marcadores unicos.
+            var hits = com.respectcraft.fx.FinisherFxRules.CueKind.HIT;
+            var falls = com.respectcraft.fx.FinisherFxRules.CueKind.FALL;
+            var take = com.respectcraft.fx.FinisherFxRules.cues(Finishers.TAKEDOWN);
+            check(f, take.size() == 3 && take.get(0).tick() == 14 && take.get(1).tick() == 26 && take.get(2).tick() == 44
+                    && take.get(2).strength() == 3 && take.get(0).strength() == 1 && take.stream().allMatch(c -> c.kind() == hits),
+                    "fx: golpes do TAKEDOWN nos ticks 14, 26 e 44 (o último de força 3)");
+            var combo = com.respectcraft.fx.FinisherFxRules.cues(Finishers.COMBO);
+            check(f, combo.size() == 4 && combo.get(0).tick() == 25 && combo.get(1).tick() == 43
+                    && combo.get(2).kind() == falls && combo.get(2).tick() == 62 && Math.abs(combo.get(2).back() - 0.4) < 1e-9
+                    && combo.get(3).tick() == 65 && combo.get(3).strength() == 1, "fx: golpes e quedas do COMBO");
+            var rast = com.respectcraft.fx.FinisherFxRules.cues(Finishers.RASTEIRA);
+            check(f, rast.size() == 1 && rast.get(0).tick() == 14 && rast.get(0).strength() == 2, "fx: golpe da RASTEIRA");
+            for (FinisherDef def : Finishers.all()) {
+                var cues = com.respectcraft.fx.FinisherFxRules.cues(def);
+                check(f, cues.stream().map(com.respectcraft.fx.FinisherFxRules.Cue::marker).distinct().count() == cues.size()
+                        && cues.stream().allMatch(c -> c.tick() >= 0 && c.tick() < def.durationTicks()),
+                        "fx: marcadores únicos dentro da cena " + def.id());
+                var timeline = com.respectcraft.fx.FinisherFx.sceneTimeline(def);
+                check(f, timeline.duration() == def.durationTicks() && timeline.hasPhase("scene")
+                        && cues.stream().allMatch(c -> timeline.hasMarker(c.marker()) && timeline.tick(c.marker()) == c.tick())
+                        && timeline.hasTrack("pulse") && timeline.hasTrack("energy"),
+                        "fx: timeline HERO do tamanho da cena com marcadores nos ticks dos eventos " + def.id());
+                // Cada momento dispara uma vez em janelas seguidas, mesmo com um tick pulado.
+                int fired = 0, last = 0;
+                for (int t = 1; t <= def.durationTicks(); t += (t % 7 == 0 ? 2 : 1)) {
+                    fired += com.respectcraft.fx.FinisherFxRules.due(cues, last, t).size();
+                    last = t;
+                }
+                fired += com.respectcraft.fx.FinisherFxRules.due(cues, last, def.durationTicks()).size();
+                check(f, fired == cues.size(), "fx: cada golpe/queda dispara uma vez " + def.id());
+            }
+            check(f, com.respectcraft.fx.FinisherFx.sceneTimeline(Finishers.TAKEDOWN).hasPhase("impact_frame_hit_2")
+                    && !com.respectcraft.fx.FinisherFx.sceneTimeline(Finishers.COMBO).phases().stream()
+                    .anyMatch(p -> p.startsWith("impact_frame_")), "fx: a cena cede o passe só nos golpes de força 3");
+            double[] bad = com.respectcraft.fx.FinisherFxRules.parseFall("x,y,z");
+            double[] far = com.respectcraft.fx.FinisherFxRules.parseFall("7,9");
+            check(f, bad[0] == 1 && bad[1] == 0 && far[0] == 3 && far[1] == 1.5, "fx: dados de queda inválidos são limitados");
+
+            // Encerramento e fonte.
+            check(f, com.respectcraft.fx.FinisherFxRules.endAction(com.respectcraft.fx.FinisherFxRules.EndReason.COMPLETE)
+                    == com.respectcraft.fx.FinisherFxRules.EndAction.RELEASE
+                    && com.respectcraft.fx.FinisherFxRules.endAction(com.respectcraft.fx.FinisherFxRules.EndReason.ABORT)
+                    == com.respectcraft.fx.FinisherFxRules.EndAction.STOP, "fx: fim solta, cancelamento para na hora");
+            com.respectcraft.fx.FinisherFx.end(null, com.respectcraft.fx.FinisherFxRules.EndReason.ABORT);
+            com.respectcraft.fx.FinisherFx.tick(null, 10);
+            check(f, com.respectcraft.fx.FinisherFxRules.sourceRole(true, false) == com.respectcraft.finisher.FinisherRole.ATTACKER
+                    && com.respectcraft.fx.FinisherFxRules.sourceRole(true, true) == com.respectcraft.finisher.FinisherRole.ATTACKER
+                    && com.respectcraft.fx.FinisherFxRules.sourceRole(false, true) == com.respectcraft.finisher.FinisherRole.VICTIM
+                    && com.respectcraft.fx.FinisherFxRules.sourceRole(false, false) == null,
+                    "fx: fonte = jogador executor (senão a vítima jogador)");
+
+            // Acessibilidade do Calamidade.
+            var subtle = com.respectcraft.fx.FinisherFxDef.Tier.SUBTLE;
+            var intense = com.respectcraft.fx.FinisherFxDef.Tier.INTENSE;
+            check(f, com.respectcraft.fx.FinisherFxRules.screenStrength(1, intense, 0, true) == 0
+                    && Math.abs(com.respectcraft.fx.FinisherFxRules.screenStrength(1, intense, 1, false) - 0.35F) < 1e-6
+                    && com.respectcraft.fx.FinisherFxRules.screenStrength(1, subtle, 1, true)
+                    < com.respectcraft.fx.FinisherFxRules.screenStrength(1, intense, 1, true),
+                    "fx: intensidade dos efeitos de tela e ocultar clarões");
+            check(f, !com.respectcraft.fx.FinisherFxRules.impactFrameInverts(false, 5)
+                    && com.respectcraft.fx.FinisherFxRules.impactFrameInverts(true, 5)
+                    && !com.respectcraft.fx.FinisherFxRules.impactFrameInverts(true, 0), "fx: impact frame só pisca com clarões");
+
+            // Gancho GeckoLib -> Calamidade (keyframes "calamidade:<efeito>").
+            check(f, com.respectcraft.fx.GeoFxKeyframes.parseInstruction("calamidade:golpe")
+                    .equals(Optional.of(com.respectcraft.RespectCraft.id("golpe")))
+                    && com.respectcraft.fx.GeoFxKeyframes.parseInstruction(" calamidade:minecraft:x ")
+                    .equals(Optional.of(net.minecraft.resources.ResourceLocation.withDefaultNamespace("x")))
+                    && com.respectcraft.fx.GeoFxKeyframes.parseInstruction("sound:abc").isEmpty()
+                    && com.respectcraft.fx.GeoFxKeyframes.parseInstruction("calamidade:").isEmpty()
+                    && com.respectcraft.fx.GeoFxKeyframes.parseInstruction("calamidade:Bad Id").isEmpty(),
+                    "fx: instrução calamidade:<efeito> do keyframe");
+            check(f, com.respectcraft.fx.GeoFxKeyframes.parseInstructions("calamidade:a; outra; calamidade:respectcraft:b;")
+                    .equals(List.of(com.respectcraft.RespectCraft.id("a"), com.respectcraft.RespectCraft.id("b"))),
+                    "fx: várias instruções no mesmo keyframe");
+            var json = com.google.gson.JsonParser.parseString("{\"animations\":{\"animation.t.attack\":{\"timeline\":"
+                    + "{\"1.0\":[\"x\",\"calamidade:respectcraft:fim\"],\"0.6\":\"calamidade:golpe;\",\"bad\":\"calamidade:z\"}}}}")
+                    .getAsJsonObject();
+            var scanned = com.respectcraft.fx.GeoFxKeyframes.scan(json, "animation.t.attack");
+            check(f, scanned.size() == 2 && scanned.get(0).tick() == 12 && scanned.get(1).tick() == 20
+                    && scanned.get(1).effect().equals(com.respectcraft.RespectCraft.id("fim"))
+                    && com.respectcraft.fx.GeoFxKeyframes.scan(json, "animation.t.none").isEmpty(),
+                    "fx: keyframes do arquivo GeckoLib em ticks (segundos × 20)");
+
+            // SkillEffect de efeito visual: existe, mas nenhuma habilidade usa ainda.
+            var vfx = com.respectcraft.skill.SkillEffect.visualFx(com.respectcraft.RespectCraft.id("finisher_fx/takedown_scene"));
+            check(f, vfx.kind() == com.respectcraft.skill.SkillEffect.Kind.VISUAL_FX
+                    && vfx.visualFxId().equals(Optional.of(com.respectcraft.RespectCraft.id("finisher_fx/takedown_scene")))
+                    && com.respectcraft.skill.SkillEffect.mood(1).visualFxId().isEmpty(), "fx: SkillEffect referencia um efeito");
+            check(f, Skills.all().stream().flatMap(d -> d.effects().stream())
+                    .noneMatch(e -> e.kind() == com.respectcraft.skill.SkillEffect.Kind.VISUAL_FX),
+                    "fx: nenhuma habilidade aplica efeito visual ainda");
         });
     }
 
