@@ -1,0 +1,379 @@
+Etapa 4.10.2 - dois clientes reais (Juca :99, Bia :98) + servidor dedicado, Xvfb/llvmpipe, Calamidade 0.11.1
+Parte 1 = cenario_dois_clientes.sh (passos 1-13), parte 2 = cenario_dois_clientes_parte2.sh (13b-18),
+correcao = cenario_parada_do_servidor.sh. O passo 13 da parte 1 nao vale (Juca com carne podre na mao; refeito em 13b).
+
+################ PARTE 1
+## Passos
+=== server (07:43:48)
+=== clients (07:44:16)
+=== 1 teams without friendly fire: natural invite and admin start refused, nothing staged (07:45:59)
+=== 2 PvP natural flow: Shift + right click on Bia, Bia accepts in her own chat, execution kills Bia (07:46:17)
+=== 3 Totem of Undying on the player victim: FAILED, totem used, Bia knocked down and recovers (07:47:00)
+=== 4 friendly fire turned off in the middle of the scene: execution refused at the final blow (07:47:29)
+=== 5 victim presses Shift in her client during the combo: CANCELLED, both cameras restored (07:47:51)
+=== 6 executor disconnects in the middle of the combo: CANCELLED, Bia free; Juca comes back clean (07:48:03)
+=== 7 victim disconnects in the middle of the combo: CANCELLED, Juca restored; Bia comes back clean (07:49:17)
+=== 8 victim changes dimension in the middle of the combo: CANCELLED, Bia arrives in the Inverted Realm, back again (07:50:24)
+=== 9 mob vs player, natural opt-in API: zombie executes Bia, Juca watches from the side (07:50:46)
+=== 10 mob vs player with the zombie AI on: its own blow is part of the scene (no cancel); Bia executed (07:51:13)
+=== 11 a third player (Juca) hits the zombie during the mob scene: CANCELLED, Bia alive (07:51:35)
+=== 12 Juca starts watching in the middle of the mob scene (tracking sync), then Bia is executed (07:51:50)
+=== 13 server restart with pvp=false: counters persisted; natural invite and admin start refused (07:52:21)
+=== done (07:55:44)
+
+## Sessoes (log do servidor)
+[07:44:46] [minecraft/MinecraftServer]: Juca joined the game
+[07:45:36] [minecraft/MinecraftServer]: Bia joined the game
+[07:46:12] [minecraft/MinecraftServer]: PvP is not allowed between you and Bia (server PvP setting or team rules).
+[07:46:37] [minecraft/MinecraftServer]: Bia was executed by Juca
+[07:46:37] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player (Bia): SUCCESS (killed)
+[07:47:08] [minecraft/MinecraftServer]: Bia has reached the goal [Postmortal]
+[07:47:08] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:player (Bia): FAILED (death was prevented)
+[07:47:39] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:player (Bia): FAILED (PvP is not allowed)
+[07:47:58] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (cancelled with Shift)
+[07:48:10] [minecraft/MinecraftServer]: Juca left the game
+[07:48:10] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (disconnect)
+[07:48:59] [minecraft/MinecraftServer]: Juca joined the game
+[07:49:24] [minecraft/MinecraftServer]: Bia left the game
+[07:49:24] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (disconnect)
+[07:50:05] [minecraft/MinecraftServer]: Bia joined the game
+[07:50:33] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (participant changed dimension)
+[07:51:02] [minecraft/MinecraftServer]: Bia was executed by Zed
+[07:51:02] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:zombie on minecraft:player (Bia): SUCCESS (killed)
+[07:51:25] [minecraft/MinecraftServer]: Bia was executed by Zed
+[07:51:25] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:zombie on minecraft:player (Bia): SUCCESS (killed)
+[07:51:43] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:zombie on minecraft:player: CANCELLED (interrupted by damage)
+[07:52:06] [minecraft/MinecraftServer]: Bia was executed by Zed
+[07:52:06] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:zombie on minecraft:player (Bia): SUCCESS (killed)
+[07:52:21] [minecraft/MinecraftServer]: Juca left the game
+[07:52:28] [minecraft/MinecraftServer]: Bia left the game
+[07:52:35] [minecraft/MinecraftServer]: Stopping server
+[07:53:48] [minecraft/MinecraftServer]: Juca joined the game
+[07:54:45] [minecraft/MinecraftServer]: Bia joined the game
+[07:55:11] [minecraft/MinecraftServer]: PvP is not allowed between you and Bia (server PvP setting or team rules).
+[07:55:14] [minecraft/MinecraftServer]: Juca left the game
+[07:55:21] [minecraft/MinecraftServer]: Bia left the game
+[07:55:28] [minecraft/MinecraftServer]: Stopping server
+
+## Chat do Juca (sem eco de comandos)
+Bia joined the game
+Your game mode has been updated to Survival Mode
+[RespectCraft Test] PvP is not allowed between you and Bia (server PvP setting or team rules).
+[RespectCraft Test] COMBAT finisher invite sent. Waiting for consent.
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+Bia was executed by Juca
+[RespectCraft Test] Execution complete: Bia was killed.
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+Bia has reached the goal [Postmortal]
+[RespectCraft Test] Execution failed: Bia survived (death was prevented).
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Execution failed: Bia survived (PvP is not allowed).
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Finisher cancelled: cancelled with Shift
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+Bia left the game
+[RespectCraft Test] Finisher cancelled: disconnect
+Bia joined the game
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Finisher cancelled: participant changed dimension
+Bia was executed by Zed
+Bia was executed by Zed
+Bia was executed by Zed
+Bia joined the game
+
+## Chat da Bia (sem eco de comandos)
+Your game mode has been updated to Survival Mode
+[RespectCraft Test] Juca requested a non-explicit test finisher. /respectcraft test finisher accept or /respectcraft test finisher deny (15s). To cancel during the action: /stopitstopnow or Shift.
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Special TEST defeat recorded (1).
+Bia was executed by Juca
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Special TEST defeat recorded (2).
+Bia has reached the goal [Postmortal]
+[RespectCraft Test] Recovery: 10s. /stopitstopnow releases you.
+[RespectCraft Test] You survived the execution (death was prevented).
+[RespectCraft Test] Recovered.
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Special TEST defeat recorded (3).
+[RespectCraft Test] Recovery: 10s. /stopitstopnow releases you.
+[RespectCraft Test] You survived the execution (PvP is not allowed).
+[RespectCraft Test] Interaction and/or recovery ended.
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Finisher cancelled: cancelled with Shift
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+Juca left the game
+[RespectCraft Test] Finisher cancelled: disconnect
+Juca joined the game
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+Welcome to the Inverted Realm. Use /respectcraft realm leave to go back.
+[RespectCraft Test] Finisher cancelled: participant changed dimension
+[RespectCraft Test] Mob finisher TESTS allowed.
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Special TEST defeat recorded (4).
+Bia was executed by Zed
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Special TEST defeat recorded (5).
+Bia was executed by Zed
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Finisher cancelled: interrupted by damage
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Special TEST defeat recorded (6).
+Bia was executed by Zed
+Juca left the game
+Juca left the game
+
+## Consultas
+> list
+[07:45:56] There are 2 of a max of 20 players online: Juca, Bia
+> respectcraft finishers Bia
+[07:45:57] Finisher eligibility for minecraft:player (PLAYER):
+ respectcraft:takedown: ELIGIBLE
+ respectcraft:rasteira: ELIGIBLE
+ respectcraft:combo: ELIGIBLE
+> data get entity Bia Health
+[07:46:08] Bia has the following entity data: 4.0f
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[07:46:12] PvP is not allowed between you and Bia (server PvP setting or team rules).
+> calamidade status
+> data get entity Bia Health
+[07:46:24] Bia has the following entity data: 4.0f
+> data get entity Bia Health
+[07:46:42] Bia has the following entity data: 0.0f
+> scoreboard players get Juca pk
+[07:46:44] Juca has 1 [pk]
+> scoreboard players get Bia bd
+[07:46:45] Bia has 1 [bd]
+> execute as Bia run respectcraft test defeats get
+[07:46:47] Special test defeats: 1
+> data get entity Bia Health
+[07:46:53] Bia has the following entity data: 20.0f
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[07:47:05] Finisher started.
+> data get entity Bia Pos
+[07:47:10] Bia has the following entity data: [0.49999999999999983d, -60.0d, 1.65d]
+> data get entity Bia Pos
+[07:47:12] Bia has the following entity data: [0.49999999999999983d, -60.0d, 1.412363699440323d]
+> data get entity Bia Health
+[07:47:14] Bia has the following entity data: 6.0f
+> data get entity Bia Inventory
+[07:47:16] Bia has the following entity data: []
+> execute as Bia run respectcraft test defeats get
+[07:47:17] Special test defeats: 2
+> data get entity Bia Pos
+[07:47:27] Bia has the following entity data: [0.49999999999999983d, -60.0d, -2.83356067145673d]
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[07:47:36] Finisher started.
+> data get entity Bia Health
+[07:47:42] Bia has the following entity data: 20.0f
+> data get entity Bia Pos
+[07:47:48] Bia has the following entity data: [0.49999999999999983d, -60.0d, -1.6856422230423642d]
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[07:47:54] Finisher started.
+> data get entity Bia Health
+[07:48:01] Bia has the following entity data: 20.0f
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[07:48:06] Finisher started.
+> data get entity Bia Pos
+[07:48:17] Bia has the following entity data: [0.49999999999999983d, -60.0d, 1.65d]
+> data get entity Bia Pos
+[07:48:19] Bia has the following entity data: [0.49999999999999983d, -60.0d, -2.5897904181676514d]
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[07:49:20] Finisher started.
+> data get entity Bia Health
+[07:50:23] Bia has the following entity data: 20.0f
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[07:50:27] Finisher started.
+> respectcraft realm enter Bia
+> respectcraft realm leave Bia
+[07:50:36] Bia left the Inverted Realm (back at 0, -60, 1).
+> data get entity Bia Health
+[07:51:05] Bia has the following entity data: 20.0f
+> execute as Bia run respectcraft test defeats get
+[07:51:06] Special test defeats: 4
+> respectcraft admin finisher @e[tag=zm,limit=1] Bia respectcraft:combo
+[07:51:18] Finisher started.
+> data get entity Bia Health
+[07:51:29] Bia has the following entity data: 20.0f
+> respectcraft admin finisher @e[tag=zm,limit=1] Bia respectcraft:combo
+[07:51:40] Finisher started.
+> data get entity Bia Health
+[07:51:45] Bia has the following entity data: 20.0f
+> data get entity @e[tag=zm,limit=1] Health
+[07:51:47] Zed has the following entity data: 20.0f
+> respectcraft admin finisher @e[tag=zm,limit=1] Bia respectcraft:combo
+[07:51:59] Finisher started.
+> data get entity Bia Health
+[07:52:10] Bia has the following entity data: 20.0f
+> execute as Bia run respectcraft test defeats get
+[07:52:16] Special test defeats: 6
+> execute as Juca run respectcraft test defeats get
+[07:52:18] Special test defeats: 0
+> scoreboard players get Bia bd
+[07:52:19] Bia has 4 [bd]
+> execute as Bia run respectcraft test defeats get
+[07:54:59] Special test defeats: 6
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[07:55:11] PvP is not allowed between you and Bia (server PvP setting or team rules).
+> data get entity Bia Health
+[07:55:12] Bia has the following entity data: 4.0f
+
+################ PARTE 2
+## Passos
+=== server pvp=false (07:57:07)
+=== 13b pvp=false, empty hand: natural invite and admin start refused; counter persisted (07:59:09)
+=== restart with pvp=true (07:59:25)
+=== 14 invite declined by the victim in her chat: no scene (08:01:46)
+=== 15 invite expires after 15 s: accept refused (08:02:01)
+=== 16 inviter disconnects before the accept: invite dropped (08:02:25)
+=== 17 victim disconnects during the knocked-down recovery and comes back free (08:03:34)
+=== 18 server stops in the middle of the combo: both come back clean (08:04:46)
+=== done (08:07:52)
+
+## Sessoes (log do servidor)
+[07:57:58] [minecraft/MinecraftServer]: Juca joined the game
+[07:58:52] [minecraft/MinecraftServer]: Bia joined the game
+[07:59:22] [minecraft/MinecraftServer]: PvP is not allowed between you and Bia (server PvP setting or team rules).
+[07:59:25] [minecraft/MinecraftServer]: Juca left the game
+[07:59:32] [minecraft/MinecraftServer]: Bia left the game
+[07:59:39] [minecraft/MinecraftServer]: Stopping server
+[08:00:36] [minecraft/MinecraftServer]: Juca joined the game
+[08:01:29] [minecraft/MinecraftServer]: Bia joined the game
+[08:02:31] [minecraft/MinecraftServer]: Juca left the game
+[08:03:17] [minecraft/MinecraftServer]: Juca joined the game
+[08:03:41] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:player (Bia): FAILED (death was prevented)
+[08:03:44] [minecraft/MinecraftServer]: Bia left the game
+[08:04:28] [minecraft/MinecraftServer]: Bia joined the game
+[08:04:55] [minecraft/MinecraftServer]: Stopping server
+[08:06:08] [minecraft/MinecraftServer]: Juca joined the game
+[08:06:59] [minecraft/MinecraftServer]: Bia joined the game
+[08:07:29] [minecraft/MinecraftServer]: Bia was executed by Juca
+[08:07:29] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:player (Bia): SUCCESS (killed)
+[08:07:33] [minecraft/MinecraftServer]: Juca left the game
+[08:07:40] [minecraft/MinecraftServer]: Bia left the game
+[08:07:47] [minecraft/MinecraftServer]: Stopping server
+
+## Chat do Juca (sem eco de comandos)
+Bia joined the game
+[RespectCraft Test] PvP is not allowed between you and Bia (server PvP setting or team rules).
+Bia joined the game
+[RespectCraft Test] COMBAT finisher invite sent. Waiting for consent.
+[RespectCraft Test] Invite declined.
+[RespectCraft Test] COMBAT finisher invite sent. Waiting for consent.
+[RespectCraft Test] COMBAT finisher invite sent. Waiting for consent.
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Execution failed: Bia survived (death was prevented).
+Bia left the game
+Bia joined the game
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+Bia joined the game
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+Bia was executed by Juca
+[RespectCraft Test] Execution complete: Bia was killed.
+
+## Chat da Bia (sem eco de comandos)
+Juca left the game
+[RespectCraft Test] Juca requested a non-explicit test finisher. /respectcraft test finisher accept or /respectcraft test finisher deny (15s). To cancel during the action: /stopitstopnow or Shift.
+[RespectCraft Test] Invite declined.
+[RespectCraft Test] There is no valid invite.
+[RespectCraft Test] Juca requested a non-explicit test finisher. /respectcraft test finisher accept or /respectcraft test finisher deny (15s). To cancel during the action: /stopitstopnow or Shift.
+[RespectCraft Test] There is no valid invite.
+[RespectCraft Test] Juca requested a non-explicit test finisher. /respectcraft test finisher accept or /respectcraft test finisher deny (15s). To cancel during the action: /stopitstopnow or Shift.
+Juca left the game
+[RespectCraft Test] There is no valid invite.
+Juca joined the game
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Special TEST defeat recorded (7).
+[RespectCraft Test] Recovery: 10s. /stopitstopnow releases you.
+[RespectCraft Test] You survived the execution (death was prevented).
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Special TEST defeat recorded (8).
+Bia was executed by Juca
+Juca left the game
+
+## Consultas
+> execute as Bia run respectcraft test defeats get
+[07:59:09] Special test defeats: 6
+> data get entity Juca SelectedItem
+[07:59:17] Found no elements matching SelectedItem
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[07:59:22] PvP is not allowed between you and Bia (server PvP setting or team rules).
+> calamidade status
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[08:03:38] Finisher started.
+> data get entity Bia Pos
+[08:04:42] Bia has the following entity data: [0.49999999999999983d, -60.0d, 1.65d]
+> data get entity Bia Pos
+[08:04:44] Bia has the following entity data: [0.49999999999999983d, -60.0d, -2.5040618129446646d]
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[08:04:51] Finisher started.
+> data get entity Bia Health
+[08:07:12] Bia has the following entity data: 20.0f
+> data get entity Bia Pos
+[08:07:14] Bia has the following entity data: [0.49999999999999983d, -60.0d, 1.5963396721849268d]
+> data get entity Bia Pos
+[08:07:16] Bia has the following entity data: [0.49999999999999983d, -60.0d, -2.773658416444969d]
+> data get entity Juca Pos
+[08:07:18] Juca has the following entity data: [0.5d, -60.0d, 0.33164422888297196d]
+> data get entity Juca Pos
+[08:07:20] Juca has the following entity data: [0.5d, -60.0d, -3.791155321168411d]
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[08:07:26] Finisher started.
+> data get entity Bia Health
+[08:07:32] Bia has the following entity data: 20.0f
+
+################ CORRECAO (servidor parando)
+## Passos
+=== server (08:18:59)
+=== two scenes at once, then /stop in the middle (08:20:54)
+=== server back on the same world: both join free and a new scene works (08:21:17)
+=== done (08:24:02)
+
+## Sessoes (log do servidor)
+[08:19:52] [minecraft/MinecraftServer]: Juca joined the game
+[08:20:39] [minecraft/MinecraftServer]: Bia joined the game
+[08:21:05] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (server stopping)
+[08:21:05] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:zombie on minecraft:player: CANCELLED (server stopping)
+[08:21:05] [minecraft/MinecraftServer]: Stopping server
+[08:22:21] [minecraft/MinecraftServer]: Juca joined the game
+[08:23:11] [minecraft/MinecraftServer]: Bia joined the game
+[08:23:43] [minecraft/MinecraftServer]: Juca left the game
+[08:23:50] [minecraft/MinecraftServer]: Bia left the game
+[08:23:57] [minecraft/MinecraftServer]: Stopping server
+
+## Chat do Juca (sem eco de comandos)
+Bia joined the game
+Your game mode has been updated to Survival Mode
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+Bia joined the game
+
+## Chat da Bia (sem eco de comandos)
+Your game mode has been updated to Survival Mode
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+Juca left the game
+
+## Consultas
+> respectcraft admin finisher Juca @e[tag=zj,limit=1] respectcraft:combo
+[08:21:00] Finisher started.
+> respectcraft admin finisher @e[tag=zb,limit=1] Bia respectcraft:combo
+[08:21:02] Finisher started.
+> data get entity Bia Pos
+[08:23:26] Bia has the following entity data: [10.5d, -60.0d, 1.65d]
+> data get entity Bia Pos
+[08:23:28] Bia has the following entity data: [10.5d, -60.0d, -2.52543971796843d]
+> data get entity Juca Pos
+[08:23:30] Juca has the following entity data: [0.5d, -60.0d, 0.5d]
+> data get entity Juca Pos
+[08:23:32] Juca has the following entity data: [0.5d, -60.0d, -3.773439721336093d]
+> respectcraft admin finisher Juca @e[tag=zj,limit=1] respectcraft:takedown
+[08:23:36] No entity was found
+> execute if entity @e[tag=zj]
+[08:23:42] Test failed
+
+################ SINGLEPLAYER (servidor integrado): Save and Quit no meio de uma cena
+[08:17:35] [Server thread/INFO] [minecraft/MinecraftServer]: Solo left the game
+[08:17:35] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (disconnect)
+[08:17:35] [Server thread/INFO] [minecraft/ServerCommonPacketListenerImpl]: Stopping singleplayer server as player logged out
+[08:17:35] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
