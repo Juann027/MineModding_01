@@ -34,12 +34,14 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 import software.bernie.geckolib.animatable.GeoEntity;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.UUID;
 
@@ -669,6 +671,26 @@ public final class FinisherTestMechanic {
         INCAPACITATED.remove(player.getUUID());
         PENDING.remove(player.getUUID());
         PENDING.entrySet().removeIf(e -> e.getValue().attacker().equals(player.getUUID()));
+    }
+
+    /**
+     * Etapa 4.10.2: servidor parando ({@code /stop}, anfitriao de LAN saindo, desligamento). O {@code PlayerList.removeAll}
+     * desconecta os jogadores SEM o {@code PlayerLoggedOutEvent}, entao {@link #onLogout} nao roda e a cena ficaria sem
+     * fim: sem CANCELLED no log, sem {@link FinisherSessionEvent.Aborted}, sem encerrar os efeitos, e com o estado
+     * estatico passando para o proximo servidor do mesmo processo (servidor integrado). Aqui toda sessao ativa termina
+     * pelo {@link #abort} (nunca executa) e convites, recuperacoes e cooldowns (tempo de jogo deste mundo) sao limpos.
+     */
+    public static void onServerStopping(ServerStoppingEvent event) {
+        for (Session s : new LinkedHashSet<>(SESSIONS.values())) abort(s, "server stopping");
+        for (UUID id : INCAPACITATED.keySet()) {
+            ServerPlayer player = event.getServer().getPlayerList().getPlayer(id);
+            if (player != null) stopIfOwn(player, Finishers.KNOCKED_DOWN);
+        }
+        SESSIONS.clear();
+        PENDING.clear();
+        INCAPACITATED.clear();
+        PAIR_COOLDOWNS.clear();
+        VICTIM_COOLDOWNS.clear();
     }
 
     public static void onClone(PlayerEvent.Clone event) {

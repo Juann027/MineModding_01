@@ -90,6 +90,7 @@ public final class RespectCraft {
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onDeath);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onPlayerTick);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onLogout);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onServerStopping);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onClone);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockAttack);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockEntityInteract);
