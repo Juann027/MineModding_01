@@ -40,6 +40,8 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   normalmente em combate, mas só a finalização **exclusiva** deles (`FinisherTargeting.exclusiveTo`) pode executá-los;
   finalizações comuns são recusadas no servidor antes da cena (também no comando de admin). Nenhum chefe ou exclusiva
   existe ainda: não invente.
+- **Multiplayer (Etapa 4.10.2):** validado com dois clientes reais; servidor parando encerra as cenas
+  (`FinisherTestMechanic.onServerStopping`, `CANCELLED (server stopping)`) e limpa o estado estático.
 - **Menu K (Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C):** holográfico em `client.holo`, núcleo `HoloMenu`. Padrão = **no mundo**
   (`HoloWorld`: placas paradas no mundo, jogador anda/pula/olha; K invoca/dispensa, R chama de volta; sem `Screen`).
   Clique/arrasto/roda pela mira (Alt segurado = modo cursor) via `HoloWorldInput`: o dono do botão é decidido no aperto

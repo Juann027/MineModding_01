@@ -143,6 +143,9 @@ sistema em que vai mexer; veja o fim deste arquivo).
   também morre (com consentimento do convite, como antes); se sobreviver, volta a recuperação caída de antes.
   `BossDefeatEvent.Method.FINISHER` só para morte confirmada pelo golpe final de uma exclusiva do próprio chefe
   (crédito em `persistentData` só durante o golpe).
+- **Servidor parando (Etapa 4.10.2):** o `/stop` desconecta sem `PlayerLoggedOutEvent`; por isso
+  `FinisherTestMechanic.onServerStopping` encerra toda sessão ativa por `abort` (`CANCELLED (server stopping)`, nunca
+  executa) e limpa convites, recuperações e cooldowns. Estado novo de finalização em `static` precisa ser limpo ali também.
 - **Efeitos de finalização (Etapa 4.10, Calamidade_Awakening):** só `fx.FinisherFx` começa/encerra efeitos de
   finalização (não chame `Effects.start` para isso em outro lugar). `FinisherDef` sem `FinisherFxDef` = partículas
   vanilla de antes (sons ficam no `FinisherTestMechanic` nos dois casos). Por sessão: um efeito **HERO** da cena
@@ -297,5 +300,7 @@ python3 tools/fx/check_shaders.py        # shaders fx montados como a Rimulib + 
   roxo, terreno, `/respectcraft realm`), Madeira Retorcida e agua-vivas → 4.9 (`HANDOFF_STAGE4_9_PURPLE_DIMENSION_MVP.md`);
   remoção do Leão do Fim → 4.9.1; efeitos das finalizações no Calamidade_Awakening (ponte `fx`, shaders, gancho
   GeckoLib, dependência) → 4.10 (`HANDOFF_STAGE4_10_FINISHER_FX_CALAMIDADE.md`); execuções reais, regra de chefes,
-  finalizações exclusivas e plano de desbloqueio → 4.10.1 (`HANDOFF_STAGE4_10_1_TRUE_EXECUTIONS.md`).
+  finalizações exclusivas e plano de desbloqueio → 4.10.1 (`HANDOFF_STAGE4_10_1_TRUE_EXECUTIONS.md`); validação
+  multiplayer com dois clientes reais (PvP, times, totem, mob × jogador, saídas, servidor parando) → 4.10.2
+  (`HANDOFF_STAGE4_10_2_MULTIPLAYER_VALIDATION.md`).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.
