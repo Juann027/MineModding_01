@@ -85,10 +85,10 @@ grep -q 'Inverted Realm ready: arrival .* biome respectcraft:twisted_wilds, fixe
   || fail "dimensão Inverted Realm não carregou/gerou terreno"
 grep -qE 'Summoned new (Baby Jellyfish|entity\.respectcraft\.agua_viva_filhote)' "$log" || fail "Baby Jellyfish não foi invocada"
 grep -qE 'Summoned new (Giant Jellyfish|entity\.respectcraft\.agua_viva\b)' "$log" || fail "Giant Jellyfish não foi invocada"
-# Etapa 4.10: Calamidade_Awakening 0.10.x carregado no servidor dedicado, efeitos das finalizacoes registrados no lado
+# Etapa 4.10: Calamidade_Awakening 0.10.x/0.11.x carregado no servidor dedicado, efeitos das finalizacoes registrados no lado
 # comum e nenhuma instancia ativa sem sessao (a recusa mob x mob acima nao comeca efeito nenhum).
-grep -qE 'Calamidade_Awakening 0\.10\.[0-9]+ \(calamidade_awakening\)' "$log" \
-  || fail "Calamidade_Awakening 0.10.x não foi carregado no servidor dedicado"
+grep -qE 'Calamidade_Awakening 0\.1[01]\.[0-9]+ \(calamidade_awakening\)' "$log" \
+  || fail "Calamidade_Awakening 0.10.x/0.11.x não foi carregado no servidor dedicado"
 grep -q 'RespectCraft finisher FX registered on Calamidade_Awakening' "$log" \
   || fail "efeitos das finalizações não foram registrados no Calamidade"
 grep -q 'Live instances on server: 0 / 64' "$log" || fail "/calamidade status não respondeu ou há efeito preso"

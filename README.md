@@ -73,9 +73,9 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 1. NeoForge **21.1.265 ou mais novo (21.1.x)** para Minecraft 1.21.1, com **Java 21**.
 2. Na pasta `mods`, **cinco jars**: `respectcraft-<versão>.jar`, **GeckoLib 4.9.3** (não a 5), **SmartBrainLib 1.16.11**,
    **Rimulib 1.3.0** para NeoForge ([CurseForge](https://www.curseforge.com/minecraft/mc-mods/rimulib/files/9676532)) e
-   **Calamidade_Awakening 0.10.x** (`calamidade_awakening-0.10.0.jar`, do
-   [release v0.10.0 no GitHub](https://github.com/Juann027/Calamidade_Awakening-Mod-1.21.1/releases/tag/v0.10.0);
-   aceita `[0.10.0,0.11.0)`).
+   **Calamidade_Awakening 0.11.1** (`calamidade_awakening-0.11.1.jar`, do
+   [release v0.11.1 no GitHub](https://github.com/Juann027/Calamidade_Awakening-Mod-1.21.1/releases/tag/v0.11.1);
+   aceita `[0.10.0,0.12.0)`, ou seja, 0.10.x e 0.11.x).
 3. Multiplayer: os mesmos cinco jars no servidor dedicado e em cada cliente, com **a mesma versão do Calamidade** nos
    dois lados (o protocolo de rede dele muda entre versões menores).
 
