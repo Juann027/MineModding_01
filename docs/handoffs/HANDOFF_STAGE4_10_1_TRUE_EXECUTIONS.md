@@ -181,3 +181,26 @@ Roteiro `docs/evidencias/etapa4_10_1/cenario_cliente_real.sh`; resumo completo e
 
 Não testado com cliente real: jogador × jogador (execução de jogador, PvP desligado, times, totem em jogador), mob × jogador,
 Dragão do Fim pelo clique (coberto pelo teste de fumaça e pela regra de partes), dois clientes, GPU real.
+
+## 7. Hotfix de compatibilidade: Calamidade_Awakening 0.11.1
+
+Pedido do dono: com o Calamidade 0.11.1 instalado o jogo recusava o RespectCraft (`requires calamidade_awakening 0.10.0
+or above, and below 0.11.0`). Correção pequena, sem mudança de jogabilidade nem de código Java.
+
+- **Conferência da API:** `javap -public` de todo `dev.calamidade_awakening.api` nos jars 0.10.0 e 0.11.1: a 0.11.1 só
+  **adiciona** (Terrain API: `TerrainEdit`, `TerrainShape`, `TerrainPalette`, `Effects.terrain` etc.); nenhum membro
+  removido ou com assinatura alterada. As 90 referências do bytecode do RespectCraft a classes/métodos/campos do
+  Calamidade existem com o mesmo descritor **nas duas** versões. `calamidade_fx.glsl` é idêntico (mesmo SHA-256) nas
+  duas. A RimuLib exigida continua `[1.3.0,2.0)`. O MUDANCAS.md do motor confirma: "toda a API da 0.10 continua".
+- **Mudança:** `gradle.properties` compila/roda contra `calamidade_version=0.11.1` (SHA-256
+  `a4dfa448…6c21`, o mesmo publicado nas notas/VALIDACAO do motor) e aceita `[0.10.0,0.12.0)`; o teste de fumaça
+  aceita `0.10.x`/`0.11.x`; CLAUDE/AGENTS/README atualizados.
+- **Rede:** a 0.11 criou o canal `terrain_v1`; o Calamidade exige a **mesma versão no servidor e nos clientes** (0.11.0 e
+  0.11.1 se entendem; 0.10 × 0.11 não é suportado pelo motor). Isso não muda o RespectCraft, que não usa a Terrain API.
+- **Testes:** `./gradlew build` OK; teste de fumaça do servidor dedicado OK com a 0.11.1 **e** com a 0.10.0 (mesmo
+  código, `-Pcalamidade_version=0.10.0`); SelfTest OK; `bbsync.py`/`test_export.py` OK; `check_shaders.py` conferiu a
+  cópia do GLSL (o `glslangValidator` não estava instalado na sessão; o CI roda a etapa estrita). Cliente real (Xvfb)
+  com 0.11.1, o mesmo roteiro da seção 6: resultados idênticos (SUCCESS ×2, FAILED com totem, CANCELLED por pedido,
+  dano e desconexão, Wither recusado e morto por dano comum, `0 / 64` instâncias), efeitos do Calamidade desenhados
+  (anel e luz no chão, barras da câmera), nenhum `NoSuchMethodError`/`NoClassDefFoundError`/`ClassNotFoundException`.
+  Evidências: `docs/evidencias/etapa4_10_1_calamidade_0_11_1/`.
