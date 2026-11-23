@@ -54,6 +54,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `entity`, `client.render`, `command` | Mobs **agua-vivas** (`AguaVivaEntity`, Etapa 4.9) e renderers. O Leão do Fim foi removido na Etapa 4.9.1 (não o reintroduza). `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim`, `test` e `realm`). |
 | `dimension`, `client.dimension` | **Inverted Realm** (Etapa 4.9, MVP): dimensão, bioma e features são **dados** (`data/respectcraft/dimension*`, `worldgen/...`); `InvertedRealm` (chave, viagem de teste, chão seguro) e `InvertedRealmCommands` (`/respectcraft realm`); céu/neblina/luz em `client.dimension.InvertedRealmEffects`. |
 | `block.wood`, `registry.ModBlocks` | **Madeira Retorcida** (Etapa 4.9, do pacote "O Avesso — Fase 2, Etapa A"): blocos em `ModBlocks`, itens em `ModItems`, placas/bancada em `TwistedFurniture`, barco por `enumextensions.json`; placas no cliente em `client.render.TwistedWoodRenderers`. |
+| `boss` | **Chefes personalizados** (Etapa 4.11): `Bosses` (registro em código, **vazio**), `BossProfile` (tipo, exclusivas, condições), `BossCondition` (`HealthBelow`, `RequiresSkill`, `RequiresProgress`), `BossExecutionCheckEvent` (só recusa). Avaliado em `FinisherTestMechanic.eligibility` antes da cena. |
 | `selftest` | `SelfTest`: regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
 | `biome`, `npc` | Só `LEIA-ME.md`: sem código (biomas são dados desde a 4.9). |
 
@@ -116,7 +117,8 @@ sistema em que vai mexer; veja o fim deste arquivo).
   `PlayerAnimationDef`; mob/chefe → `EntityFinisherClip` (controlador e animação gatilho do **próprio** rig,
   `triggerAnim` no mesmo tick) ou parado. Nunca um controlador universal nem ossos de jogador em mob. Toda sessão
   precisa de um jogador (mob × mob é recusado). Mob é segurado sem gravar nada na entidade (sem `NoAI`). Não invente
-  clips de mob: só registre `EntityFinisherClip` quando o asset existir. Chefe = tag `c:bosses` ou `respectcraft:bosses`;
+  clips de mob: só registre `EntityFinisherClip` quando o asset existir. Chefe personalizado (Etapa 4.11) = ficha em
+  `boss.Bosses` (exclusivas + condições); não registre chefe sem aprovação do dono. Chefe = tag `c:bosses` ou `respectcraft:bosses`;
   `BossDefeatEvent` sai no máximo uma vez por chefe e **ninguém concede recompensa** até as regras serem pedidas.
 - **Câmera cinematográfica** segue o estado de animação sincronizado e restaura a perspectiva em qualquer saída.
 - **Regra permanente de chefes (Etapa 4.10.1):** chefes podem ser derrotados normalmente (dano comum, armas,
