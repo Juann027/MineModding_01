@@ -34,6 +34,24 @@ public final class FinisherRules {
     }
 
     /**
+     * Etapa 4.11 (decisao do dono): o contador so sobe com a morte CONFIRMADA pelo golpe final (SUCCESS). Totem,
+     * protecao, PvP desligado ou invulnerabilidade (FAILED) e cancelamento nunca contam.
+     */
+    public static boolean countsDefeat(com.respectcraft.finisher.FinisherParticipants.Kind victim,
+                                       com.respectcraft.finisher.FinisherExecution.Outcome outcome) {
+        return countsDefeat(victim) && outcome == com.respectcraft.finisher.FinisherExecution.Outcome.SUCCESS;
+    }
+
+    /**
+     * Etapa 4.11 (decisao do dono): dano que ignora invulnerabilidade ({@code /kill}, vazio) cancela a cena e PASSA;
+     * qualquer outro dano a um participante cancela a cena e e descartado (o golpe automatico do proprio parceiro mob
+     * e descartado sem cancelar). Devolve true quando o dano deve ser cancelado.
+     */
+    public static boolean suppressSessionDamage(boolean bypassesInvulnerability) {
+        return !bypassesInvulnerability;
+    }
+
+    /**
      * Motivo para cancelar a cena neste tick, ou null para seguir. "Presente" = vivo, nao removido (despawn,
      * descarregado) e, se jogador, conectado. Dimensao diferente e distancia excessiva tambem cancelam.
      */

@@ -554,17 +554,21 @@ public final class FinisherTestMechanic {
         PAIR_COOLDOWNS.put(new Pair(s.attacker.getUUID(), s.target.getUUID()),
                 now + FinisherRules.SAME_PAIR_COOLDOWN_TICKS);
         VICTIM_COOLDOWNS.put(s.target.getUUID(), now + FinisherRules.VICTIM_COOLDOWN_TICKS);
-        // Contador so de jogador (FinisherRules.countsDefeat): mob e chefe vencidos nunca recebem contador.
+        // Contador so de jogador: mob e chefe vencidos nunca recebem contador.
         boolean counts = FinisherRules.countsDefeat(FinisherParticipants.kindOf(s.target));
-        if (counts && s.target instanceof ServerPlayer player) {
-            int updated = DefeatCounter.increment(player);
-            message(player, "Special TEST defeat recorded (" + updated + ").");
-        }
         // Etapa 4.10.1: golpe final real, com os participantes ja liberados (o dano nao cai mais na trava da sessao).
         String targetName = name(s.target);
         FinisherExecution.Result result = FinisherExecution.execute(s.attacker, s.target, s.finisher);
         RespectCraft.LOGGER.info("Finisher {} by {} on {} ({}): {} ({})", s.finisher.id(), FinisherParticipants.typeId(s.attacker),
                 FinisherParticipants.typeId(s.target), targetName, result.outcome(), result.detail());
+        // Etapa 4.11 (decisao do dono): o contador so sobe com SUCCESS (morte confirmada). O jogador morto continua
+        // sendo o mesmo objeto ate o respawn (o Clone copia o persistentData), entao o incremento vale.
+        if (FinisherRules.countsDefeat(FinisherParticipants.kindOf(s.target), result.outcome())
+                && s.target instanceof ServerPlayer player) {
+            int updated = DefeatCounter.increment(player);
+            RespectCraft.LOGGER.info("Defeat counter of {} = {}", player.getGameProfile().getName(), updated);
+            message(player, "Special TEST defeat recorded (" + updated + ").");
+        }
         if (!result.killConfirmed() && counts && s.target instanceof ServerPlayer player && player.isAlive()
                 && !s.finisher.recoveryInScene()) {
             // Sobreviveu (totem, protecao): fica caida durante a recuperacao, como antes desta etapa.
@@ -681,6 +685,12 @@ public final class FinisherTestMechanic {
         if (s != null) {
             // Uma tentativa de dano interrompe a cena, SEM aplicar o dano da tentativa. Excecao (Etapa 4.8): o golpe
             // automatico da IA do PROPRIO parceiro mob faz parte da cena; e anulado sem cancelar a finalizacao.
+            // Etapa 4.11: dano que ignora invulnerabilidade (/kill, vazio) cancela a cena e segue normalmente.
+            boolean unblockable = event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY);
+            if (!FinisherRules.suppressSessionDamage(unblockable)) {
+                abort(s, "interrupted by unblockable damage");
+                return;
+            }
             event.setCanceled(true);
             LivingEntity partner = s.attacker == event.getEntity() ? s.target : s.attacker;
             if (partner instanceof ServerPlayer || event.getSource().getEntity() != partner) abort(s, "interrupted by damage");
