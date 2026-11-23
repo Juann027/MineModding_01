@@ -1523,6 +1523,29 @@ public final class SelfTest {
         check(f, com.respectcraft.testgame.DefeatCounter.next(-5) == 1, "derrotas: negativo vira 0 antes do +1");
         check(f, com.respectcraft.testgame.DefeatCounter.next(Integer.MAX_VALUE) == Integer.MAX_VALUE,
                 "derrotas: sem estouro no máximo");
+        // Etapa 4.11 (decisao do dono): contador so com SUCCESS; /kill e vazio passam e cancelam a cena.
+        var P = com.respectcraft.finisher.FinisherParticipants.Kind.PLAYER;
+        var M = com.respectcraft.finisher.FinisherParticipants.Kind.MOB;
+        var B = com.respectcraft.finisher.FinisherParticipants.Kind.BOSS;
+        var O = com.respectcraft.finisher.FinisherExecution.Outcome.class.getEnumConstants();
+        boolean onlySuccess = true;
+        for (var outcome : O) {
+            boolean expected = outcome == com.respectcraft.finisher.FinisherExecution.Outcome.SUCCESS;
+            if (com.respectcraft.testgame.FinisherRules.countsDefeat(P, outcome) != expected
+                    || com.respectcraft.testgame.FinisherRules.countsDefeat(M, outcome)
+                    || com.respectcraft.testgame.FinisherRules.countsDefeat(B, outcome)) onlySuccess = false;
+        }
+        check(f, onlySuccess, "derrotas: só SUCCESS contra jogador conta (FAILED/totem e CANCELLED não; mob/chefe nunca)");
+        check(f, !com.respectcraft.testgame.FinisherRules.suppressSessionDamage(true)
+                && com.respectcraft.testgame.FinisherRules.suppressSessionDamage(false),
+                "cena: dano que ignora invulnerabilidade passa; dano comum é descartado");
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            var types = server.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE);
+            check(f, types.getHolderOrThrow(net.minecraft.world.damagesource.DamageTypes.GENERIC_KILL).is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
+                    && types.getHolderOrThrow(net.minecraft.world.damagesource.DamageTypes.FELL_OUT_OF_WORLD).is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY),
+                    "cena: /kill e vazio ignoram invulnerabilidade (passam pela cena)");
+        }
     }
 
     private static void sequences(List<String> f) {
