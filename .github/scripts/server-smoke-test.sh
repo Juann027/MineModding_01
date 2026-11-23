@@ -77,6 +77,8 @@ for id in takedown rasteira combo; do
   grep -q "respectcraft:$id: ELIGIBLE" "$log" || fail "finalização $id não ficou elegível contra mob comum"
   [ "$(grep -c "respectcraft:$id: BOSS_REQUIRES_EXCLUSIVE" "$log")" -ge 2 ] || fail "finalização $id não foi recusada contra os chefes"
 done
+# Etapa 4.11: chefes vanilla nao tem ficha de chefe personalizado (registro Bosses vazio): so derrota comum.
+[ "$(grep -c 'Boss profile: none (normal defeat only)' "$log")" -ge 2 ] || fail "chefes vanilla deveriam ficar sem ficha de chefe"
 grep -q 'Named entity .*SmokeWither.* died' "$log" || fail "o Wither não morreu por dano comum de combate"
 grep -q 'Boss defeat minecraft:wither (NORMAL)' "$log" || fail "derrota comum do Wither não foi anunciada como NORMAL"
 # Etapa 4.9: a dimensao Inverted Realm carrega (dimension_type, noise_settings, bioma e features em dados), gera

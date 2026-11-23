@@ -1029,6 +1029,7 @@ public final class SelfTest {
         check(f, Finishers.pickFor(catalog, B, bossB, s -> false, random).isEmpty(), "execução: exclusiva travada não é sorteada");
         check(f, Finishers.pickFor(catalog, B, bossB, lock::equals, random).orElse(null) == exB, "execução: exclusiva liberada de B");
         check(f, Finishers.pickFor(catalog, B, wither, s -> true, random).isEmpty(), "execução: chefe sem exclusiva fica sem finalização");
+        bossRegistry(f, catalog, exA, exB, bossA, bossB, lock);
 
         // Golpe final: dano finito, acima de vida + absorcao; resultado so com morte confirmada.
         float[][] cases = {{4, 0, 20}, {1, 16, 20}, {300, 0, 300}, {0, 0, 0}, {1.0E9F, 1.0E9F, 1.0E9F}};
@@ -1067,6 +1068,68 @@ public final class SelfTest {
                         && h.is(net.minecraft.tags.DamageTypeTags.BYPASSES_COOLDOWN), "execução: dano ignora armadura, recarga e repulsão");
                 check(f, !h.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY), "execução: dano respeita totem e invulnerabilidade");
             });
+        }
+    }
+
+    /**
+     * Etapa 4.11: fichas de chefe ({@code boss.Bosses}) com fixtures que nunca entram no registro. Validacao contra o
+     * catalogo, execucao so pela exclusiva listada, condicoes (vida, habilidade, progressao ausente) e evento de recusa.
+     */
+    private static void bossRegistry(List<String> f, List<FinisherDef> catalog, FinisherDef exA, FinisherDef exB,
+                                     net.minecraft.resources.ResourceLocation bossA, net.minecraft.resources.ResourceLocation bossB,
+                                     net.minecraft.resources.ResourceLocation lock) {
+        java.util.function.Function<net.minecraft.resources.ResourceLocation, FinisherDef> lookup =
+                id -> catalog.stream().filter(d -> d.id().equals(id)).findFirst().orElse(null);
+        var profileA = com.respectcraft.boss.BossProfile.of(bossA).withExclusiveFinisher(exA.id())
+                .withCondition(new com.respectcraft.boss.BossCondition.HealthBelow(0.10F));
+        var profileB = com.respectcraft.boss.BossProfile.of(bossB).withExclusiveFinisher(exB.id())
+                .withCondition(new com.respectcraft.boss.BossCondition.RequiresSkill(lock))
+                .withCondition(new com.respectcraft.boss.BossCondition.RequiresProgress(com.respectcraft.RespectCraft.id("selftest/progress_b")));
+        check(f, com.respectcraft.boss.Bosses.validate(profileA, lookup).isEmpty()
+                && com.respectcraft.boss.Bosses.validate(profileB, lookup).isEmpty(), "chefes: fichas de teste válidas");
+        check(f, !com.respectcraft.boss.Bosses.validate(com.respectcraft.boss.BossProfile.of(bossA).withExclusiveFinisher(exB.id()), lookup).isEmpty(),
+                "chefes: exclusiva de outro chefe recusada na ficha");
+        check(f, !com.respectcraft.boss.Bosses.validate(com.respectcraft.boss.BossProfile.of(bossA)
+                .withExclusiveFinisher(Finishers.TAKEDOWN_ID), lookup).isEmpty(), "chefes: finalização comum recusada na ficha");
+        check(f, !com.respectcraft.boss.Bosses.validate(com.respectcraft.boss.BossProfile.of(bossA)
+                .withExclusiveFinisher(com.respectcraft.RespectCraft.id("selftest/missing")), lookup).isEmpty(), "chefes: finalização ausente recusada");
+        check(f, !com.respectcraft.boss.Bosses.validate(profileA.withExclusiveFinisher(exA.id()), lookup).isEmpty(),
+                "chefes: exclusiva repetida recusada");
+        check(f, com.respectcraft.boss.Bosses.get(bossA).isEmpty() && com.respectcraft.boss.Bosses.all().isEmpty(),
+                "chefes: registro real vazio (nenhum chefe definitivo)");
+        check(f, throwsIllegalArgument(() -> new com.respectcraft.boss.BossCondition.HealthBelow(0F))
+                && throwsIllegalArgument(() -> new com.respectcraft.boss.BossCondition.HealthBelow(1.5F)), "chefes: fração de vida inválida");
+
+        var low = new com.respectcraft.boss.BossCondition.Context(0.05F, s -> false, k -> false);
+        var high = new com.respectcraft.boss.BossCondition.Context(0.20F, s -> true, k -> true);
+        var skilled = new com.respectcraft.boss.BossCondition.Context(0.20F, lock::equals, k -> false);
+        var full = new com.respectcraft.boss.BossCondition.Context(0.20F, lock::equals, k -> true);
+        check(f, com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileA), exA, low).isEmpty(),
+                "chefes: A executável com vida abaixo de 10%");
+        check(f, com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileA), exA, high).isPresent(),
+                "chefes: A recusado com vida acima de 10%");
+        check(f, com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.empty(), exA, low).isPresent(),
+                "chefes: chefe sem ficha nunca é executado");
+        check(f, com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileA), exB, low).isPresent(),
+                "chefes: exclusiva fora da ficha recusada");
+        check(f, com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileB), exB, low).isPresent()
+                && com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileB), exB, skilled).isPresent()
+                && com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileB), exB, full).isEmpty(),
+                "chefes: B exige habilidade e progressão (todas as condições)");
+
+        var event = new com.respectcraft.boss.BossExecutionCheckEvent(null, null, profileA, exA);
+        check(f, event.getDenial().isEmpty(), "chefes: evento sem ouvinte não recusa");
+        event.deny("first");
+        event.deny("second");
+        check(f, event.getDenial().orElse("").equals("first"), "chefes: primeira recusa do evento vale");
+    }
+
+    private static boolean throwsIllegalArgument(Runnable action) {
+        try {
+            action.run();
+            return false;
+        } catch (IllegalArgumentException e) {
+            return true;
         }
     }
 
