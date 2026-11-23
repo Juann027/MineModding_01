@@ -291,6 +291,12 @@ public final class RespectCraftCommands {
             if (verdict.eligible()) eligible++;
             sb.append("\n ").append(def.id()).append(": ").append(verdict);
         }
+        if (kind == com.respectcraft.finisher.FinisherParticipants.Kind.BOSS) {
+            // Etapa 4.11: ficha do chefe personalizado (Bosses). Sem ficha = so derrota comum.
+            var profile = com.respectcraft.boss.Bosses.get(type);
+            sb.append("\n Boss profile: ").append(profile.map(p -> p.exclusiveFinishers().size() + " exclusive finisher(s), "
+                    + p.executionConditions().size() + " condition(s)").orElse("none (normal defeat only)"));
+        }
         String text = sb.toString();
         c.getSource().sendSuccess(() -> Component.literal(text), false);
         return eligible;

@@ -4,6 +4,10 @@ import com.respectcraft.animation.PlayerAnimationDef;
 import com.respectcraft.animation.PlayerAnimationEvent;
 import com.respectcraft.animation.PlayerAnimationService;
 import com.respectcraft.RespectCraft;
+import com.respectcraft.boss.BossCondition;
+import com.respectcraft.boss.BossExecutionCheckEvent;
+import com.respectcraft.boss.BossProfile;
+import com.respectcraft.boss.Bosses;
 import com.respectcraft.finisher.FinisherDef;
 import com.respectcraft.finisher.FinisherExecution;
 import com.respectcraft.finisher.FinisherParticipants;
@@ -300,10 +304,33 @@ public final class FinisherTestMechanic {
                 case ELIGIBLE -> throw new IllegalStateException();
             });
         }
+        if (kind == FinisherParticipants.Kind.BOSS) {
+            // Etapa 4.11: exclusiva elegivel ainda precisa da ficha do chefe (Bosses), das condicoes dela e de nenhum
+            // ouvinte do BossExecutionCheckEvent recusar. Tudo antes de palco, animacao, trava ou efeito.
+            String denial = bossDenial(attacker, target, finisher);
+            if (denial != null) {
+                RespectCraft.LOGGER.info("Finisher {} refused against boss {}: {}", finisher.id(),
+                        FinisherParticipants.typeId(target), denial);
+                return StartResult.refused(denial);
+            }
+        }
         if (attacker instanceof ServerPlayer player && target instanceof ServerPlayer victim && !victim.canHarmPlayer(player)) {
             return StartResult.refused("PvP is not allowed between you and " + name(victim) + " (server PvP setting or team rules).");
         }
         return null;
+    }
+
+    /** Ficha, condicoes e ouvintes da execucao de um chefe (Etapa 4.11). Null = pode seguir. */
+    private static String bossDenial(LivingEntity attacker, LivingEntity boss, FinisherDef finisher) {
+        if (!(attacker instanceof ServerPlayer player)) return "Only players can execute bosses.";
+        Optional<BossProfile> profile = Bosses.get(FinisherParticipants.typeId(boss));
+        var context = new BossCondition.Context(boss.getHealth() / Math.max(1F, boss.getMaxHealth()),
+                skill -> ProfileService.get(player).hasSkill(skill.toString()),
+                key -> false); // Sem progressao de chefes ainda: toda marca exigida esta ausente.
+        Optional<String> denial = Bosses.checkExecution(profile, finisher, context);
+        if (denial.isPresent()) return denial.get();
+        BossExecutionCheckEvent check = NeoForge.EVENT_BUS.post(new BossExecutionCheckEvent(player, boss, profile.get(), finisher));
+        return check.getDenial().orElse(null);
     }
 
     private static StartResult start(LivingEntity attacker, LivingEntity target, FinisherDef chosen, boolean force) {
@@ -596,6 +623,9 @@ public final class FinisherTestMechanic {
         s.lastProcessed = now;
         String problem = FinisherRules.abortReason(present(s.attacker), present(s.target),
                 s.attacker.level() == s.target.level(), s.attacker.distanceToSqr(s.target));
+        // Etapa 4.11: participante que virou espectador no meio da cena (/gamemode) nao pode ficar preso no palco nem
+        // receber um golpe final que o modo espectador sempre recusa.
+        if (problem == null && (s.attacker.isSpectator() || s.target.isSpectator())) problem = "participant became a spectator";
         if (problem != null) {
             abort(s, problem);
             return;

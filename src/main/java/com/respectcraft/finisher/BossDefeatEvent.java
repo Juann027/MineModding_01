@@ -41,4 +41,8 @@ public final class BossDefeatEvent extends Event {
     public Optional<ServerPlayer> getCredited() { return Optional.ofNullable(credited); }
     /** Finalizacao qualificante (so em FINISHER). */
     public Optional<ResourceLocation> getFinisher() { return Optional.ofNullable(finisher); }
+    /** Ficha do chefe personalizado (Etapa 4.11), se ele tiver uma em {@code boss.Bosses}; vanilla/outros mods: vazio. */
+    public Optional<com.respectcraft.boss.BossProfile> getProfile() {
+        return com.respectcraft.boss.Bosses.get(FinisherParticipants.typeId(boss));
+    }
 }
