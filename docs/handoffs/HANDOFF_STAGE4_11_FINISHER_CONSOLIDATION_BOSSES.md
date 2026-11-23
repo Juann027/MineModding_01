@@ -1,6 +1,6 @@
 # Handoff — Etapa 4.11: consolidação do Finisher Engine e infraestrutura de chefes personalizados
 
-Status: **PR aberto, empilhado sobre o #48 (que está sobre o #47). Nada foi integrado na `main`.** `mod_version`
+Status: **PR #49 aberto (contador só com SUCCESS e `/kill` aprovados e aplicados), empilhado sobre o #48 (que está sobre o #47). Nada foi integrado na `main`.** `mod_version`
 continua `0.5.7` (sem release).
 
 ## 1. Estado de integração encontrado
@@ -43,25 +43,27 @@ invulnerável) — e o contador de derrotas subia mesmo assim. Agora o tick da s
 - Uma única exclusiva por tipo de chefe na `FinisherTargeting` (limite herdado da 4.10.1); a ficha de chefe aceita
   várias exclusivas, todas com `exclusiveTo(<mesmo tipo>)`.
 
-## 3. Contador de derrotas e `/kill` — recomendações (NÃO aplicadas, aguardam o dono)
+## 3. Contador de derrotas e `/kill` — decisões do dono (aplicadas na segunda rodada do PR #49)
 
-### 3.1 Contador sobe com execução impedida (totem, proteção, PvP desligado no meio)
-Hoje: `complete` incrementa antes do golpe final (regra da 4.2), então conta também em `FAILED`.
+### 3.1 Contador só com `SUCCESS`
+`FinisherTestMechanic.complete` agora incrementa **depois** do golpe final e só quando
+`FinisherRules.countsDefeat(kind, outcome)` é verdadeiro: vítima jogador **e** `Outcome.SUCCESS` (morte confirmada).
+`FAILED` (totem, proteção, PvP desligado no meio, invulnerabilidade) e `CANCELLED` nunca contam; mob e chefe nunca
+contam (regra da 4.8 mantida em `countsDefeat(kind)`). O jogador morto ainda é o mesmo objeto no tick do golpe e o
+`DefeatCounter.onClone` copia o valor para o respawn, então o incremento sobrevive à morte (validado: contador 1 depois
+da execução PvP). Log novo: `Defeat counter of <nome> = <n>`.
 
-| Opção | Efeito |
-|---|---|
-| **A (recomendada)** | Contar só em `SUCCESS` (`result.killConfirmed()`). Com execuções reais, "derrota" passa a significar morte confirmada; totem/proteção não marcam. Mudança de uma linha (mover o incremento para depois do golpe) + caso no `SelfTest` (`FinisherRules.countsDefeat` ganharia o resultado). |
-| B | Manter (a cena concluída é a derrota, mesmo sem morte). |
-| C | Contar em `SUCCESS` e `FAILED` por morte impedida, mas não por PvP/proteção (`damage was prevented`). |
+### 3.2 `/kill` e dano que ignora invulnerabilidade
+`onIncomingDamage`: dano com a tag `minecraft:bypasses_invulnerability` (`/kill` = `generic_kill`, vazio
+`fell_out_of_world`, e qualquer tipo de mod com a tag) a um participante **cancela a cena e passa** normalmente
+(`CANCELLED (interrupted by unblockable damage)`; o alvo morre). Regra pura: `FinisherRules.suppressSessionDamage`.
+Todo outro dano continua descartado + cancela; o golpe automático do próprio parceiro mob continua descartado sem
+cancelar. O contador não sobe (a cena foi cancelada).
 
-### 3.2 `/kill` durante a cena é engolido
-Hoje: `onIncomingDamage` cancela **todo** dano a um participante e aborta a cena; `/kill` não mata (só o segundo).
-
-| Opção | Efeito |
-|---|---|
-| **A (recomendada)** | Dano com a tag `minecraft:bypasses_invulnerability` (`/kill` = `generic_kill`, vazio `fell_out_of_world`) aborta a cena **e passa** (não é cancelado). Dano comum continua cancelado + aborta. Sem efeito no contador (a cena foi cancelada). |
-| B | Só `generic_kill` passa (vazio continua engolido). |
-| C | Manter. |
+### 3.3 Testes de regressão
+- `SelfTest.defeats`: para cada `Outcome`, só `SUCCESS` contra jogador conta; mob e chefe nunca; `suppressSessionDamage`
+  deixa passar só o dano que ignora invulnerabilidade; no servidor, `generic_kill` e `fell_out_of_world` têm a tag.
+- Cenário de dois clientes reproduzível: `docs/evidencias/etapa4_11/cenario_4_11.sh`.
 
 ## 4. Infraestrutura de chefes personalizados (novo pacote `com.respectcraft.boss`)
 
@@ -105,13 +107,36 @@ Nada do `fx`, shaders, `GeoFxKeyframes`, `VISUAL_FX` ou dependência foi tocado.
 | Teste | Resultado |
 |---|---|
 | `./gradlew build` | OK (`build/libs/respectcraft-0.5.7.jar`) |
-| `bash .github/scripts/server-smoke-test.sh` | OK — `RespectCraft self-test: OK`; Wither/Dragão `BOSS_REQUIRES_EXCLUSIVE` e novo `Boss profile: none (normal defeat only)`; Wither morto por golem = `NORMAL` |
-| `SelfTest` (novo bloco `bossRegistry`, 14 casos) | OK — fichas de teste válidas; exclusiva de outro chefe/comum/ausente/repetida recusadas; registro real vazio; vida, habilidade, progressão; chefe sem ficha nunca executado; evento sem ouvinte não recusa, primeira recusa vale |
+| `bash .github/scripts/server-smoke-test.sh` | OK — `RespectCraft self-test: OK`; Wither/Dragão `BOSS_REQUIRES_EXCLUSIVE` e `Boss profile: none (normal defeat only)`; Wither morto por golem = `NORMAL` |
+| `SelfTest` | OK — bloco `bossRegistry` (14 casos) + regressões de contador/dano (3 casos) |
 | `bbsync.py` / `test_export.py` | OK / 0 falhas |
 | `check_shaders.py` | cópia igual; `glslangValidator` ausente aqui (passo estrito roda no CI) |
-| Clientes reais / multiplayer | **Não rodados.** A mudança é só regra no servidor (sem render, tela ou pacote novo); a sincronização foi validada com dois clientes na 4.10.2 e não mudou. A correção do espectador não foi exercitada com cliente real (limitação). |
+| CI do PR #49 (workflow Build) | ver o PR |
+
+### 6.1 Dois clientes reais (Juca e Bia, servidor dedicado de desenvolvimento, Xvfb/llvmpipe)
+Script: `docs/evidencias/etapa4_11/cenario_4_11.sh`; resumo (log, chat, consultas): `docs/evidencias/etapa4_11/resumo.txt`.
+
+| Cenário | Log do servidor | Resultado |
+|---|---|---|
+| Executor vira espectador no meio do COMBO | `CANCELLED (participant became a spectator)` | Bia 20/20; Juca anda livre como espectador; barras de cinema somem (`01a`/`01b`) |
+| Vítima vira espectadora no meio | `CANCELLED (participant became a spectator)` | câmera restaurada (`01c`) |
+| `/kill Bia` no meio | `CANCELLED (interrupted by unblockable damage)` + `Bia was killed` | morre no primeiro `/kill`; contador não sobe (`02`) |
+| `/kill` no zumbi vítima no meio | 1ª rodada: `CANCELLED (interrupted by unblockable damage)` + `zk was killed` | ok (ver nota) |
+| Execução PvP (TAKEDOWN) | `Bia was executed by Juca` · `SUCCESS (killed)` · `Defeat counter of Bia = 1` | plaqueta 1 (`03b`) |
+| Totem na mão secundária | `FAILED (death was prevented)`, **sem** linha de contador | Postmortal, recuperação de 10 s, vida 7 (`04`) |
+| Shift real da vítima (xdotool) | `CANCELLED (cancelled with Shift)` | (`05`) |
+| `/stop` no meio | `CANCELLED (server stopping)` antes de `Stopping server` | clientes em "Server closed" (`06b`) |
+
+Erros: nenhum do RespectCraft/Calamidade; só `No key layers` do ambiente (servidor plano sem camadas).
+
+Nota sobre a rodada: a primeira execução do script rodou sem `xdotool` instalado (Shift não foi apertado, então o
+cenário 5 terminou em `SUCCESS` e o contador foi a 2 — comportamento correto para uma execução concluída). Na segunda,
+com `xdotool`, tudo saiu como na tabela, mas o zumbi do cenário `/kill` queimou ao sol e a cena caiu antes por
+`interrupted by damage` (dano comum, descartado e cancelado — também correto); o `/kill` dele foi validado na primeira
+rodada. O script agora põe capacete no zumbi.
 
 ## 7. Limitações
 - Sem chefes reais, o caminho exclusiva → `checkExecution` → cena só é coberto por regra pura (fixtures), não no mundo.
 - `RequiresProgress` sempre recusa até existir um sistema de progressão.
-- Recomendações da seção 3 pendentes da decisão do dono.
+- Só llvmpipe, clientes e servidor na mesma máquina (sem latência real).
+- Nenhum chefe definitivo: design, habilidades, fases e exclusivas ficam com o dono.

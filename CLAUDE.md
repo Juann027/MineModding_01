@@ -162,8 +162,9 @@ sistema em que vai mexer; veja o fim deste arquivo).
   Keyframe `calamidade:<efeito>` em animação de mob só dispara por `GeoFxKeyframes.triggerAnim` no servidor (nunca por
   handler de keyframe no cliente). `SkillEffect.Kind.VISUAL_FX` existe, mas nenhuma habilidade o usa e `SkillService`
   não o aplica. Antes de usar algo novo do Calamidade/RimuLib, confira com `javap` no jar.
-- **Contador de derrotas:** +1 para o alvo **jogador** só em `FinisherTestMechanic.complete` (`abort` nunca conta;
-  `FinisherRules.countsDefeat`: mob e chefe nunca têm contador, estatística ou plaqueta). A plaqueta
+- **Contador de derrotas:** +1 para o alvo **jogador** só em `FinisherTestMechanic.complete` e só com execução
+  `SUCCESS` (Etapa 4.11; `FAILED`/totem e `abort` nunca contam; `FinisherRules.countsDefeat(kind, outcome)`). Dano com
+  `bypasses_invulnerability` (`/kill`, vazio) a um participante cancela a cena e passa; outro dano é descartado. (`FinisherRules.countsDefeat`: mob e chefe nunca têm contador, estatística ou plaqueta). A plaqueta
   replica a matemática do `renderNameTag` 1.21.1; ícones são a fonte bitmap `respectcraft:defeat_icons`, não emoji.
 - **Necessidades:** ativas são Coom, Bexiga, Intestino e Emoção (id `humor`) — `Need.ACTIVE`. Hidratação e Energia
   são **dados legados inativos** (`Need.active() == false`): continuam no Codec, mas não mudam, não afetam a Emoção,
