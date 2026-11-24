@@ -87,13 +87,18 @@ grep -q 'Inverted Realm ready: arrival .* biome respectcraft:twisted_wilds, fixe
   || fail "dimensão Inverted Realm não carregou/gerou terreno"
 grep -qE 'Summoned new (Baby Jellyfish|entity\.respectcraft\.agua_viva_filhote)' "$log" || fail "Baby Jellyfish não foi invocada"
 grep -qE 'Summoned new (Giant Jellyfish|entity\.respectcraft\.agua_viva\b)' "$log" || fail "Giant Jellyfish não foi invocada"
-# Etapa 4.10: Calamidade_Awakening 0.10.x/0.11.x carregado no servidor dedicado, efeitos das finalizacoes registrados no lado
-# comum e nenhuma instancia ativa sem sessao (a recusa mob x mob acima nao comeca efeito nenhum).
-grep -qE 'Calamidade_Awakening 0\.1[01]\.[0-9]+ \(calamidade_awakening\)' "$log" \
-  || fail "Calamidade_Awakening 0.10.x/0.11.x não foi carregado no servidor dedicado"
+# Etapa 4.10: Calamidade_Awakening da versao de gradle.properties (hoje 0.14.0) carregado no servidor dedicado, efeitos das
+# finalizacoes registrados no lado comum e nenhuma instancia ativa sem sessao (a recusa mob x mob acima nao comeca efeito
+# nenhum). O zero e conferido qualquer que seja o limite exibido depois da barra (64 hoje; pode mudar entre versoes).
+cal_version=$(sed -n 's/^calamidade_version=//p' gradle.properties | tr -d '[:space:]')
+[ -n "$cal_version" ] || fail "calamidade_version ausente em gradle.properties"
+grep -qF "Calamidade_Awakening $cal_version (calamidade_awakening)" "$log" \
+  || fail "Calamidade_Awakening $cal_version não foi carregado no servidor dedicado"
 grep -q 'RespectCraft finisher FX registered on Calamidade_Awakening' "$log" \
   || fail "efeitos das finalizações não foram registrados no Calamidade"
-grep -q 'Live instances on server: 0 / 64' "$log" || fail "/calamidade status não respondeu ou há efeito preso"
+grep -qE 'Live instances on server: 0 / [0-9]+' "$log" || fail "/calamidade status não respondeu ou há efeito preso"
+grep -E 'Live instances on server: [0-9]+ / [0-9]+' "$log" | grep -qvE ': 0 / ' \
+  && fail "/calamidade status mostrou efeito ativo depois das cenas"
 # Etapa 4.8: o jar do RespectCraft nao embute o Rimulib (o jogador instala ao lado).
 jar=$(ls build/libs/respectcraft-*.jar 2>/dev/null | grep -v -- '-sources' | head -1)
 if [ -z "$jar" ]; then fail "jar do RespectCraft não encontrado em build/libs"

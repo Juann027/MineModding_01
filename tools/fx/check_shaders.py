@@ -4,7 +4,8 @@
 A RimuLib junta: common.glsl dela (que comeca com #version 150), uma linha "#line 1 1" e o arquivo; cada linha
 '#include "x"' vira o conteudo de assets/<ns>/shaders/fx/x (sem recursao). Este script faz o mesmo e passa o
 resultado ao glslangValidator (GLSL 1.50, fragmento). Tambem confere que a copia de calamidade_fx.glsl e identica a
-do jar do Calamidade_Awakening em libs/.
+do jar do Calamidade_Awakening da versao configurada (calamidade_version em gradle.properties), mesmo com jars de
+versoes antigas sobrando em libs/.
 
 Uso: python3 tools/fx/check_shaders.py   (depois de ./gradlew build: precisa do jar da RimuLib no cache do Gradle)
 Sem glslangValidator instalado (apt install glslang-tools), so avisa e sai com 0, a menos que --strict.
@@ -29,13 +30,25 @@ def find_jar(patterns):
     return None
 
 
+def gradle_property(name):
+    with open(os.path.join(ROOT, "gradle.properties"), encoding="utf-8") as f:
+        for line in f:
+            key, sep, value = line.partition("=")
+            if sep and key.strip() == name:
+                return value.strip()
+    return None
+
+
 def main():
     strict = "--strict" in sys.argv
     failures = 0
-    # 1. calamidade_fx.glsl igual a do motor.
-    cal = find_jar([os.path.join(ROOT, "libs", "calamidade_awakening-*.jar")])
-    if cal is None:
-        print("aviso: jar do Calamidade nao encontrado em libs/ (rode ./gradlew baixarCalamidade)")
+    # 1. calamidade_fx.glsl igual a do motor (o jar da versao configurada, nunca o primeiro que aparecer em libs/).
+    version = gradle_property("calamidade_version")
+    cal = os.path.join(ROOT, "libs", "calamidade_awakening-%s.jar" % version) if version else None
+    if cal is None or not os.path.isfile(cal):
+        print("aviso: jar do Calamidade", version, "nao encontrado em libs/ (rode ./gradlew baixarCalamidade)")
+        if strict:
+            failures += 1
     else:
         with zipfile.ZipFile(cal) as z:
             engine = z.read("assets/calamidade_awakening/shaders/fx/calamidade_fx.glsl")
