@@ -1,0 +1,97 @@
+## Sessoes (log do servidor)
+[19:35:40] [Server thread/INFO] [minecraft/MinecraftServer]: Juca has made the advancement [Monster Hunter]
+[19:35:40] [Server thread/INFO] [minecraft/LivingEntity]: Named entity Zombie['z_kill'/2, l='ServerLevel[world]', x=0.50, y=-60.00, z=1.65] died: z_kill was executed by Juca
+[19:35:40] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:zombie (z_kill): SUCCESS (killed)
+[19:35:41] [Server thread/INFO] [minecraft/MinecraftServer]: Juca has made the advancement [Diamonds!]
+[19:36:06] [Server thread/INFO] [minecraft/LivingEntity]: Named entity Zombie['z_natural'/7, l='ServerLevel[world]', x=0.50, y=-60.00, z=1.65] died: z_natural was executed by Juca
+[19:36:06] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:zombie (z_natural): SUCCESS (killed)
+[19:36:22] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:zombie (z_totem): FAILED (death was prevented)
+[19:36:27] [Server thread/INFO] [minecraft/LivingEntity]: Named entity Zombie['z_totem'/12, l='ServerLevel[world]', x=0.50, y=-60.00, z=1.65] died: z_totem was killed while fighting Juca
+[19:36:35] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (player request)
+[19:36:47] [Server thread/INFO] [minecraft/LivingEntity]: Named entity Zombie['z_cancel'/15, l='ServerLevel[world]', x=0.50, y=-60.00, z=1.65] died: z_cancel was killed
+[19:36:55] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (interrupted by damage)
+[19:37:07] [Server thread/INFO] [minecraft/LivingEntity]: Named entity Zombie['z_external'/17, l='ServerLevel[world]', x=0.50, y=-60.00, z=1.65] died: z_external was killed
+[19:37:20] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown refused against minecraft:wither (BOSS): BOSS_REQUIRES_EXCLUSIVE
+[19:37:20] [Server thread/INFO] [minecraft/MinecraftServer]: The takedown finisher cannot be used against Boss. Bosses can only be executed by their own exclusive finisher.
+[19:37:35] [Server thread/INFO] [co.re.RespectCraft/]: Boss defeat minecraft:wither (NORMAL), credited Juca
+[19:37:35] [Server thread/INFO] [minecraft/LivingEntity]: Named entity WitherBoss['Boss'/19, l='ServerLevel[world]', x=0.50, y=-60.00, z=3.50] died: Boss was slain by Juca
+[19:37:48] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (disconnect)
+
+## Chat do cliente
+Your game mode has been updated to Survival Mode
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+Juca has made the advancement [Monster Hunter]
+[RespectCraft Test] Execution complete: z_kill was killed.
+Juca has made the advancement [Diamonds!]
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Execution complete: z_natural was killed.
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Execution failed: z_totem survived (death was prevented).
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Finisher cancelled: player request
+[RespectCraft Test] Interaction and/or recovery ended.
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Finisher cancelled: interrupted by damage
+[RespectCraft Test] Regular finishers cannot be used against Boss. Bosses can only be executed by their own exclusive finisher.
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+
+## Consultas
+> xp query Juca points
+[19:35:36] [Server thread/INFO] [minecraft/MinecraftServer]: Juca has 0 experience points
+> execute if entity @e[type=minecraft:experience_orb]
+[19:35:42] [Server thread/INFO] [minecraft/MinecraftServer]: Test failed
+> execute if entity @e[tag=z_kill]
+[19:35:47] [Server thread/INFO] [minecraft/MinecraftServer]: Test failed
+> clear Juca minecraft:diamond 0
+[19:35:49] [Server thread/INFO] [minecraft/MinecraftServer]: Found 1 matching item(s) on player Juca
+> execute if entity @e[type=minecraft:item,nbt={Item:{id:"minecraft:diamond"}}]
+[19:35:50] [Server thread/INFO] [minecraft/MinecraftServer]: Test failed
+> xp query Juca points
+[19:35:52] [Server thread/INFO] [minecraft/MinecraftServer]: Juca has 6 experience points
+> scoreboard players get Juca zk
+[19:35:53] [Server thread/INFO] [minecraft/MinecraftServer]: Juca has 1 [zk]
+> execute if entity @e[tag=z_natural]
+[19:36:11] [Server thread/INFO] [minecraft/MinecraftServer]: Test failed
+> scoreboard players get Juca zk
+[19:36:13] [Server thread/INFO] [minecraft/MinecraftServer]: Juca has 2 [zk]
+> execute if entity @e[tag=z_totem]
+[19:36:24] [Server thread/INFO] [minecraft/MinecraftServer]: Test passed, count: 1
+> data get entity @e[tag=z_totem,limit=1] HandItems
+[19:36:26] [Server thread/INFO] [minecraft/MinecraftServer]: z_totem has the following entity data: [{}, {}]
+> execute if entity @e[tag=z_cancel]
+[19:36:44] [Server thread/INFO] [minecraft/MinecraftServer]: Test passed, count: 1
+> data get entity @e[tag=z_cancel,limit=1] Health
+[19:36:46] [Server thread/INFO] [minecraft/MinecraftServer]: z_cancel has the following entity data: 20.0f
+> kill @e[tag=z_external]
+[19:36:55] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (interrupted by damage)
+[19:36:55] [Server thread/INFO] [minecraft/MinecraftServer]: Killed z_external
+> execute if entity @e[tag=z_external]
+[19:37:04] [Server thread/INFO] [minecraft/MinecraftServer]: Test passed, count: 1
+> scoreboard players get Juca zk
+[19:37:06] [Server thread/INFO] [minecraft/MinecraftServer]: Juca has 2 [zk]
+> kill @e[tag=z_external]
+[19:37:07] [Server thread/INFO] [minecraft/LivingEntity]: Named entity Zombie['z_external'/17, l='ServerLevel[world]', x=0.50, y=-60.00, z=1.65] died: z_external was killed
+[19:37:07] [Server thread/INFO] [minecraft/MinecraftServer]: Killed z_external
+> execute if entity @e[tag=z_external]
+[19:37:10] [Server thread/INFO] [minecraft/MinecraftServer]: Test failed
+> respectcraft admin finisher Juca @e[tag=boss,limit=1] respectcraft:takedown
+[19:37:20] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown refused against minecraft:wither (BOSS): BOSS_REQUIRES_EXCLUSIVE
+[19:37:20] [Server thread/INFO] [minecraft/MinecraftServer]: The takedown finisher cannot be used against Boss. Bosses can only be executed by their own exclusive finisher.
+> calamidade status
+[19:37:22] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
+> calamidade status
+[19:37:26] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
+> data get entity @e[tag=boss,limit=1] Health
+[19:37:30] [Server thread/INFO] [minecraft/MinecraftServer]: Boss has the following entity data: 300.0f
+> data get entity @e[tag=boss,limit=1] Health
+[19:37:33] [Server thread/INFO] [minecraft/MinecraftServer]: Boss has the following entity data: 292.256f
+> damage @e[tag=boss,limit=1] 400 minecraft:player_attack by Juca
+[19:37:35] [Server thread/INFO] [co.re.RespectCraft/]: Boss defeat minecraft:wither (NORMAL), credited Juca
+[19:37:35] [Server thread/INFO] [minecraft/LivingEntity]: Named entity WitherBoss['Boss'/19, l='ServerLevel[world]', x=0.50, y=-60.00, z=3.50] died: Boss was slain by Juca
+[19:37:35] [Server thread/INFO] [minecraft/MinecraftServer]: Applied 400.0 damage to Boss
+> execute if entity @e[tag=boss]
+[19:37:39] [Server thread/INFO] [minecraft/MinecraftServer]: Test failed
+> execute if entity @e[tag=z_disconnect]
+[19:37:58] [Server thread/INFO] [minecraft/MinecraftServer]: Test passed, count: 1
+> data get entity @e[tag=z_disconnect,limit=1] Health
+[19:37:59] [Server thread/INFO] [minecraft/MinecraftServer]: z_disconnect has the following entity data: 20.0f

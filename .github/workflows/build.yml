@@ -27,7 +27,8 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
-      # Etapa 4.10: o build baixa o Calamidade_Awakening do release do GitHub (SHA-256 conferido, libs/ fora do git).
+      # Etapa 4.10: o build baixa o Calamidade_Awakening do release do GitHub (versao e SHA-256 de gradle.properties, hoje
+      # 0.14.0; libs/ fora do git). O teste de fumaca confere essa mesma versao carregada e zero efeitos ativos.
       # Os shaders fx sao montados como a RimuLib faz e compilados em GLSL 1.50.
       - name: Shaders fx (glslangValidator)
         run: |

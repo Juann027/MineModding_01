@@ -4,10 +4,16 @@ import com.respectcraft.animation.PlayerAnimationDef;
 import com.respectcraft.animation.PlayerAnimationEvent;
 import com.respectcraft.animation.PlayerAnimationService;
 import com.respectcraft.RespectCraft;
+import com.respectcraft.boss.BossCondition;
+import com.respectcraft.boss.BossExecutionCheckEvent;
+import com.respectcraft.boss.BossProfile;
+import com.respectcraft.boss.Bosses;
 import com.respectcraft.finisher.FinisherDef;
+import com.respectcraft.finisher.FinisherExecution;
 import com.respectcraft.finisher.FinisherParticipants;
 import com.respectcraft.finisher.FinisherRole;
 import com.respectcraft.finisher.FinisherSessionEvent;
+import com.respectcraft.finisher.FinisherTargeting;
 import com.respectcraft.finisher.Finishers;
 import com.respectcraft.fx.FinisherFx;
 import com.respectcraft.fx.FinisherFxRules;
@@ -32,12 +38,14 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 import software.bernie.geckolib.animatable.GeoEntity;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.UUID;
 
@@ -55,6 +63,12 @@ import java.util.UUID;
  * <p>Etapa 4.10: os efeitos visuais sao do {@link FinisherFx} (Calamidade_Awakening), comecados aqui no inicio da
  * sessao, avancados no tick da sessao e encerrados em {@link #abort} e {@link #complete}. Finalizacao sem
  * {@code FinisherFxDef} continua com as particulas vanilla; os sons ficam aqui nos dois casos.
+ *
+ * <p>Etapa 4.10.1 (execucoes reais): a cena concluida termina com o golpe final de {@link FinisherExecution} — dano
+ * comum do Minecraft, uma vez por sessao, depois de o fim da cena liberar os participantes. Cancelamento (Shift,
+ * comando, dano, morte externa, saida, troca de dimensao, distancia) nunca executa. Chefes so podem ser executados
+ * pela finalizacao exclusiva deles ({@link FinisherTargeting}): a recusa acontece em {@link #start}, antes de
+ * qualquer palco, animacao, trava ou efeito.
  */
 public final class FinisherTestMechanic {
     private static final double RANGE_SQUARED = 3.5 * 3.5;
@@ -108,6 +122,12 @@ public final class FinisherTestMechanic {
 
     private FinisherTestMechanic() {}
 
+    /** Resposta de {@link #start}: comecou, ou o motivo da recusa (ingles, para o jogador/comando). */
+    public record StartResult(boolean started, String message) {
+        static final StartResult STARTED = new StartResult(true, "Finisher started.");
+        static StartResult refused(String message) { return new StartResult(false, message); }
+    }
+
     private static void message(ServerPlayer player, String text) {
         player.sendSystemMessage(Component.literal("[RespectCraft Test] " + text));
     }
@@ -115,9 +135,19 @@ public final class FinisherTestMechanic {
     public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
         if (event.getHand() != InteractionHand.MAIN_HAND || !(event.getEntity() instanceof ServerPlayer attacker)) return;
         if (!attacker.isShiftKeyDown() || !attacker.getMainHandItem().isEmpty()) return;
-        Entity raw = event.getTarget();
-        if (!(raw instanceof LivingEntity target) || target == attacker || !target.isAlive()) return;
-        if (attacker.distanceToSqr(target) > RANGE_SQUARED || attacker.isSpectator()) return;
+        // Partes (Dragao do Fim) contam como a entidade dona, para a regra de chefe valer nelas tambem.
+        Entity raw = FinisherParticipants.owner(event.getTarget());
+        if (!(raw instanceof LivingEntity target) || target == attacker || !target.isAlive() || attacker.isSpectator()) return;
+        if (FinisherParticipants.kindOf(target) == FinisherParticipants.Kind.BOSS) {
+            // Etapa 4.10.1: chefe so pela finalizacao exclusiva dele. A recusa sai antes de tamanho, vida e distancia
+            // (nada de cena, trava ou dano); um dia, com a exclusiva liberada, start segue as regras normais.
+            StartResult result = start(attacker, target, null, false);
+            if (!result.started()) message(attacker, result.message());
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            return;
+        }
+        if (attacker.distanceToSqr(target) > RANGE_SQUARED) return;
         if (target instanceof ServerPlayer victim) {
             if (victim.isSpectator() || victim.isCreative()) return;
             if (!FinisherRules.isVulnerable(victim.getHealth(), victim.getMaxHealth())) {
@@ -128,8 +158,9 @@ public final class FinisherTestMechanic {
         } else if (target instanceof Mob mob && FinisherRules.isValidMobSize(mob.getBbWidth(), mob.getBbHeight())) {
             if (!FinisherRules.isVulnerable(mob.getHealth(), mob.getMaxHealth())) {
                 message(attacker, "The mob must be below 25% health.");
-            } else if (!start(attacker, mob)) {
-                message(attacker, "Target is busy, protected or on cooldown.");
+            } else {
+                StartResult result = start(attacker, mob, null, false);
+                if (!result.started()) message(attacker, result.message());
             }
         } else {
             return;
@@ -141,6 +172,11 @@ public final class FinisherTestMechanic {
     private static void invite(ServerPlayer attacker, ServerPlayer victim) {
         if (!available(attacker, victim)) {
             message(attacker, "Finisher unavailable (cooldown, active session or distance).");
+            return;
+        }
+        if (!victim.canHarmPlayer(attacker)) {
+            // Etapa 4.10.1: a finalizacao termina com dano real; sem PvP (servidor ou times), nem convida.
+            message(attacker, "PvP is not allowed between you and " + name(victim) + " (server PvP setting or team rules).");
             return;
         }
         long now = victim.level().getGameTime();
@@ -163,8 +199,11 @@ public final class FinisherTestMechanic {
             return 0;
         }
         ServerPlayer attacker = victim.server.getPlayerList().getPlayer(invite.attacker());
-        if (attacker == null || !start(attacker, victim)) {
-            message(victim, "The finisher can no longer start.");
+        StartResult result = attacker == null ? StartResult.refused("The finisher can no longer start.")
+                : start(attacker, victim, null, false);
+        if (!result.started()) {
+            message(victim, result.message());
+            if (attacker != null) message(attacker, result.message());
             return 0;
         }
         return 1;
@@ -187,7 +226,7 @@ public final class FinisherTestMechanic {
 
     /** API para IA futura: so executa um finisher de combate nao explicito em jogadores que optaram pelo teste. */
     public static boolean tryStartFromMob(Mob mob, ServerPlayer target) {
-        return target.getPersistentData().getBoolean(MOB_OPT_IN_KEY) && start(mob, target);
+        return target.getPersistentData().getBoolean(MOB_OPT_IN_KEY) && start(mob, target, null, false).started();
     }
 
     /** Permite testar a futura API de mobs SEM adicionar IA a todos os mobs existentes. */
@@ -227,38 +266,102 @@ public final class FinisherTestMechanic {
                 && FinisherRules.isCooldownOver(now, VICTIM_COOLDOWNS.getOrDefault(target.getUUID(), 0L));
     }
 
-    private static boolean start(LivingEntity attacker, LivingEntity target) {
-        return start(attacker, target, null, false);
-    }
-
     /**
      * Ferramenta de administracao/teste ({@code /respectcraft admin finisher}): inicia a cena sem convite, sem exigir
-     * vida baixa e sem cooldown. As demais travas (distancia, sessao ativa, montaria) continuam valendo.
+     * vida baixa e sem cooldown. As demais travas (distancia, sessao ativa, montaria) continuam valendo, e tambem a
+     * regra de chefes e o PvP (Etapa 4.10.1): o comando de admin nunca executa um chefe com finalizacao comum.
      */
-    public static boolean forceStart(LivingEntity attacker, LivingEntity target, FinisherDef finisher) {
+    public static StartResult forceStart(LivingEntity attacker, LivingEntity target, FinisherDef finisher) {
         return start(attacker, target, finisher, true);
     }
 
-    private static boolean start(LivingEntity attacker, LivingEntity target, FinisherDef chosen, boolean force) {
+    /** Nome do alvo para as mensagens. */
+    private static String name(LivingEntity entity) {
+        return entity.getDisplayName().getString();
+    }
+
+    /**
+     * Elegibilidade no servidor, antes de qualquer mudanca no mundo (Etapa 4.10.1): finalizacao escolhida (ou sorteada
+     * entre as que podem executar o alvo), regra de chefes e PvP. Null = pode seguir; senao, a recusa.
+     */
+    private static StartResult eligibility(LivingEntity attacker, LivingEntity target, FinisherDef finisher) {
+        FinisherParticipants.Kind kind = FinisherParticipants.kindOf(target);
+        if (finisher == null && kind != FinisherParticipants.Kind.BOSS) {
+            return StartResult.refused("No finisher is available against " + name(target) + ".");
+        }
+        FinisherTargeting.Verdict verdict = finisher == null
+                ? (kind == FinisherParticipants.Kind.BOSS ? FinisherTargeting.Verdict.BOSS_REQUIRES_EXCLUSIVE
+                        : FinisherTargeting.Verdict.ELIGIBLE)
+                : finisher.targeting().check(kind, FinisherParticipants.typeId(target));
+        if (!verdict.eligible()) {
+            RespectCraft.LOGGER.info("Finisher {} refused against {} ({}): {}", finisher == null ? "(none)" : finisher.id(),
+                    FinisherParticipants.typeId(target), kind, verdict);
+            return StartResult.refused(switch (verdict) {
+                case BOSS_REQUIRES_EXCLUSIVE -> (finisher == null ? "Regular finishers" : "The " + finisher.id().getPath() + " finisher")
+                        + " cannot be used against " + name(target) + ". Bosses can only be executed by their own exclusive finisher.";
+                case EXCLUSIVE_OTHER_TARGET -> "The " + finisher.id().getPath() + " finisher is exclusive to another boss and cannot be used against "
+                        + name(target) + ".";
+                case ELIGIBLE -> throw new IllegalStateException();
+            });
+        }
+        if (kind == FinisherParticipants.Kind.BOSS) {
+            // Etapa 4.11: exclusiva elegivel ainda precisa da ficha do chefe (Bosses), das condicoes dela e de nenhum
+            // ouvinte do BossExecutionCheckEvent recusar. Tudo antes de palco, animacao, trava ou efeito.
+            String denial = bossDenial(attacker, target, finisher);
+            if (denial != null) {
+                RespectCraft.LOGGER.info("Finisher {} refused against boss {}: {}", finisher.id(),
+                        FinisherParticipants.typeId(target), denial);
+                return StartResult.refused(denial);
+            }
+        }
+        if (attacker instanceof ServerPlayer player && target instanceof ServerPlayer victim && !victim.canHarmPlayer(player)) {
+            return StartResult.refused("PvP is not allowed between you and " + name(victim) + " (server PvP setting or team rules).");
+        }
+        return null;
+    }
+
+    /** Ficha, condicoes e ouvintes da execucao de um chefe (Etapa 4.11). Null = pode seguir. */
+    private static String bossDenial(LivingEntity attacker, LivingEntity boss, FinisherDef finisher) {
+        if (!(attacker instanceof ServerPlayer player)) return "Only players can execute bosses.";
+        Optional<BossProfile> profile = Bosses.get(FinisherParticipants.typeId(boss));
+        var context = new BossCondition.Context(boss.getHealth() / Math.max(1F, boss.getMaxHealth()),
+                skill -> ProfileService.get(player).hasSkill(skill.toString()),
+                key -> false); // Sem progressao de chefes ainda: toda marca exigida esta ausente.
+        Optional<String> denial = Bosses.checkExecution(profile, finisher, context);
+        if (denial.isPresent()) return denial.get();
+        BossExecutionCheckEvent check = NeoForge.EVENT_BUS.post(new BossExecutionCheckEvent(player, boss, profile.get(), finisher));
+        return check.getDenial().orElse(null);
+    }
+
+    private static StartResult start(LivingEntity attacker, LivingEntity target, FinisherDef chosen, boolean force) {
         // Primeiro: sem jogador nao ha sessao (ela so avanca no tick do jogador), seja qual for a distancia.
         Optional<FinisherParticipants.Interaction> interaction = FinisherParticipants.interaction(
                 FinisherParticipants.kindOf(attacker), FinisherParticipants.kindOf(target));
         if (interaction.isEmpty()) {
             RespectCraft.LOGGER.debug("Finisher refused: {} vs {} has no player participant",
                     FinisherParticipants.typeId(attacker), FinisherParticipants.typeId(target));
-            return false;
+            return StartResult.refused("Could not start: a finisher needs a player participant.");
         }
-        if (force ? !stageable(attacker, target) : !available(attacker, target)) return false;
+        // Etapa 4.10.1: a finalizacao e escolhida ANTES das travas, entre as que podem executar este alvo (chefe sem
+        // exclusiva liberada = nenhuma), e a regra de alvos/PvP recusa antes de qualquer palco, animacao ou trava.
         FinisherDef finisher = chosen != null ? chosen : attacker instanceof ServerPlayer player
-                ? Finishers.pick(skill -> ProfileService.get(player).hasSkill(skill.toString()), com.respectcraft.profile.BirthRoulette.newRandom())
+                ? Finishers.pickFor(FinisherParticipants.kindOf(target), FinisherParticipants.typeId(target),
+                        skill -> ProfileService.get(player).hasSkill(skill.toString()),
+                        com.respectcraft.profile.BirthRoulette.newRandom()).orElse(null)
                 : Finishers.TAKEDOWN;
+        StartResult refused = eligibility(attacker, target, finisher);
+        if (refused != null) return refused;
+        if (force ? !stageable(attacker, target) : !available(attacker, target)) {
+            return StartResult.refused(force ? "Could not start (distance, active session or mount)."
+                    : "Target is busy, protected or on cooldown.");
+        }
         // Cada lado resolve o proprio clip no proprio rig; participante invalido recusa a cena antes de mexer em algo.
         FinisherParticipants.Resolution attackerRes = FinisherParticipants.resolve(finisher, FinisherRole.ATTACKER, attacker);
         FinisherParticipants.Resolution targetRes = FinisherParticipants.resolve(finisher, FinisherRole.VICTIM, target);
         if (!attackerRes.valid() || !targetRes.valid()) {
             RespectCraft.LOGGER.warn("Finisher {} refused: {}", finisher.id(),
                     attackerRes.valid() ? targetRes.problem() : attackerRes.problem());
-            return false;
+            return StartResult.refused("Could not start: invalid rig for this finisher.");
         }
         FinisherParticipants.Clip attackerClip = attackerRes.clip().get();
         FinisherParticipants.Clip targetClip = targetRes.clip().get();
@@ -309,7 +412,7 @@ public final class FinisherTestMechanic {
                 new Vec3(middle.x, Math.min(attacker.getY(), targetAnchor.y), middle.z), yaw, boss);
         if (attacker instanceof ServerPlayer p) message(p, "Test finisher started. /stopitstopnow cancels.");
         if (target instanceof ServerPlayer p) message(p, "Test started. Press Shift or /stopitstopnow to cancel.");
-        return true;
+        return StartResult.STARTED;
     }
 
     private static void triggerEntityClip(LivingEntity entity, FinisherParticipants.Clip clip) {
@@ -377,7 +480,8 @@ public final class FinisherTestMechanic {
         level.playSound(null, target.blockPosition(), strength >= 2 ? ModSounds.FINISHER_IMPACT_HEAVY.get()
                 : ModSounds.FINISHER_IMPACT.get(), SoundSource.PLAYERS, 1F, 0.9F + level.random.nextFloat() * 0.2F);
         if (strength >= 3) level.playSound(null, target.blockPosition(), ModSounds.FINISHER_STING.get(), SoundSource.PLAYERS, 0.7F, 1F);
-        // Lampejo vermelho e inclinacao de dano nos clientes, sem dano real (a cena nao mata).
+        // Lampejo vermelho e inclinacao de dano nos clientes, sem dano real: so o golpe final (FinisherExecution, no
+        // fim da cena) fere a vitima.
         level.broadcastDamageEvent(target, player.damageSources().playerAttack(player));
     }
 
@@ -432,12 +536,17 @@ public final class FinisherTestMechanic {
         release(s);
         FinisherFx.end(s.fx, FinisherFxRules.EndReason.ABORT);
         stopAnimations(s);
+        // Etapa 4.10.1: cancelamento nunca executa (nenhum golpe final); fica no log para auditoria.
+        RespectCraft.LOGGER.info("Finisher {} by {} on {}: CANCELLED ({})", s.finisher.id(),
+                FinisherParticipants.typeId(s.attacker), FinisherParticipants.typeId(s.target), reason);
         if (s.attacker instanceof ServerPlayer p) message(p, "Finisher cancelled: " + reason);
         if (s.target instanceof ServerPlayer p) message(p, "Finisher cancelled: " + reason);
         NeoForge.EVENT_BUS.post(new FinisherSessionEvent.Aborted(s.attacker, s.target, s.finisher, s.interaction, reason));
     }
 
     private static void complete(Session s) {
+        // Idempotente: a sessao sai do mapa antes do golpe final; uma segunda chamada (outro tick, outro jogador)
+        // nao passa daqui, entao uma sessao nunca executa duas vezes.
         if (SESSIONS.get(s.attacker.getUUID()) != s) return;
         release(s);
         FinisherFx.end(s.fx, FinisherFxRules.EndReason.COMPLETE);
@@ -445,21 +554,36 @@ public final class FinisherTestMechanic {
         PAIR_COOLDOWNS.put(new Pair(s.attacker.getUUID(), s.target.getUUID()),
                 now + FinisherRules.SAME_PAIR_COOLDOWN_TICKS);
         VICTIM_COOLDOWNS.put(s.target.getUUID(), now + FinisherRules.VICTIM_COOLDOWN_TICKS);
-        // Contador so de jogador (FinisherRules.countsDefeat): mob e chefe vencidos nunca recebem contador.
+        // Contador so de jogador: mob e chefe vencidos nunca recebem contador.
         boolean counts = FinisherRules.countsDefeat(FinisherParticipants.kindOf(s.target));
-        if (counts && s.target instanceof ServerPlayer player && s.finisher.recoveryInScene()) {
-            // A vitima ja se levantou dentro do clip: os dois voltam ao controle normal agora.
+        // Etapa 4.10.1: golpe final real, com os participantes ja liberados (o dano nao cai mais na trava da sessao).
+        String targetName = name(s.target);
+        FinisherExecution.Result result = FinisherExecution.execute(s.attacker, s.target, s.finisher);
+        RespectCraft.LOGGER.info("Finisher {} by {} on {} ({}): {} ({})", s.finisher.id(), FinisherParticipants.typeId(s.attacker),
+                FinisherParticipants.typeId(s.target), targetName, result.outcome(), result.detail());
+        // Etapa 4.11 (decisao do dono): o contador so sobe com SUCCESS (morte confirmada). O jogador morto continua
+        // sendo o mesmo objeto ate o respawn (o Clone copia o persistentData), entao o incremento vale.
+        if (FinisherRules.countsDefeat(FinisherParticipants.kindOf(s.target), result.outcome())
+                && s.target instanceof ServerPlayer player) {
             int updated = DefeatCounter.increment(player);
+            RespectCraft.LOGGER.info("Defeat counter of {} = {}", player.getGameProfile().getName(), updated);
             message(player, "Special TEST defeat recorded (" + updated + ").");
-        } else if (counts && s.target instanceof ServerPlayer player) {
-            int updated = DefeatCounter.increment(player);
+        }
+        if (!result.killConfirmed() && counts && s.target instanceof ServerPlayer player && player.isAlive()
+                && !s.finisher.recoveryInScene()) {
+            // Sobreviveu (totem, protecao): fica caida durante a recuperacao, como antes desta etapa.
             INCAPACITATED.put(player.getUUID(), new Incapacitated(player.position(), now + FinisherRules.INCAPACITATED_TICKS, player.level().dimension()));
-            message(player, "Special TEST defeat recorded (" + updated + "). Recovery: 10s. /stopitstopnow releases you.");
-            // Fica caida durante a recuperacao (loop parado pelo servidor quando ela se recupera).
+            message(player, "Recovery: 10s. /stopitstopnow releases you.");
             PlayerAnimationService.play(player, Finishers.KNOCKED_DOWN, now, Optional.empty(), new CompoundTag(), true);
         }
-        if (s.attacker instanceof ServerPlayer player) message(player, "Test combat finisher complete.");
-        NeoForge.EVENT_BUS.post(new FinisherSessionEvent.Completed(s.attacker, s.target, s.finisher, s.interaction));
+        if (!result.killConfirmed() && s.target instanceof ServerPlayer player && player.isAlive()) {
+            message(player, "You survived the execution (" + result.detail() + ").");
+        }
+        if (s.attacker instanceof ServerPlayer player) {
+            message(player, result.killConfirmed() ? "Execution complete: " + targetName + " was killed."
+                    : "Execution failed: " + targetName + " survived (" + result.detail() + ").");
+        }
+        NeoForge.EVENT_BUS.post(new FinisherSessionEvent.Completed(s.attacker, s.target, s.finisher, s.interaction, result));
     }
 
     public static int emergencyStop(ServerPlayer player) {
@@ -503,6 +627,9 @@ public final class FinisherTestMechanic {
         s.lastProcessed = now;
         String problem = FinisherRules.abortReason(present(s.attacker), present(s.target),
                 s.attacker.level() == s.target.level(), s.attacker.distanceToSqr(s.target));
+        // Etapa 4.11: participante que virou espectador no meio da cena (/gamemode) nao pode ficar preso no palco nem
+        // receber um golpe final que o modo espectador sempre recusa.
+        if (problem == null && (s.attacker.isSpectator() || s.target.isSpectator())) problem = "participant became a spectator";
         if (problem != null) {
             abort(s, problem);
             return;
@@ -558,6 +685,12 @@ public final class FinisherTestMechanic {
         if (s != null) {
             // Uma tentativa de dano interrompe a cena, SEM aplicar o dano da tentativa. Excecao (Etapa 4.8): o golpe
             // automatico da IA do PROPRIO parceiro mob faz parte da cena; e anulado sem cancelar a finalizacao.
+            // Etapa 4.11: dano que ignora invulnerabilidade (/kill, vazio) cancela a cena e segue normalmente.
+            boolean unblockable = event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY);
+            if (!FinisherRules.suppressSessionDamage(unblockable)) {
+                abort(s, "interrupted by unblockable damage");
+                return;
+            }
             event.setCanceled(true);
             LivingEntity partner = s.attacker == event.getEntity() ? s.target : s.attacker;
             if (partner instanceof ServerPlayer || event.getSource().getEntity() != partner) abort(s, "interrupted by damage");
@@ -578,6 +711,26 @@ public final class FinisherTestMechanic {
         INCAPACITATED.remove(player.getUUID());
         PENDING.remove(player.getUUID());
         PENDING.entrySet().removeIf(e -> e.getValue().attacker().equals(player.getUUID()));
+    }
+
+    /**
+     * Etapa 4.10.2: servidor parando ({@code /stop}, anfitriao de LAN saindo, desligamento). O {@code PlayerList.removeAll}
+     * desconecta os jogadores SEM o {@code PlayerLoggedOutEvent}, entao {@link #onLogout} nao roda e a cena ficaria sem
+     * fim: sem CANCELLED no log, sem {@link FinisherSessionEvent.Aborted}, sem encerrar os efeitos, e com o estado
+     * estatico passando para o proximo servidor do mesmo processo (servidor integrado). Aqui toda sessao ativa termina
+     * pelo {@link #abort} (nunca executa) e convites, recuperacoes e cooldowns (tempo de jogo deste mundo) sao limpos.
+     */
+    public static void onServerStopping(ServerStoppingEvent event) {
+        for (Session s : new LinkedHashSet<>(SESSIONS.values())) abort(s, "server stopping");
+        for (UUID id : INCAPACITATED.keySet()) {
+            ServerPlayer player = event.getServer().getPlayerList().getPlayer(id);
+            if (player != null) stopIfOwn(player, Finishers.KNOCKED_DOWN);
+        }
+        SESSIONS.clear();
+        PENDING.clear();
+        INCAPACITATED.clear();
+        PAIR_COOLDOWNS.clear();
+        VICTIM_COOLDOWNS.clear();
     }
 
     public static void onClone(PlayerEvent.Clone event) {

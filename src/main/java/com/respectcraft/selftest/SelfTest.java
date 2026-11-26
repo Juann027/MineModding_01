@@ -61,6 +61,7 @@ public final class SelfTest {
             rouletteWheel(f);
             multiRig(f);
             bossDefeats(f);
+            finisherExecutions(f);
             rimulib(f);
             finisherFx(f);
             holoGeometry(f);
@@ -927,30 +928,36 @@ public final class SelfTest {
         return com.respectcraft.finisher.FinisherParticipants.interaction(a, b).map(Enum::name).orElse("");
     }
 
-    /** Etapa 4.8: derrota de chefe anunciada no maximo uma vez; finalizacao qualificante x derrota comum. */
+    /**
+     * Etapa 4.8 (revista na 4.10.1): derrota de chefe anunciada no maximo uma vez; so a morte pelo golpe final da
+     * execucao, com o credito gravado no mesmo tick, e FINISHER. Espada depois de uma cena, ou credito velho, e NORMAL.
+     */
     private static void bossDefeats(List<String> f) {
         java.util.UUID finisherPlayer = new java.util.UUID(1, 1);
         java.util.UUID killer = new java.util.UUID(2, 2);
         var credit = Optional.of(new com.respectcraft.finisher.BossDefeats.Credit(finisherPlayer, Finishers.TAKEDOWN_ID, 1000));
-        var window = com.respectcraft.finisher.BossDefeats.FINISHER_CREDIT_TICKS;
-        var inWindow = com.respectcraft.finisher.BossDefeats.decide(false, credit, 1000 + window, Optional.of(killer));
-        check(f, inWindow.isPresent() && inWindow.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.FINISHER
-                && inWindow.get().credited().equals(Optional.of(finisherPlayer))
-                && inWindow.get().finisher().equals(Optional.of(Finishers.TAKEDOWN_ID)), "chefe: finalização qualificante credita o executor");
-        var late = com.respectcraft.finisher.BossDefeats.decide(false, credit, 1001 + window, Optional.of(killer));
-        check(f, late.isPresent() && late.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.NORMAL
-                && late.get().credited().equals(Optional.of(killer)) && late.get().finisher().isEmpty(), "chefe: fora da janela é derrota comum");
-        var normal = com.respectcraft.finisher.BossDefeats.decide(false, Optional.empty(), 5, Optional.empty());
+        var executed = com.respectcraft.finisher.BossDefeats.decide(false, credit, 1000, Optional.of(finisherPlayer), true);
+        check(f, executed.isPresent() && executed.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.FINISHER
+                && executed.get().credited().equals(Optional.of(finisherPlayer))
+                && executed.get().finisher().equals(Optional.of(Finishers.TAKEDOWN_ID)), "chefe: morte pela execução credita o executor");
+        var sword = com.respectcraft.finisher.BossDefeats.decide(false, credit, 1000, Optional.of(killer), false);
+        check(f, sword.isPresent() && sword.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.NORMAL
+                && sword.get().credited().equals(Optional.of(killer)) && sword.get().finisher().isEmpty(),
+                "chefe: morte por dano comum é derrota comum (mesmo com crédito)");
+        var stale = com.respectcraft.finisher.BossDefeats.decide(false, credit, 1001, Optional.of(killer), true);
+        check(f, stale.isPresent() && stale.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.NORMAL,
+                "chefe: crédito de outro tick não conta");
+        var noCredit = com.respectcraft.finisher.BossDefeats.decide(false, Optional.empty(), 5, Optional.of(killer), true);
+        check(f, noCredit.isPresent() && noCredit.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.NORMAL,
+                "chefe: execução sem crédito (finalização comum) não é FINISHER");
+        var normal = com.respectcraft.finisher.BossDefeats.decide(false, Optional.empty(), 5, Optional.empty(), false);
         check(f, normal.isPresent() && normal.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.NORMAL
                 && normal.get().credited().isEmpty(), "chefe: morte sem jogador não credita ninguém");
-        var future = com.respectcraft.finisher.BossDefeats.decide(false, credit, 999, Optional.empty());
-        check(f, future.isPresent() && future.get().method() == com.respectcraft.finisher.BossDefeatEvent.Method.NORMAL,
-                "chefe: crédito com tempo inválido não conta");
         // Sem disparo duplo: depois de anunciado, nenhuma outra decisao (nem por finalizacao, nem comum).
         boolean posted = false;
         int fired = 0;
         for (int i = 0; i < 3; i++) {
-            if (com.respectcraft.finisher.BossDefeats.decide(posted, credit, 1010, Optional.of(killer)).isPresent()) {
+            if (com.respectcraft.finisher.BossDefeats.decide(posted, credit, 1000, Optional.of(killer), true).isPresent()) {
                 fired++;
                 posted = true;
             }
@@ -1057,6 +1064,185 @@ public final class SelfTest {
         check(f, parsed.id().equals(hunted.id()) && parsed.hunters().equals(hunted.hunters()) && parsed.expires() == hunted.expires()
                 && parsed.reward().getCount() == 3 && parsed.reward().is(net.minecraft.world.item.Items.DIAMOND)
                 && parsed.targetName().equals("T"), "recompensa: codec do contrato");
+    }
+
+    /**
+     * Etapa 4.10.1: execucoes reais e regra de chefes. Finalizacoes comuns nunca executam chefes; uma exclusiva so o
+     * chefe designado. As exclusivas daqui sao FIXTURES isoladas (nunca registradas no catalogo).
+     */
+    private static void finisherExecutions(List<String> f) {
+        var P = com.respectcraft.finisher.FinisherParticipants.Kind.PLAYER;
+        var M = com.respectcraft.finisher.FinisherParticipants.Kind.MOB;
+        var B = com.respectcraft.finisher.FinisherParticipants.Kind.BOSS;
+        var ELIGIBLE = com.respectcraft.finisher.FinisherTargeting.Verdict.ELIGIBLE;
+        var NEEDS = com.respectcraft.finisher.FinisherTargeting.Verdict.BOSS_REQUIRES_EXCLUSIVE;
+        var OTHER = com.respectcraft.finisher.FinisherTargeting.Verdict.EXCLUSIVE_OTHER_TARGET;
+        var REGULAR = com.respectcraft.finisher.FinisherTargeting.REGULAR;
+        var wither = net.minecraft.resources.ResourceLocation.withDefaultNamespace("wither");
+        var dragon = net.minecraft.resources.ResourceLocation.withDefaultNamespace("ender_dragon");
+        var zombie = net.minecraft.resources.ResourceLocation.withDefaultNamespace("zombie");
+        var bossA = com.respectcraft.RespectCraft.id("selftest_boss_a");
+        var bossB = com.respectcraft.RespectCraft.id("selftest_boss_b");
+
+        // Regra de alvos.
+        check(f, REGULAR.regular() && REGULAR.check(P, null) == ELIGIBLE && REGULAR.check(M, zombie) == ELIGIBLE,
+                "execução: comum vale para jogador e mob");
+        check(f, REGULAR.check(B, wither) == NEEDS && REGULAR.check(B, dragon) == NEEDS && REGULAR.check(B, bossA) == NEEDS,
+                "execução: comum é recusada contra qualquer chefe");
+        var onlyA = com.respectcraft.finisher.FinisherTargeting.exclusiveTo(bossA);
+        check(f, !onlyA.regular() && onlyA.check(B, bossA) == ELIGIBLE, "execução: exclusiva vale para o chefe dela");
+        check(f, onlyA.check(B, bossB) == OTHER && onlyA.check(B, wither) == OTHER, "execução: exclusiva de A não executa B");
+        check(f, onlyA.check(M, bossA) == OTHER && onlyA.check(M, zombie) == OTHER && onlyA.check(P, null) == OTHER,
+                "execução: exclusiva não executa mob nem jogador");
+        check(f, throwsNpe(() -> com.respectcraft.finisher.FinisherTargeting.exclusiveTo(null)), "execução: exclusiva sem chefe é recusada");
+
+        // Catalogo de producao: tudo comum; Wither e Dragao do Fim recusados; nenhuma exclusiva registrada.
+        for (FinisherDef def : Finishers.all()) {
+            check(f, def.targeting().regular(), "execução: " + def.id() + " é comum");
+            check(f, !def.targeting().check(B, wither).eligible() && !def.targeting().check(B, dragon).eligible(),
+                    "execução: " + def.id() + " recusada contra Wither e Dragão do Fim");
+        }
+        var random = com.respectcraft.profile.BirthRoulette.newRandom();
+        check(f, Finishers.pickFor(B, wither, s -> true, random).isEmpty() && Finishers.pickFor(B, dragon, s -> true, random).isEmpty(),
+                "execução: nenhum sorteio contra chefe sem exclusiva");
+        check(f, Finishers.pickFor(M, zombie, s -> true, random).isPresent() && Finishers.pickFor(P, null, s -> false, random).isPresent(),
+                "execução: sorteio comum continua contra mob e jogador");
+
+        // Extensao futura sem reescrever o motor: fixtures exclusivas de A e B (B travada por habilidade).
+        FinisherDef base = Finishers.TAKEDOWN;
+        check(f, base.withTargeting(null).targeting() == REGULAR, "execução: regra nula vira comum");
+        FinisherDef exA = new FinisherDef(com.respectcraft.RespectCraft.id("selftest/exclusive_a"), base.attacker(), base.victim(),
+                base.camera(), null, 1).withTargeting(onlyA);
+        var lock = com.respectcraft.RespectCraft.id("selftest/unlock_b");
+        FinisherDef exB = new FinisherDef(com.respectcraft.RespectCraft.id("selftest/exclusive_b"), base.attacker(), base.victim(),
+                base.camera(), lock, 1).withTargeting(com.respectcraft.finisher.FinisherTargeting.exclusiveTo(bossB));
+        check(f, Finishers.get(exA.id()) == null && Finishers.get(exB.id()) == null && Finishers.TAKEDOWN.targeting() == REGULAR,
+                "execução: fixtures não entram no catálogo");
+        List<FinisherDef> catalog = new ArrayList<>(Finishers.all());
+        catalog.add(exA);
+        catalog.add(exB);
+        boolean regularOnly = true;
+        for (int i = 0; i < 200; i++) {
+            FinisherDef picked = Finishers.pickFor(catalog, M, zombie, s -> true, random).orElse(null);
+            FinisherDef pickedPlayer = Finishers.pickFor(catalog, P, null, s -> true, random).orElse(null);
+            if (picked == null || !picked.targeting().regular() || pickedPlayer == null || !pickedPlayer.targeting().regular()) regularOnly = false;
+        }
+        check(f, regularOnly, "execução: exclusiva nunca é sorteada contra mob ou jogador");
+        check(f, Finishers.pickFor(catalog, B, bossA, s -> false, random).orElse(null) == exA, "execução: chefe A sorteia só a exclusiva de A");
+        check(f, Finishers.pickFor(catalog, B, bossB, s -> false, random).isEmpty(), "execução: exclusiva travada não é sorteada");
+        check(f, Finishers.pickFor(catalog, B, bossB, lock::equals, random).orElse(null) == exB, "execução: exclusiva liberada de B");
+        check(f, Finishers.pickFor(catalog, B, wither, s -> true, random).isEmpty(), "execução: chefe sem exclusiva fica sem finalização");
+        bossRegistry(f, catalog, exA, exB, bossA, bossB, lock);
+
+        // Golpe final: dano finito, acima de vida + absorcao; resultado so com morte confirmada.
+        float[][] cases = {{4, 0, 20}, {1, 16, 20}, {300, 0, 300}, {0, 0, 0}, {1.0E9F, 1.0E9F, 1.0E9F}};
+        boolean damageOk = true;
+        for (float[] c : cases) {
+            float d = com.respectcraft.finisher.FinisherExecution.damageFor(c[0], c[1], c[2]);
+            if (!Float.isFinite(d) || d <= 0 || (c[0] + c[1] < 1.0E5F && d <= c[0] + c[1])) damageOk = false;
+        }
+        check(f, damageOk, "execução: dano do golpe final");
+        var success = com.respectcraft.finisher.FinisherExecution.outcome(true, true);
+        var prevented = com.respectcraft.finisher.FinisherExecution.outcome(false, false);
+        var survived = com.respectcraft.finisher.FinisherExecution.outcome(true, false);
+        check(f, success.killConfirmed() && success.outcome() == com.respectcraft.finisher.FinisherExecution.Outcome.SUCCESS,
+                "execução: morte confirmada = SUCCESS");
+        check(f, !prevented.killConfirmed() && prevented.outcome() == com.respectcraft.finisher.FinisherExecution.Outcome.FAILED
+                && !survived.killConfirmed() && survived.outcome() == com.respectcraft.finisher.FinisherExecution.Outcome.FAILED
+                && !prevented.detail().equals(survived.detail()), "execução: dano impedido e totem = FAILED (motivos distintos)");
+        var aborted = new com.respectcraft.finisher.FinisherSessionEvent.Aborted(null, null, base, null, "test");
+        var completed = new com.respectcraft.finisher.FinisherSessionEvent.Completed(null, null, base, null, survived);
+        check(f, aborted.getOutcome() == com.respectcraft.finisher.FinisherExecution.Outcome.CANCELLED
+                && completed.getOutcome() == com.respectcraft.finisher.FinisherExecution.Outcome.FAILED && !completed.killConfirmed(),
+                "execução: cancelada e cena concluída sem morte nunca são SUCCESS");
+
+        // Mundo (servidor rodando): tags de chefe e o tipo de dano com as regras de morte normais.
+        check(f, com.respectcraft.finisher.FinisherParticipants.isBossType(net.minecraft.world.entity.EntityType.WITHER)
+                && com.respectcraft.finisher.FinisherParticipants.isBossType(net.minecraft.world.entity.EntityType.ENDER_DRAGON)
+                && !com.respectcraft.finisher.FinisherParticipants.isBossType(net.minecraft.world.entity.EntityType.ZOMBIE),
+                "execução: Wither e Dragão do Fim são chefes (c:bosses), zumbi não");
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            var type = server.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
+                    .getHolder(com.respectcraft.finisher.FinisherExecution.DAMAGE_TYPE);
+            check(f, type.isPresent(), "execução: tipo de dano registrado");
+            type.ifPresent(h -> {
+                check(f, h.is(net.minecraft.tags.DamageTypeTags.BYPASSES_ARMOR) && h.is(net.minecraft.tags.DamageTypeTags.NO_KNOCKBACK)
+                        && h.is(net.minecraft.tags.DamageTypeTags.BYPASSES_COOLDOWN), "execução: dano ignora armadura, recarga e repulsão");
+                check(f, !h.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY), "execução: dano respeita totem e invulnerabilidade");
+            });
+        }
+    }
+
+    /**
+     * Etapa 4.11: fichas de chefe ({@code boss.Bosses}) com fixtures que nunca entram no registro. Validacao contra o
+     * catalogo, execucao so pela exclusiva listada, condicoes (vida, habilidade, progressao ausente) e evento de recusa.
+     */
+    private static void bossRegistry(List<String> f, List<FinisherDef> catalog, FinisherDef exA, FinisherDef exB,
+                                     net.minecraft.resources.ResourceLocation bossA, net.minecraft.resources.ResourceLocation bossB,
+                                     net.minecraft.resources.ResourceLocation lock) {
+        java.util.function.Function<net.minecraft.resources.ResourceLocation, FinisherDef> lookup =
+                id -> catalog.stream().filter(d -> d.id().equals(id)).findFirst().orElse(null);
+        var profileA = com.respectcraft.boss.BossProfile.of(bossA).withExclusiveFinisher(exA.id())
+                .withCondition(new com.respectcraft.boss.BossCondition.HealthBelow(0.10F));
+        var profileB = com.respectcraft.boss.BossProfile.of(bossB).withExclusiveFinisher(exB.id())
+                .withCondition(new com.respectcraft.boss.BossCondition.RequiresSkill(lock))
+                .withCondition(new com.respectcraft.boss.BossCondition.RequiresProgress(com.respectcraft.RespectCraft.id("selftest/progress_b")));
+        check(f, com.respectcraft.boss.Bosses.validate(profileA, lookup).isEmpty()
+                && com.respectcraft.boss.Bosses.validate(profileB, lookup).isEmpty(), "chefes: fichas de teste válidas");
+        check(f, !com.respectcraft.boss.Bosses.validate(com.respectcraft.boss.BossProfile.of(bossA).withExclusiveFinisher(exB.id()), lookup).isEmpty(),
+                "chefes: exclusiva de outro chefe recusada na ficha");
+        check(f, !com.respectcraft.boss.Bosses.validate(com.respectcraft.boss.BossProfile.of(bossA)
+                .withExclusiveFinisher(Finishers.TAKEDOWN_ID), lookup).isEmpty(), "chefes: finalização comum recusada na ficha");
+        check(f, !com.respectcraft.boss.Bosses.validate(com.respectcraft.boss.BossProfile.of(bossA)
+                .withExclusiveFinisher(com.respectcraft.RespectCraft.id("selftest/missing")), lookup).isEmpty(), "chefes: finalização ausente recusada");
+        check(f, !com.respectcraft.boss.Bosses.validate(profileA.withExclusiveFinisher(exA.id()), lookup).isEmpty(),
+                "chefes: exclusiva repetida recusada");
+        check(f, com.respectcraft.boss.Bosses.get(bossA).isEmpty() && com.respectcraft.boss.Bosses.all().isEmpty(),
+                "chefes: registro real vazio (nenhum chefe definitivo)");
+        check(f, throwsIllegalArgument(() -> new com.respectcraft.boss.BossCondition.HealthBelow(0F))
+                && throwsIllegalArgument(() -> new com.respectcraft.boss.BossCondition.HealthBelow(1.5F)), "chefes: fração de vida inválida");
+
+        var low = new com.respectcraft.boss.BossCondition.Context(0.05F, s -> false, k -> false);
+        var high = new com.respectcraft.boss.BossCondition.Context(0.20F, s -> true, k -> true);
+        var skilled = new com.respectcraft.boss.BossCondition.Context(0.20F, lock::equals, k -> false);
+        var full = new com.respectcraft.boss.BossCondition.Context(0.20F, lock::equals, k -> true);
+        check(f, com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileA), exA, low).isEmpty(),
+                "chefes: A executável com vida abaixo de 10%");
+        check(f, com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileA), exA, high).isPresent(),
+                "chefes: A recusado com vida acima de 10%");
+        check(f, com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.empty(), exA, low).isPresent(),
+                "chefes: chefe sem ficha nunca é executado");
+        check(f, com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileA), exB, low).isPresent(),
+                "chefes: exclusiva fora da ficha recusada");
+        check(f, com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileB), exB, low).isPresent()
+                && com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileB), exB, skilled).isPresent()
+                && com.respectcraft.boss.Bosses.checkExecution(java.util.Optional.of(profileB), exB, full).isEmpty(),
+                "chefes: B exige habilidade e progressão (todas as condições)");
+
+        var event = new com.respectcraft.boss.BossExecutionCheckEvent(null, null, profileA, exA);
+        check(f, event.getDenial().isEmpty(), "chefes: evento sem ouvinte não recusa");
+        event.deny("first");
+        event.deny("second");
+        check(f, event.getDenial().orElse("").equals("first"), "chefes: primeira recusa do evento vale");
+    }
+
+    private static boolean throwsIllegalArgument(Runnable action) {
+        try {
+            action.run();
+            return false;
+        } catch (IllegalArgumentException e) {
+            return true;
+        }
+    }
+
+    private static boolean throwsNpe(Runnable action) {
+        try {
+            action.run();
+            return false;
+        } catch (NullPointerException e) {
+            return true;
+        }
     }
 
     /**
@@ -1440,6 +1626,29 @@ public final class SelfTest {
         check(f, com.respectcraft.testgame.DefeatCounter.next(-5) == 1, "derrotas: negativo vira 0 antes do +1");
         check(f, com.respectcraft.testgame.DefeatCounter.next(Integer.MAX_VALUE) == Integer.MAX_VALUE,
                 "derrotas: sem estouro no máximo");
+        // Etapa 4.11 (decisao do dono): contador so com SUCCESS; /kill e vazio passam e cancelam a cena.
+        var P = com.respectcraft.finisher.FinisherParticipants.Kind.PLAYER;
+        var M = com.respectcraft.finisher.FinisherParticipants.Kind.MOB;
+        var B = com.respectcraft.finisher.FinisherParticipants.Kind.BOSS;
+        var O = com.respectcraft.finisher.FinisherExecution.Outcome.class.getEnumConstants();
+        boolean onlySuccess = true;
+        for (var outcome : O) {
+            boolean expected = outcome == com.respectcraft.finisher.FinisherExecution.Outcome.SUCCESS;
+            if (com.respectcraft.testgame.FinisherRules.countsDefeat(P, outcome) != expected
+                    || com.respectcraft.testgame.FinisherRules.countsDefeat(M, outcome)
+                    || com.respectcraft.testgame.FinisherRules.countsDefeat(B, outcome)) onlySuccess = false;
+        }
+        check(f, onlySuccess, "derrotas: só SUCCESS contra jogador conta (FAILED/totem e CANCELLED não; mob/chefe nunca)");
+        check(f, !com.respectcraft.testgame.FinisherRules.suppressSessionDamage(true)
+                && com.respectcraft.testgame.FinisherRules.suppressSessionDamage(false),
+                "cena: dano que ignora invulnerabilidade passa; dano comum é descartado");
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            var types = server.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE);
+            check(f, types.getHolderOrThrow(net.minecraft.world.damagesource.DamageTypes.GENERIC_KILL).is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
+                    && types.getHolderOrThrow(net.minecraft.world.damagesource.DamageTypes.FELL_OUT_OF_WORLD).is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY),
+                    "cena: /kill e vazio ignoram invulnerabilidade (passam pela cena)");
+        }
     }
 
     private static void sequences(List<String> f) {

@@ -12,49 +12,56 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 
 /**
- * Caminho preparado para recompensas de chefe (Etapa 4.8): distingue derrota comum, derrota por finalizacao
- * qualificante e o jogador creditado, e posta {@link BossDefeatEvent} no maximo uma vez por chefe.
+ * Caminho preparado para recompensas de chefe (Etapa 4.8, revisto na 4.10.1): distingue derrota comum de execucao
+ * pela finalizacao EXCLUSIVA do chefe e posta {@link BossDefeatEvent} no maximo uma vez por chefe.
  *
- * <p>Estado so na propria entidade chefe ({@code persistentData}), nada em {@code static}:
- * {@value #CREDIT_KEY} guarda a ultima finalizacao concluida contra ele (jogador, finalizacao, tick) e
- * {@value #POSTED_KEY} marca que a derrota ja foi anunciada. NAO concede nada.
+ * <p>Etapa 4.10.1: finalizacoes comuns nunca comecam contra chefes ({@link FinisherTargeting}); so a exclusiva
+ * designada para aquele chefe pode executa-lo, e a derrota so e {@link BossDefeatEvent.Method#FINISHER} quando a morte
+ * confirmada veio do golpe final dessa execucao ({@link FinisherExecution}). Cinematica concluida sem morte, morte
+ * posterior por espada, ou morte por outra finalizacao nunca contam como execucao.
+ *
+ * <p>Estado so na propria entidade chefe ({@code persistentData}), nada em {@code static}: {@value #CREDIT_KEY} guarda
+ * a execucao em andamento (jogador, finalizacao, tick) apenas durante o golpe final ({@link #markExecution} /
+ * {@link #clearExecution}) e {@value #POSTED_KEY} marca que a derrota ja foi anunciada. NAO concede nada.
  */
 public final class BossDefeats {
-    /** Janela (ticks) em que a morte do chefe ainda conta como derrota pela finalizacao concluida. Provisoria. */
-    public static final int FINISHER_CREDIT_TICKS = 100;
     static final String CREDIT_KEY = "respectcraft_boss_finisher_credit";
     static final String POSTED_KEY = "respectcraft_boss_defeat_posted";
 
     private BossDefeats() {}
 
-    /** Credito de finalizacao gravado no chefe. */
+    /** Credito de execucao gravado no chefe durante o golpe final. */
     public record Credit(UUID player, ResourceLocation finisher, long gameTime) {}
 
     /** Decisao de anunciar uma derrota. */
     public record Decision(BossDefeatEvent.Method method, Optional<UUID> credited, Optional<ResourceLocation> finisher) {}
 
     /**
-     * Regra pura (coberta pelo {@code SelfTest}): ja anunciado = nada; credito de finalizacao dentro da janela =
-     * FINISHER creditado ao executor; senao NORMAL creditado a quem matou (se jogador).
+     * Regra pura (coberta pelo {@code SelfTest}): ja anunciado = nada; morte pelo dano de execucao com credito do
+     * mesmo tick = FINISHER creditado ao executor; qualquer outra morte = NORMAL creditado a quem matou (se jogador).
      */
-    public static Optional<Decision> decide(boolean alreadyPosted, Optional<Credit> credit, long now, Optional<UUID> killer) {
+    public static Optional<Decision> decide(boolean alreadyPosted, Optional<Credit> credit, long now, Optional<UUID> killer,
+                                            boolean executionDamage) {
         if (alreadyPosted) return Optional.empty();
-        if (credit.isPresent() && now >= credit.get().gameTime() && now - credit.get().gameTime() <= FINISHER_CREDIT_TICKS) {
+        if (executionDamage && credit.isPresent() && credit.get().gameTime() == now) {
             return Optional.of(new Decision(BossDefeatEvent.Method.FINISHER, Optional.of(credit.get().player()),
                     Optional.of(credit.get().finisher())));
         }
         return Optional.of(new Decision(BossDefeatEvent.Method.NORMAL, killer, Optional.empty()));
     }
 
-    /** Finalizacao concluida por um jogador contra um chefe: grava o credito no chefe (substitui o anterior). */
-    public static void onFinisherCompleted(FinisherSessionEvent.Completed event) {
-        if (event.getInteraction() != FinisherParticipants.Interaction.PLAYER_VS_BOSS) return;
-        if (!(event.getAttacker() instanceof ServerPlayer player) || event.getVictim().level().isClientSide()) return;
+    /** Golpe final de uma finalizacao exclusiva contra este chefe vai comecar (so {@link FinisherExecution}). */
+    static void markExecution(LivingEntity boss, ServerPlayer player, FinisherDef finisher) {
         CompoundTag credit = new CompoundTag();
         credit.putUUID("player", player.getUUID());
-        credit.putString("finisher", event.getFinisher().id().toString());
-        credit.putLong("time", event.getVictim().level().getGameTime());
-        event.getVictim().getPersistentData().put(CREDIT_KEY, credit);
+        credit.putString("finisher", finisher.id().toString());
+        credit.putLong("time", boss.level().getGameTime());
+        boss.getPersistentData().put(CREDIT_KEY, credit);
+    }
+
+    /** Fim do golpe final: o credito nao sobrevive a ele (chefe que sobreviveu nao guarda nada). */
+    static void clearExecution(LivingEntity boss) {
+        boss.getPersistentData().remove(CREDIT_KEY);
     }
 
     /** Registrado com prioridade LOWEST: morte cancelada por outro mod (ex.: totem) nao e derrota. */
@@ -64,14 +71,14 @@ public final class BossDefeats {
         if (FinisherParticipants.kindOf(boss) != FinisherParticipants.Kind.BOSS) return;
         CompoundTag data = boss.getPersistentData();
         Optional<Decision> decision = decide(data.getBoolean(POSTED_KEY), readCredit(data), boss.level().getGameTime(),
-                killer(event));
+                killer(event), FinisherExecution.isExecution(event.getSource()));
         if (decision.isEmpty()) return;
         data.putBoolean(POSTED_KEY, true);
         data.remove(CREDIT_KEY);
         ServerPlayer credited = decision.get().credited()
                 .map(id -> boss.getServer() == null ? null : boss.getServer().getPlayerList().getPlayer(id))
                 .orElse(null);
-        RespectCraft.LOGGER.debug("Boss defeat {} ({}), credited {}", FinisherParticipants.typeId(boss),
+        RespectCraft.LOGGER.info("Boss defeat {} ({}), credited {}", FinisherParticipants.typeId(boss),
                 decision.get().method(), credited == null ? "nobody" : credited.getGameProfile().getName());
         NeoForge.EVENT_BUS.post(new BossDefeatEvent(boss, decision.get().method(), credited,
                 decision.get().finisher().orElse(null)));

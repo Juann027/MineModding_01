@@ -5,12 +5,18 @@ import com.respectcraft.animation.PlayerAnimations;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import com.respectcraft.RespectCraft;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.Tags;
+import net.neoforged.neoforge.entity.PartEntity;
 import software.bernie.geckolib.animatable.GeoEntity;
 
 /**
@@ -48,7 +54,17 @@ public final class FinisherParticipants {
         return Optional.ofNullable(STAGING.get(entityType));
     }
 
-    /** Tipo de participante. Chefe = tag comum {@code c:bosses} (NeoForge), sem lista propria. */
+    /**
+     * Chefes do RespectCraft e chefes de outros mods que nao usam a convencao {@code c:bosses} (Etapa 4.10.1). Tag de
+     * dados ({@code data/respectcraft/tags/entity_type/bosses.json}, vazia hoje): um chefe futuro do mod entra aqui
+     * (ou em {@code c:bosses}); um pacote de dados do servidor pode acrescentar chefes de outros mods sem codigo.
+     */
+    public static final TagKey<EntityType<?>> BOSSES = TagKey.create(Registries.ENTITY_TYPE, RespectCraft.id("bosses"));
+
+    /**
+     * Tipo de participante. Chefe = tag comum {@code c:bosses} (NeoForge; inclui Wither e Dragao do Fim) ou
+     * {@link #BOSSES}. Nunca por vida, tamanho, nome ou barra de chefe (nao ha API comum para a barra).
+     */
     public enum Kind { PLAYER, MOB, BOSS }
 
     /** Combinacoes suportadas. Precisam de um jogador: a sessao avanca no tick dele. */
@@ -157,7 +173,19 @@ public final class FinisherParticipants {
 
     public static Kind kindOf(LivingEntity entity) {
         if (entity instanceof Player) return Kind.PLAYER;
-        return entity.getType().is(Tags.EntityTypes.BOSSES) ? Kind.BOSS : Kind.MOB;
+        return isBossType(entity.getType()) ? Kind.BOSS : Kind.MOB;
+    }
+
+    public static boolean isBossType(EntityType<?> type) {
+        return type.is(Tags.EntityTypes.BOSSES) || type.is(BOSSES);
+    }
+
+    /**
+     * Entidade que o jogador realmente mirou: partes de entidades de varias partes (ex.: o Dragao do Fim, via
+     * {@link PartEntity} do NeoForge) viram a entidade dona, para a regra de chefe valer nelas tambem.
+     */
+    public static Entity owner(Entity entity) {
+        return entity instanceof PartEntity<?> part && part.getParent() != null ? part.getParent() : entity;
     }
 
     public static ResourceLocation typeId(LivingEntity entity) {

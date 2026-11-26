@@ -92,6 +92,7 @@ public final class RespectCraft {
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onDeath);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onPlayerTick);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onLogout);
+        NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onServerStopping);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onClone);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockAttack);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::blockEntityInteract);
@@ -108,8 +109,9 @@ public final class RespectCraft {
         NeoForge.EVENT_BUS.addListener(PlayerAnimationService::onLogout);
         NeoForge.EVENT_BUS.addListener(FinisherTestMechanic::onAnimationTimed);
         // Etapa 4.8: caminho preparado para recompensas de chefe (so anuncia BossDefeatEvent; nada e concedido).
-        NeoForge.EVENT_BUS.addListener(BossDefeats::onFinisherCompleted);
+        // Etapa 4.10.1: a execucao so conta com a morte confirmada (LOWEST: morte cancelada por outro mod nao conta).
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, BossDefeats::onDeath);
+        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, com.respectcraft.finisher.FinisherExecution::onDeathConfirmed);
         // Etapa 3: ficha do personagem (roleta, atributos, habilidades) e necessidades.
         modBus.addListener(GameplayNetworking::register);
         modBus.addListener(ProfileService::onConfigReload);

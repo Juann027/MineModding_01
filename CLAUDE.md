@@ -2,7 +2,8 @@
 
 RPG de humor para **Minecraft Java 1.21.1 / NeoForge 21.1.x / Java 21**: criador de personagem, roleta de
 nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas,
-finalizações cinematográficas (efeitos visuais pelo motor **Calamidade_Awakening**, Etapa 4.10), contador de derrotas,
+finalizações cinematográficas que **executam** o alvo de verdade (Etapa 4.10.1; efeitos visuais pelo motor
+**Calamidade_Awakening**, Etapa 4.10), contador de derrotas, infraestrutura de chefes personalizados (Etapa 4.11),
 avisos holográficos automáticos e caça a recompensa entre jogadores (Etapa 4.11) e
 (Etapa 4.9, MVP) a dimensão **Inverted Realm**
 (céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
@@ -26,7 +27,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | GeckoLib | **4.9.3** (`software.bernie.geckolib:geckolib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Não use a 5. |
 | SmartBrainLib | 1.16.11 (`net.tslat.smartbrainlib:SmartBrainLib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Sem uso no código desde a remoção do Leão do Fim (4.9.1); continua declarada até o dono decidir |
 | Rimulib | **1.3.0** NeoForge (Etapa 4.8; sem Maven público: `curse.maven:rimulib-1753907:9676532` pelo CurseMaven) — cliente e servidor, não embutido. Conectado em `RespectCraft.RIMULIB`. Só `cyou.rimuru.rimulib.mc1211.api` no código comum; `...mc1211.client.api` (ex.: `FxApi`) só em `client` |
-| Calamidade_Awakening | **0.10.0** (Etapa 4.10, obrigatório; aceita `[0.10.0,0.11.0)`). Sem Maven: a tarefa `baixarCalamidade` baixa o jar do release do GitHub para `libs/` (fora do git) e confere o SHA-256 (`gradle.properties`); `compileOnly` + `runtimeOnly`, nunca embutido. A RimuLib dele é a do CurseMaven acima (não baixe de novo). Servidor e clientes na **mesma versão**. Só `dev.calamidade_awakening.api.v1` no código comum; `api.v1.client` (`AddonLayers`) só em `client` |
+| Calamidade_Awakening | **0.14.0** (Etapa 4.10, obrigatório; aceita `[0.14.0,0.15.0)`: a API `api.v1` da 0.14 é a da 0.10 + adições, compila sem mudança de código; NeoForge 21.1.265 e RimuLib 1.3.0 atendem ao que ela pede; `calamidade_fx.glsl` copiado da 0.14.0, versão 3). Sem Maven: a tarefa `baixarCalamidade` baixa o jar do release do GitHub para `libs/` (fora do git) e confere o SHA-256 (`gradle.properties`); `compileOnly` + `runtimeOnly`, nunca embutido. A RimuLib dele é a do CurseMaven acima (não baixe de novo). Servidor e clientes na **mesma versão**. Só `dev.calamidade_awakening.api.v1` no código comum; `api.v1.client` (`AddonLayers`) só em `client` |
 | UI Lib / Architectury | **Não são dependências.** As telas usam o framework próprio `client.ui`. Não reintroduza. |
 
 - Versões em `gradle.properties`; `neoforge.mods.toml` é gerado de `src/main/templates/`.
@@ -43,7 +44,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `client.playergeo` | **Rig GeckoLib do jogador.** `PlayerRigLayer` é a primeira camada do `PlayerRenderer` vanilla: lê a pose vanilla, desenha o rig e devolve a pose ao `PlayerModel` (armadura, itens e camadas acompanham). F8 = modo de teste, F9 = aceno. |
 | `client.bodylayer` | **Body Layers**: busto, cabelo, pele, rosto e acessórios como `BodyLayerDefinition` em `BodyLayers`. |
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/respectcraft anim`. |
-| `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Comando `/respectcraft test` (e `/stopitstopnow`). |
+| `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Execuções reais (Etapa 4.10.1): `FinisherTargeting` (quem cada finalização pode executar; chefes só pela exclusiva) e `FinisherExecution` (golpe final = dano comum `respectcraft:finisher_execution`, resultado `SUCCESS`/`CANCELLED`/`FAILED`). Comandos `/respectcraft test` (e `/stopitstopnow`), `/respectcraft finishers <alvo>` (elegibilidade). |
 | `fx`, `client.fx` | **Ponte com o Calamidade_Awakening** (Etapa 4.10). `FinisherFx` é o **único dono** dos efeitos de finalização (registro no construtor do mod, HERO da cena, golpes/quedas nos marcadores, fim/abort); dados em `FinisherFxDef` (campo opcional `FinisherDef.fx()`), regras puras em `FinisherFxRules` (no `SelfTest`). Gancho de mobs `GeoFxKeyframes` (keyframe `calamidade:<efeito>`, lido no servidor). Passes de pós e shaders só em `client.fx.FinisherFxClient` + `assets/respectcraft/shaders/fx/finisher_*.fsh` (com a cópia de `calamidade_fx.glsl`). |
 | `character`, `client.character` | **Character Creator** (primeira vez na tecla K): aparência (`CharacterAppearance`, `CharacterAppearanceService`), só Body, Hairstyle e Hair Color (Etapa 4.8.4-C); rascunho sem desenho `AppearanceDraft`. |
 | `client.holo`, `ui` | **Menu holográfico da tecla K** (Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C). Criador e roleta são **janelas** do mesmo arco (`HoloPopup`: `CreatorView`, `RouletteView`); roleta sem desenho em `ui.RouletteMachine` (pura, no `SelfTest`) + `client.roulette.RouletteSession`; desenho da roda só em `client.roulette.PrizeWheel` (janela e tela de reserva). Núcleo `HoloMenu` (arco das seções Overview, Character, Body & Traits, Speciality, Skills, superfícies por painel, passada 3D `Holo3D`, `press` comum de clique) com duas cascas: **`HoloWorld`** (padrão: placas paradas no mundo, `RenderFrameEvent.Pre` + `RenderLevelStageEvent` AFTER_LEVEL, K/Recall, posição sem paredes `ui.HoloPlacement`, mira/clique/arrasto/roda/dica) e `HoloCharacterScreen` (tela da 4.8.1, reserva temporária `mode = "SCREEN"`). Entrada no mundo: **`HoloWorldInput`** (dono por aperto com `ui.HoloInputArbiter`, modo cursor). Geometria pura em `ui.HoloGeometry` (no `SelfTest`); config de cliente `respectcraft-holomenu-client.toml`. |
@@ -54,6 +55,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `entity`, `client.render`, `command` | Mobs **agua-vivas** (`AguaVivaEntity`, Etapa 4.9) e renderers. O Leão do Fim foi removido na Etapa 4.9.1 (não o reintroduza). `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim`, `test` e `realm`). |
 | `dimension`, `client.dimension` | **Inverted Realm** (Etapa 4.9, MVP): dimensão, bioma e features são **dados** (`data/respectcraft/dimension*`, `worldgen/...`); `InvertedRealm` (chave, viagem de teste, chão seguro) e `InvertedRealmCommands` (`/respectcraft realm`); céu/neblina/luz em `client.dimension.InvertedRealmEffects`. |
 | `block.wood`, `registry.ModBlocks` | **Madeira Retorcida** (Etapa 4.9, do pacote "O Avesso — Fase 2, Etapa A"): blocos em `ModBlocks`, itens em `ModItems`, placas/bancada em `TwistedFurniture`, barco por `enumextensions.json`; placas no cliente em `client.render.TwistedWoodRenderers`. |
+| `boss` | **Chefes personalizados** (Etapa 4.11): `Bosses` (registro em código, **vazio**), `BossProfile` (tipo, exclusivas, condições), `BossCondition` (`HealthBelow`, `RequiresSkill`, `RequiresProgress`), `BossExecutionCheckEvent` (só recusa). Avaliado em `FinisherTestMechanic.eligibility` antes da cena. |
 | `notice`, `client.holo.HoloToasts` | **Avisos holográficos automáticos** (Etapa 4.11). `HoloNotices` é o **único** caminho de um aviso (audiência, `HoloNoticeEvent` cancelável, pacote, farol); dados `HoloNotice` (`NoticeKind`, `NoticeSeverity`), regras puras `NoticeRules` (no `SelfTest`); faróis no Calamidade em `NoticeFx` (único dono). Fontes de hoje: chefe que aparece, chefe derrotado, portal do Nether aceso, chegada ao Inverted Realm, caça a recompensa; API pronta para chefes/portais/eventos futuros (`bossAppeared`, `portalOpened`, `worldEvent`). Cliente: `network.NoticeClientCache` (fila + histórico), cartões na tela `HoloToasts`, seção Alerts `client.holo.NoticesView`. Comando `/respectcraft notice`. |
 | `bounty` | **Caça a recompensa** contra jogadores (Etapa 4.11). `BountyService` é o único dono do quadro `BountyBoard` (SavedData do Overworld); contrato `Bounty`; regras puras `BountyRules` (no `SelfTest`); aba Bounty Hunt `client.holo.BountyView` + cache `network.BountyClientCache`; pacotes em `network.HoloNetworking`; comando `/respectcraft bounty`. |
 | `selftest` | `SelfTest`: regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
@@ -118,9 +120,37 @@ sistema em que vai mexer; veja o fim deste arquivo).
   `PlayerAnimationDef`; mob/chefe → `EntityFinisherClip` (controlador e animação gatilho do **próprio** rig,
   `triggerAnim` no mesmo tick) ou parado. Nunca um controlador universal nem ossos de jogador em mob. Toda sessão
   precisa de um jogador (mob × mob é recusado). Mob é segurado sem gravar nada na entidade (sem `NoAI`). Não invente
-  clips de mob: só registre `EntityFinisherClip` quando o asset existir. Chefe = tag `c:bosses`; `BossDefeatEvent`
-  sai no máximo uma vez por chefe e **ninguém concede recompensa** até as regras serem pedidas.
+  clips de mob: só registre `EntityFinisherClip` quando o asset existir. Chefe personalizado (Etapa 4.11) = ficha em
+  `boss.Bosses` (exclusivas + condições); não registre chefe sem aprovação do dono. Chefe = tag `c:bosses` ou `respectcraft:bosses`;
+  `BossDefeatEvent` sai no máximo uma vez por chefe e **ninguém concede recompensa** até as regras serem pedidas.
 - **Câmera cinematográfica** segue o estado de animação sincronizado e restaura a perspectiva em qualquer saída.
+- **Regra permanente de chefes (Etapa 4.10.1):** chefes podem ser derrotados normalmente (dano comum, armas,
+  habilidades; nunca imunes à morte), mas **só a finalização exclusiva designada para aquele chefe pode executá-lo pelo
+  Finisher Engine. Finalizações comuns nunca executam chefes.** Regra em `FinisherTargeting` (campo
+  `FinisherDef.targeting()`, padrão `REGULAR`; `exclusiveTo(<tipo de entidade do chefe>)` só para o chefe daquele tipo e
+  nenhum outro alvo). A recusa é no servidor, em `FinisherTestMechanic.start`, **antes** de palco, animação, trava,
+  efeito ou dano — vale para o clique, o convite e o `/respectcraft admin finisher`. Chefe = `FinisherParticipants.Kind.BOSS`:
+  tag `c:bosses` **ou** `respectcraft:bosses` (dados; chefes futuros do mod e de outros mods sem `c:bosses` entram aí),
+  partes (`PartEntity`, ex.: Dragão do Fim) contam como a dona; nunca por vida, tamanho, nome ou barra. O sorteio
+  (`Finishers.pickFor`) só oferece o que pode executar o alvo; exclusiva nunca é sorteada contra mob/jogador. **Nenhum
+  chefe do RespectCraft nem finalização exclusiva existe ainda:** não crie chefes, ids, animações ou exclusivas
+  provisórias, não use Wither/Dragão como substitutos permanentes e não registre fixtures (as do `SelfTest` ficam fora do
+  catálogo). Desbloqueio por progressão (conquistas, Skill Trees), recompensas de execução e invocação de chefes são de
+  etapas futuras (plano no handoff 4.10.1).
+- **Execuções reais (Etapa 4.10.1):** a cena concluída termina com **um** golpe final (`FinisherExecution.execute`, em
+  `FinisherTestMechanic.complete`, depois de `release` e do `FinisherFx.end`): `LivingEntity.hurt` com o tipo de dano
+  `respectcraft:finisher_execution` causado pelo executor — morte normal do Minecraft (eventos, matador, loot e XP de
+  morte por jogador, estatísticas, conquistas, mensagem de morte), respeitando totem, invulnerabilidade/criativo, PvP do
+  servidor/times e mods de proteção (`AttackEntityEvent`). Nunca `discard()` nem vida forçada a zero. `SUCCESS` só com o
+  `LivingDeathEvent` da execução confirmado (LOWEST, não cancelado); dano recusado/vítima viva = `FAILED` (sem segunda
+  tentativa); qualquer interrupção = `CANCELLED` (sem golpe final). `FinisherSessionEvent.getOutcome()` carrega isso.
+  PvP desligado/times recusam o convite e o início. A sessão sai do mapa antes do golpe (idempotente). Jogador vítima
+  também morre (com consentimento do convite, como antes); se sobreviver, volta a recuperação caída de antes.
+  `BossDefeatEvent.Method.FINISHER` só para morte confirmada pelo golpe final de uma exclusiva do próprio chefe
+  (crédito em `persistentData` só durante o golpe).
+- **Servidor parando (Etapa 4.10.2):** o `/stop` desconecta sem `PlayerLoggedOutEvent`; por isso
+  `FinisherTestMechanic.onServerStopping` encerra toda sessão ativa por `abort` (`CANCELLED (server stopping)`, nunca
+  executa) e limpa convites, recuperações e cooldowns. Estado novo de finalização em `static` precisa ser limpo ali também.
 - **Efeitos de finalização (Etapa 4.10, Calamidade_Awakening):** só `fx.FinisherFx` começa/encerra efeitos de
   finalização (não chame `Effects.start` para isso em outro lugar). `FinisherDef` sem `FinisherFxDef` = partículas
   vanilla de antes (sons ficam no `FinisherTestMechanic` nos dois casos). Por sessão: um efeito **HERO** da cena
@@ -135,8 +165,9 @@ sistema em que vai mexer; veja o fim deste arquivo).
   Keyframe `calamidade:<efeito>` em animação de mob só dispara por `GeoFxKeyframes.triggerAnim` no servidor (nunca por
   handler de keyframe no cliente). `SkillEffect.Kind.VISUAL_FX` existe, mas nenhuma habilidade o usa e `SkillService`
   não o aplica. Antes de usar algo novo do Calamidade/RimuLib, confira com `javap` no jar.
-- **Contador de derrotas:** +1 para o alvo **jogador** só em `FinisherTestMechanic.complete` (`abort` nunca conta;
-  `FinisherRules.countsDefeat`: mob e chefe nunca têm contador, estatística ou plaqueta). A plaqueta
+- **Contador de derrotas:** +1 para o alvo **jogador** só em `FinisherTestMechanic.complete` e só com execução
+  `SUCCESS` (Etapa 4.11; `FAILED`/totem e `abort` nunca contam; `FinisherRules.countsDefeat(kind, outcome)`). Dano com
+  `bypasses_invulnerability` (`/kill`, vazio) a um participante cancela a cena e passa; outro dano é descartado. (`FinisherRules.countsDefeat`: mob e chefe nunca têm contador, estatística ou plaqueta). A plaqueta
   replica a matemática do `renderNameTag` 1.21.1; ícones são a fonte bitmap `respectcraft:defeat_icons`, não emoji.
 - **Necessidades:** ativas são Coom, Bexiga, Intestino e Emoção (id `humor`) — `Need.ACTIVE`. Hidratação e Energia
   são **dados legados inativos** (`Need.active() == false`): continuam no Codec, mas não mudam, não afetam a Emoção,
@@ -218,6 +249,7 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 | `respectcraft_bounties` (campos `bounties`, `pending_returns` e os do Codec de `Bounty`) | SavedData do Overworld (`data/respectcraft_bounties.dat`): contratos abertos e recompensas a devolver (Etapa 4.11) |
 | ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
 | itens, blocos (`twisted_*`), block entities `twisted_sign`/`twisted_hanging_sign`, `respectcraft:agua_viva`, `respectcraft:agua_viva_filhote` | registries |
+| tipo de dano `respectcraft:finisher_execution` (mensagens `death.attack.respectcraft.finisher_execution*`), tag de entidade `respectcraft:bosses` | dados (Etapa 4.10.1) |
 | dimensão `respectcraft:inverted_realm`, bioma `respectcraft:twisted_wilds`, `WoodType`/`BlockSetType` e `Boat.Type` `respectcraft:twisted` (enum `RESPECTCRAFT_TWISTED`) | pasta do mundo, chunks e NBT de barcos (Etapa 4.9) |
 
 - Id de origem aposentado: adicione o alias em `profile.LegacyOriginIds` (lido pelo Codec da ficha e regravado com o
@@ -292,6 +324,11 @@ python3 tools/fx/check_shaders.py        # shaders fx montados como a Rimulib + 
   4.8.4-C; visual da roda da roleta (roda de prêmios) → `HANDOFF_ROULETTE_PRIZE_WHEEL.md`; dimensão Inverted Realm (céu
   roxo, terreno, `/respectcraft realm`), Madeira Retorcida e agua-vivas → 4.9 (`HANDOFF_STAGE4_9_PURPLE_DIMENSION_MVP.md`);
   remoção do Leão do Fim → 4.9.1; efeitos das finalizações no Calamidade_Awakening (ponte `fx`, shaders, gancho
-  GeckoLib, dependência) → 4.10 (`HANDOFF_STAGE4_10_FINISHER_FX_CALAMIDADE.md`); avisos holográficos automáticos,
-  faróis no Calamidade, seções Alerts/Bounty Hunt e caça a recompensa → 4.11 (`HANDOFF_STAGE4_11_NOTICES_BOUNTIES.md`).
+  GeckoLib, dependência) → 4.10 (`HANDOFF_STAGE4_10_FINISHER_FX_CALAMIDADE.md`); execuções reais, regra de chefes,
+  finalizações exclusivas e plano de desbloqueio → 4.10.1 (`HANDOFF_STAGE4_10_1_TRUE_EXECUTIONS.md`); validação
+  multiplayer com dois clientes reais (PvP, times, totem, mob × jogador, saídas, servidor parando) → 4.10.2
+  (`HANDOFF_STAGE4_10_2_MULTIPLAYER_VALIDATION.md`); avisos holográficos automáticos, faróis no Calamidade, seções
+  Alerts/Bounty Hunt e caça a recompensa → 4.11 (`HANDOFF_STAGE4_11_NOTICES_BOUNTIES.md`); ciclo de vida do Finisher
+  (contador só com `SUCCESS`, `/kill` na cena) e registro de chefes personalizados → 4.11
+  (`HANDOFF_STAGE4_11_FINISHER_CONSOLIDATION_BOSSES.md`).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

@@ -478,5 +478,8 @@
   "notice.respectcraft.bounty.returned.title": "Rewards returned",
   "notice.respectcraft.bounty.returned.body": "%s reward stack(s) from expired bounties came back to you.",
   "notice.respectcraft.bounty.still_on_you.title": "You are still wanted",
-  "notice.respectcraft.bounty.still_on_you.body": "%s bounty(ies) are open on you."
+  "notice.respectcraft.bounty.still_on_you.body": "%s bounty(ies) are open on you.",
+  "death.attack.respectcraft.finisher_execution": "%1$s was executed by %2$s",
+  "death.attack.respectcraft.finisher_execution.item": "%1$s was executed by %2$s using %3$s",
+  "death.attack.respectcraft.finisher_execution.player": "%1$s was executed by %2$s"
 }

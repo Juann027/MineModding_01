@@ -36,7 +36,10 @@ else
   # (sem jogador nao ha sessao). O Leao do Fim saiu do mod: o teste usa so mobs vanilla.
   # Etapa 4.9: Inverted Realm (dimensao em dados: gera a chegada e uma amostra 5x5) e as agua-vivas.
   # Etapa 4.10: /calamidade status confirma o Calamidade_Awakening carregado e nenhum efeito preso no servidor.
-  for cmd in "time set midnight" "summon minecraft:zombie 0 -60 0" "summon minecraft:zombie 0 -60 0 {Tags:[\"rc_a\"],PersistenceRequired:1b}" "summon minecraft:zombie 2 -60 0 {Tags:[\"rc_b\"],PersistenceRequired:1b}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "respectcraft notice kinds" "respectcraft notice test boss_spawn" "respectcraft bounty list" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "calamidade status" "tupini selftest"; do
+  # Etapa 4.10.1: classificacao de chefes e regra das finalizacoes (comuns nunca executam chefes) no servidor, e o
+  # Wither continua morrendo por dano comum de combate (golpe de um golem; morto-vivo nao fere o Wither no vanilla),
+  # anunciado como derrota NORMAL.
+  for cmd in "time set midnight" "summon minecraft:zombie 0 -60 0" "summon minecraft:zombie 0 -60 0 {Tags:[\"rc_a\"],PersistenceRequired:1b}" "summon minecraft:zombie 2 -60 0 {Tags:[\"rc_b\"],PersistenceRequired:1b}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "summon minecraft:wither 8 -58 8 {Tags:[\"rc_w\"],NoAI:1b,PersistenceRequired:1b,CustomName:'\"SmokeWither\"'}" "summon minecraft:ender_dragon 20 -40 20 {Tags:[\"rc_d\"],NoAI:1b}" "respectcraft finishers @e[tag=rc_a,limit=1]" "respectcraft finishers @e[tag=rc_w,limit=1]" "respectcraft finishers @e[tag=rc_d,limit=1]" "summon minecraft:iron_golem 4 -60 8 {Tags:[\"rc_g\"],NoAI:1b,PersistenceRequired:1b}" "damage @e[tag=rc_w,limit=1] 2000 minecraft:mob_attack by @e[tag=rc_g,limit=1]" "kill @e[tag=rc_d]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "respectcraft notice kinds" "respectcraft notice test boss_spawn" "respectcraft bounty list" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "calamidade status" "tupini selftest"; do
     echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
@@ -65,16 +68,32 @@ grep -q 'RespectCraft connected to Rimulib 1\.3\.' "$log" || fail "Rimulib não 
 # Etapa 4.8: finalizacao sem jogador recusada antes de comecar (nenhum mob fica preso numa sessao).
 grep -q 'has no player participant' "$log" || fail "finalização mob x mob não foi recusada"
 grep -q 'Could not start' "$log" || fail "comando de finalização mob x mob não respondeu com recusa"
+# Etapa 4.10.1: zumbi = mob comum (todas as finalizacoes podem executa-lo); Wither e Dragao do Fim = chefes (c:bosses):
+# toda finalizacao do catalogo e recusada contra eles. O Wither morre por dano comum (golpe de mob), sem imunidade.
+grep -q 'Finisher eligibility for minecraft:zombie (MOB)' "$log" || fail "elegibilidade contra zumbi não respondeu"
+grep -q 'Finisher eligibility for minecraft:wither (BOSS)' "$log" || fail "Wither não foi classificado como chefe"
+grep -q 'Finisher eligibility for minecraft:ender_dragon (BOSS)' "$log" || fail "Dragão do Fim não foi classificado como chefe"
+for id in takedown rasteira combo; do
+  grep -q "respectcraft:$id: ELIGIBLE" "$log" || fail "finalização $id não ficou elegível contra mob comum"
+  [ "$(grep -c "respectcraft:$id: BOSS_REQUIRES_EXCLUSIVE" "$log")" -ge 2 ] || fail "finalização $id não foi recusada contra os chefes"
+done
+# Etapa 4.11: chefes vanilla nao tem ficha de chefe personalizado (registro Bosses vazio): so derrota comum.
+[ "$(grep -c 'Boss profile: none (normal defeat only)' "$log")" -ge 2 ] || fail "chefes vanilla deveriam ficar sem ficha de chefe"
+grep -q 'Named entity .*SmokeWither.* died' "$log" || fail "o Wither não morreu por dano comum de combate"
+grep -q 'Boss defeat minecraft:wither (NORMAL)' "$log" || fail "derrota comum do Wither não foi anunciada como NORMAL"
 # Etapa 4.9: a dimensao Inverted Realm carrega (dimension_type, noise_settings, bioma e features em dados), gera
 # terreno com o bioma certo e a hora fixa do ceu roxo; as agua-vivas sao invocadas no servidor dedicado.
 grep -q 'Inverted Realm ready: arrival .* biome respectcraft:twisted_wilds, fixed time 12400' "$log" \
   || fail "dimensão Inverted Realm não carregou/gerou terreno"
 grep -qE 'Summoned new (Baby Jellyfish|entity\.respectcraft\.agua_viva_filhote)' "$log" || fail "Baby Jellyfish não foi invocada"
 grep -qE 'Summoned new (Giant Jellyfish|entity\.respectcraft\.agua_viva\b)' "$log" || fail "Giant Jellyfish não foi invocada"
-# Etapa 4.10: Calamidade_Awakening 0.10.x carregado no servidor dedicado, efeitos das finalizacoes registrados no lado
-# comum e nenhuma instancia ativa sem sessao (a recusa mob x mob acima nao comeca efeito nenhum).
-grep -qE 'Calamidade_Awakening 0\.10\.[0-9]+ \(calamidade_awakening\)' "$log" \
-  || fail "Calamidade_Awakening 0.10.x não foi carregado no servidor dedicado"
+# Etapa 4.10: Calamidade_Awakening da versao de gradle.properties (hoje 0.14.0) carregado no servidor dedicado, efeitos das
+# finalizacoes registrados no lado comum e nenhuma instancia ativa sem sessao (a recusa mob x mob acima nao comeca efeito
+# nenhum). O zero e conferido qualquer que seja o limite exibido depois da barra (64 hoje; pode mudar entre versoes).
+cal_version=$(sed -n 's/^calamidade_version=//p' gradle.properties | tr -d '[:space:]')
+[ -n "$cal_version" ] || fail "calamidade_version ausente em gradle.properties"
+grep -qF "Calamidade_Awakening $cal_version (calamidade_awakening)" "$log" \
+  || fail "Calamidade_Awakening $cal_version não foi carregado no servidor dedicado"
 grep -q 'RespectCraft finisher FX registered on Calamidade_Awakening' "$log" \
   || fail "efeitos das finalizações não foram registrados no Calamidade"
 # Etapa 4.11: avisos holograficos (farois no Calamidade) e caca a recompensa.
@@ -83,7 +102,9 @@ grep -q 'RespectCraft notice FX registered on Calamidade_Awakening' "$log" \
 grep -q 'Notice kinds: system world_event\* boss_spawn\*' "$log" || fail "/respectcraft notice kinds não respondeu"
 grep -q 'Notice boss_spawn sent to 0 players' "$log" || fail "/respectcraft notice test não respondeu"
 grep -qE 'Bounties: [0-9]+ active, [0-9]+ rewards waiting' "$log" || fail "/respectcraft bounty list não respondeu"
-grep -q 'Live instances on server: 0 / 64' "$log" || fail "/calamidade status não respondeu ou há efeito preso"
+grep -qE 'Live instances on server: 0 / [0-9]+' "$log" || fail "/calamidade status não respondeu ou há efeito preso"
+grep -E 'Live instances on server: [0-9]+ / [0-9]+' "$log" | grep -qvE ': 0 / ' \
+  && fail "/calamidade status mostrou efeito ativo depois das cenas"
 # Etapa 4.8: o jar do RespectCraft nao embute o Rimulib (o jogador instala ao lado).
 jar=$(ls build/libs/respectcraft-*.jar 2>/dev/null | grep -v -- '-sources' | head -1)
 if [ -z "$jar" ]; then fail "jar do RespectCraft não encontrado em build/libs"
