@@ -1,0 +1,16 @@
+Migracao para o Calamidade_Awakening 0.14.0 (release v0.14.0, SHA-256 02851af9f70ae404783bc8eaec985b065221828f0ecad8f35bd22d287bcb0cb7).
+Faixa aceita: [0.14.0,0.15.0). NeoForge 21.1.265 e RimuLib 1.3.0 sem mudanca (o motor pede [21.1,21.2) e [1.3.0,2.0)).
+Codigo Java: nenhuma mudanca (compila contra a 0.14.0; a API publica so cresceu desde a 0.10).
+calamidade_fx.glsl: copiado da 0.14.0 (CA_FX_VERSION 2 -> 3, so adicoes); shaders fx OK com glslangValidator --strict.
+
+Cliente real (Xvfb, llvmpipe) + servidor dedicado, roteiro cenario_cliente_real.sh:
+Calamidade_Awakening 0.14.0 (calamidade_awakening)
+RespectCraft finisher FX registered on Calamidade_Awakening
+Finisher respectcraft:combo ... SUCCESS (killed)              -> Live instances on server: 0 / 64
+Finisher respectcraft:takedown ... SUCCESS (killed)           -> Live instances on server: 0 / 64
+combo no meio da cena: Live instances on server: 2 / 64
+Finisher respectcraft:combo ... CANCELLED (player request)    -> Live instances on server: 0 / 64
+Finisher respectcraft:takedown refused against minecraft:wither (BOSS): BOSS_REQUIRES_EXCLUSIVE -> 0 / 64
+F7 do cliente depois do fim e do abort: Events 0, HERO 0, Lights 0, Atmosphere 0; camera de volta a primeira pessoa.
+Golpes do COMBO: luz, anel no chao e impact frame no 3o golpe (01_combo_sheet.jpg, 02_combo_hit3_impact.jpg).
+NoSuchMethodError/NoClassDefFoundError/ClassNotFoundException/NoSuchFieldError/AbstractMethodError: 0 (servidor e cliente).

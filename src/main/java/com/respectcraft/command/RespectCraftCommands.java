@@ -34,6 +34,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
@@ -48,7 +49,10 @@ public final class RespectCraftCommands {
         d.register(Commands.literal("respectcraft")
                 .then(Commands.literal("profile").executes(c -> profile(c, c.getSource().getPlayerOrException())))
                 .then(Commands.literal("skills").then(Commands.literal("list").executes(RespectCraftCommands::listSkills)))
-                .then(Commands.literal("finishers").executes(RespectCraftCommands::listFinishers))
+                .then(Commands.literal("finishers").executes(RespectCraftCommands::listFinishers)
+                        .then(Commands.argument("target", EntityArgument.entity())
+                                .requires(source -> source.hasPermission(2))
+                                .executes(RespectCraftCommands::finisherEligibility)))
                 .then(Commands.literal("selftest").requires(s -> s.hasPermission(2)).executes(RespectCraftCommands::selfTest))
                 .then(Commands.literal("speciality").requires(s -> s.hasPermission(2))
                         .then(Commands.literal("list").executes(RespectCraftCommands::listSpecialities))
@@ -262,12 +266,43 @@ public final class RespectCraftCommands {
             c.getSource().sendFailure(Component.literal("Attacker and target must be living entities."));
             return 0;
         }
-        if (!com.respectcraft.testgame.FinisherTestMechanic.forceStart(attacker, target, def)) {
-            c.getSource().sendFailure(Component.literal("Could not start (needs a player participant; distance, active session, mount or invalid rig)."));
+        var result = com.respectcraft.testgame.FinisherTestMechanic.forceStart(attacker, target, def);
+        if (!result.started()) {
+            c.getSource().sendFailure(Component.literal(result.message()));
             return 0;
         }
-        c.getSource().sendSuccess(() -> Component.literal("Finisher started."), true);
+        c.getSource().sendSuccess(() -> Component.literal(result.message()), true);
         return 1;
+    }
+
+    /**
+     * Etapa 4.10.1: quais finalizacoes podem executar este alvo (so leitura, para admins e o teste de fumaca). Mostra
+     * o tipo do alvo (jogador, mob, chefe) e o veredito de cada finalizacao do catalogo.
+     */
+    private static int finisherEligibility(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+        Entity raw = com.respectcraft.finisher.FinisherParticipants.owner(EntityArgument.getEntity(c, "target"));
+        if (!(raw instanceof net.minecraft.world.entity.LivingEntity target)) {
+            c.getSource().sendFailure(Component.literal("Target must be a living entity."));
+            return 0;
+        }
+        var kind = com.respectcraft.finisher.FinisherParticipants.kindOf(target);
+        var type = com.respectcraft.finisher.FinisherParticipants.typeId(target);
+        int eligible = 0;
+        StringBuilder sb = new StringBuilder("Finisher eligibility for " + type + " (" + kind + "):");
+        for (FinisherDef def : Finishers.all()) {
+            var verdict = def.targeting().check(kind, type);
+            if (verdict.eligible()) eligible++;
+            sb.append("\n ").append(def.id()).append(": ").append(verdict);
+        }
+        if (kind == com.respectcraft.finisher.FinisherParticipants.Kind.BOSS) {
+            // Etapa 4.11: ficha do chefe personalizado (Bosses). Sem ficha = so derrota comum.
+            var profile = com.respectcraft.boss.Bosses.get(type);
+            sb.append("\n Boss profile: ").append(profile.map(p -> p.exclusiveFinishers().size() + " exclusive finisher(s), "
+                    + p.executionConditions().size() + " condition(s)").orElse("none (normal defeat only)"));
+        }
+        String text = sb.toString();
+        c.getSource().sendSuccess(() -> Component.literal(text), false);
+        return eligible;
     }
 
     private static int setNeed(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {

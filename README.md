@@ -48,6 +48,11 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 - **Finalizações cinematográficas** entre dois personagens, com câmera dinâmica. Desde a Etapa 4.8 o motor aceita
   participantes com rigs GeckoLib diferentes (jogador × jogador, jogador × mob, mob × jogador, chefe × jogador),
   cada um no próprio rig.
+- **Execuções reais (Etapa 4.10.1):** a finalização concluída mata o alvo como uma morte normal do Minecraft (loot, XP,
+  estatísticas, conquistas, mensagem de morte); totem, invulnerabilidade, PvP desligado e proteções do servidor
+  continuam valendo. Cancelar (Shift, `/stopitstopnow`, dano, saída) nunca mata. **Chefes** (Wither, Dragão do Fim e
+  qualquer `c:bosses`/`respectcraft:bosses`) morrem normalmente em combate, mas finalizações comuns são recusadas contra
+  eles antes da cena: no futuro cada chefe terá a própria finalização exclusiva, desbloqueada por progressão.
 - **Efeitos das finalizações (Etapa 4.10)** pelo motor **Calamidade_Awakening**: cada finalização tem um efeito
   protagonista (HERO) que acompanha a cena — linhas de foco no Takedown (discreto), arco rente ao chão na Rasteira
   (médio) e cúpula de pressão no Combo (o mais intenso) —, luz e anel no chão a cada golpe, impact frame no golpe de
@@ -77,9 +82,9 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
 1. NeoForge **21.1.265 ou mais novo (21.1.x)** para Minecraft 1.21.1, com **Java 21**.
 2. Na pasta `mods`, **cinco jars**: `respectcraft-<versão>.jar`, **GeckoLib 4.9.3** (não a 5), **SmartBrainLib 1.16.11**,
    **Rimulib 1.3.0** para NeoForge ([CurseForge](https://www.curseforge.com/minecraft/mc-mods/rimulib/files/9676532)) e
-   **Calamidade_Awakening 0.10.x** (`calamidade_awakening-0.10.0.jar`, do
-   [release v0.10.0 no GitHub](https://github.com/Juann027/Calamidade_Awakening-Mod-1.21.1/releases/tag/v0.10.0);
-   aceita `[0.10.0,0.11.0)`).
+   **Calamidade_Awakening 0.14.0** (`calamidade_awakening-0.14.0.jar`, do
+   [release v0.14.0 no GitHub](https://github.com/Juann027/Calamidade_Awakening-Mod-1.21.1/releases/tag/v0.14.0);
+   aceita `[0.14.0,0.15.0)`, ou seja, só 0.14.x; versões 0.10–0.13 não carregam mais).
 3. Multiplayer: os mesmos cinco jars no servidor dedicado e em cada cliente, com **a mesma versão do Calamidade** nos
    dois lados (o protocolo de rede dele muda entre versões menores).
 
@@ -106,7 +111,8 @@ python3 tools/fx/check_shaders.py         # compila os shaders fx como a Rimulib
 
 O `./gradlew build` baixa o Calamidade_Awakening do release do GitHub para `libs/` (fora do git) e confere o SHA-256.
 O CI do GitHub roda os quatro primeiros em cada push e PR. Comandos úteis no jogo (árvore única `/respectcraft`):
-`/respectcraft profile`, `/respectcraft skills list`, `/respectcraft finishers`,
+`/respectcraft profile`, `/respectcraft skills list`, `/respectcraft finishers` (admins: `/respectcraft finishers <alvo>`
+mostra quais finalizações podem executar aquele alvo),
 `/respectcraft test finisher accept|deny` e, para admins, `/respectcraft selftest`, `/respectcraft speciality list|odds|simulate <rolls>`,
 `/respectcraft anim list|play|together|sequence|next|stop`, `/respectcraft realm enter|leave [players]|check [radius]`
 e `/respectcraft admin profile|points|roulette|reset|skill|finisher|effect|need ...`

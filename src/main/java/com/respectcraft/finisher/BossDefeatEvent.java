@@ -16,7 +16,10 @@ public final class BossDefeatEvent extends Event {
     public enum Method {
         /** Morte comum (dano, sem finalizacao recente). */
         NORMAL,
-        /** Morte dentro da janela de credito de uma finalizacao concluida contra este chefe. */
+        /**
+         * Morte confirmada pelo golpe final da finalizacao EXCLUSIVA deste chefe (Etapa 4.10.1). Unico caminho que
+         * uma recompensa futura de "execucao do chefe" pode aceitar. Nenhuma finalizacao exclusiva existe ainda.
+         */
         FINISHER
     }
 
@@ -38,4 +41,8 @@ public final class BossDefeatEvent extends Event {
     public Optional<ServerPlayer> getCredited() { return Optional.ofNullable(credited); }
     /** Finalizacao qualificante (so em FINISHER). */
     public Optional<ResourceLocation> getFinisher() { return Optional.ofNullable(finisher); }
+    /** Ficha do chefe personalizado (Etapa 4.11), se ele tiver uma em {@code boss.Bosses}; vanilla/outros mods: vazio. */
+    public Optional<com.respectcraft.boss.BossProfile> getProfile() {
+        return com.respectcraft.boss.Bosses.get(FinisherParticipants.typeId(boss));
+    }
 }

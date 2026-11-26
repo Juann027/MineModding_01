@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.random.RandomGenerator;
 import net.minecraft.resources.ResourceLocation;
@@ -166,23 +167,42 @@ public final class Finishers {
         return null;
     }
 
-    /** Sorteio ponderado entre as finalizacoes liberadas. */
+    /** Sorteio ponderado entre as finalizacoes COMUNS liberadas (alvo jogador ou mob; nunca exclusivas de chefe). */
     public static FinisherDef pick(Predicate<ResourceLocation> hasSkill, RandomGenerator random) {
+        return pickFor(REGISTRY.values(), FinisherParticipants.Kind.MOB, null, hasSkill, random).orElse(TAKEDOWN);
+    }
+
+    /** Sorteio ponderado entre as finalizacoes do catalogo que podem executar este alvo (Etapa 4.10.1). */
+    public static Optional<FinisherDef> pickFor(FinisherParticipants.Kind victimKind, ResourceLocation victimType,
+                                                Predicate<ResourceLocation> hasSkill, RandomGenerator random) {
+        return pickFor(REGISTRY.values(), victimKind, victimType, hasSkill, random);
+    }
+
+    /**
+     * Regra pura (coberta pelo {@code SelfTest} com catalogos de teste nao registrados): so entram as finalizacoes
+     * cuja {@link FinisherTargeting} aceita o alvo e cuja habilidade exigida o executor tem. Chefe sem finalizacao
+     * exclusiva liberada = vazio (a cena e recusada antes de comecar). A habilidade exigida ({@code requiresSkill}) e
+     * o unico desbloqueio que existe hoje; o desbloqueio por progressao dos chefes e de uma etapa futura.
+     */
+    public static Optional<FinisherDef> pickFor(Collection<FinisherDef> catalog, FinisherParticipants.Kind victimKind,
+                                                ResourceLocation victimType, Predicate<ResourceLocation> hasSkill,
+                                                RandomGenerator random) {
         List<FinisherDef> options = new ArrayList<>();
         int total = 0;
-        for (FinisherDef def : REGISTRY.values()) {
+        for (FinisherDef def : catalog) {
+            if (!def.targeting().check(victimKind, victimType).eligible()) continue;
             if (def.requiresSkill() == null || hasSkill.test(def.requiresSkill())) {
                 options.add(def);
                 total += def.weight();
             }
         }
-        if (options.isEmpty()) return TAKEDOWN;
+        if (options.isEmpty()) return Optional.empty();
         int roll = random.nextInt(Math.max(1, total));
         for (FinisherDef def : options) {
             roll -= def.weight();
-            if (roll < 0) return def;
+            if (roll < 0) return Optional.of(def);
         }
-        return options.get(0);
+        return Optional.of(options.get(0));
     }
 
     public static void bootstrap() {}

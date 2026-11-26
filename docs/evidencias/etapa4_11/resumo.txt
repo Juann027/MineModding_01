@@ -1,0 +1,106 @@
+## Sessoes, contador e mortes (log do servidor)
+[04:54:02] [Server thread/INFO] [minecraft/MinecraftServer]: Juca joined the game
+[04:54:42] [Server thread/INFO] [minecraft/MinecraftServer]: Bia joined the game
+[04:55:18] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (participant became a spectator)
+[04:55:48] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (participant became a spectator)
+[04:56:14] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (interrupted by unblockable damage)
+[04:56:14] [Server thread/INFO] [minecraft/MinecraftServer]: Bia was killed
+[04:56:40] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (interrupted by damage)
+[04:56:42] [Server thread/INFO] [minecraft/LivingEntity]: Named entity Zombie['zk'/4, l='ServerLevel[world]', x=0.50, y=-60.00, z=1.65] died: zk was killed
+[04:57:09] [Server thread/INFO] [minecraft/MinecraftServer]: Bia was executed by Juca
+[04:57:09] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:player (Bia): SUCCESS (killed)
+[04:57:09] [Server thread/INFO] [co.re.RespectCraft/]: Defeat counter of Bia = 1
+[04:57:37] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:player (Bia): FAILED (death was prevented)
+[04:58:17] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (cancelled with Shift)
+[04:58:43] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (server stopping)
+[04:58:43] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
+
+## Chat
+Your game mode has been updated to Survival Mode
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Finisher cancelled: participant became a spectator
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+Your game mode has been updated to Spectator Mode
+[RespectCraft Test] Finisher cancelled: participant became a spectator
+Your game mode has been updated to Survival Mode
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Finisher cancelled: interrupted by unblockable damage
+Bia was killed
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+Bia was executed by Juca
+[RespectCraft Test] Special TEST defeat recorded (1).
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+Bia has reached the goal [Postmortal]
+[RespectCraft Test] Recovery: 10s. /stopitstopnow releases you.
+[RespectCraft Test] You survived the execution (death was prevented).
+[RespectCraft Test] Recovered.
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+[RespectCraft Test] Finisher cancelled: cancelled with Shift
+[RespectCraft Test] Test started. Press Shift or /stopitstopnow to cancel.
+Bia joined the game
+Your game mode has been updated to Survival Mode
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+Your game mode has been updated to Spectator Mode
+[RespectCraft Test] Finisher cancelled: participant became a spectator
+Your game mode has been updated to Survival Mode
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Finisher cancelled: participant became a spectator
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Finisher cancelled: interrupted by unblockable damage
+Bia was killed
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Finisher cancelled: interrupted by damage
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+Bia was executed by Juca
+[RespectCraft Test] Execution complete: Bia was killed.
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+Bia has reached the goal [Postmortal]
+[RespectCraft Test] Execution failed: Bia survived (death was prevented).
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+[RespectCraft Test] Finisher cancelled: cancelled with Shift
+[RespectCraft Test] Test finisher started. /stopitstopnow cancels.
+
+## Erros (fora rede/som do ambiente)
+      1 [04:53:31] [main/ERROR] [minecraft/DedicatedServerProperties]: No key layers in MapLike[{}]
+
+## Consultas
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[04:55:15] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+> gamemode spectator Juca
+[04:55:18] [Server thread/INFO] [minecraft/MinecraftServer]: Set Juca's game mode to Spectator Mode
+[04:55:18] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (participant became a spectator)
+> data get entity Bia Health
+[04:55:21] [Server thread/INFO] [minecraft/MinecraftServer]: Bia has the following entity data: 20.0f
+> data get entity Juca Pos
+[04:55:23] [Server thread/INFO] [minecraft/MinecraftServer]: Juca has the following entity data: [0.5d, -60.0d, 5.6605583744938d]
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[04:55:45] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+> gamemode spectator Bia
+[04:55:48] [Server thread/INFO] [minecraft/MinecraftServer]: Set Bia's game mode to Spectator Mode
+[04:55:48] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (participant became a spectator)
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[04:56:11] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+> kill Bia
+[04:56:14] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (interrupted by unblockable damage)
+[04:56:14] [Server thread/INFO] [minecraft/MinecraftServer]: Bia was killed
+[04:56:14] [Server thread/INFO] [minecraft/MinecraftServer]: Killed Bia
+> respectcraft admin finisher Juca @e[tag=zk,limit=1] respectcraft:combo
+[04:56:39] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+[04:56:40] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (interrupted by damage)
+> kill @e[tag=zk]
+[04:56:42] [Server thread/INFO] [minecraft/LivingEntity]: Named entity Zombie['zk'/4, l='ServerLevel[world]', x=0.50, y=-60.00, z=1.65] died: zk was killed
+[04:56:42] [Server thread/INFO] [minecraft/MinecraftServer]: Killed zk
+> execute if entity @e[tag=zk]
+[04:56:45] [Server thread/INFO] [minecraft/MinecraftServer]: Test failed
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[04:57:06] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[04:57:34] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+> data get entity Bia Health
+[04:57:40] [Server thread/INFO] [minecraft/MinecraftServer]: Bia has the following entity data: 7.0f
+> data get entity Bia HandItems
+[04:57:42] [Server thread/INFO] [minecraft/MinecraftServer]: Found no elements matching HandItems
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[04:58:14] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[04:58:39] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.

@@ -1,4 +1,4 @@
-// calamidade_fx.glsl — biblioteca de GLSL do Calamidade_Awakening (motor 0.9.0, biblioteca versão 2).
+// calamidade_fx.glsl — biblioteca de GLSL do Calamidade_Awakening (motor 0.12.0, biblioteca versão 3).
 //
 // USO: numa linha própria de um shader fx, depois dos uniforms:
 //     #include "calamidade_fx.glsl"
@@ -12,7 +12,7 @@
 // GLSL portátil: só literais float e funções comuns a GLSL 1.50 e GLSL ES 3.00. scripts/testar_glsl.cjs executa
 // cada função numa GPU (WebGL2) e compara com valores esperados.
 
-#define CA_FX_VERSION 2
+#define CA_FX_VERSION 3
 
 // ------------------------------------------------------------------------------------------- interseções
 
@@ -294,4 +294,96 @@ float caStars(vec3 dir, float seconds) {
     float core = 1.0 - smoothstep(0.05, 0.3, length(uv - centro));
     float twinkle = 0.75 + 0.25 * sin(seconds * (1.5 + 5.0 * caHash13(vec3(cell, 5.0))) + h * 91.0);
     return core * twinkle * (0.55 + 0.45 * (h - 0.975) / 0.025);
+}
+
+// ------------------------------------------------------------------------------------------- céu (versão 3)
+// Usadas pelo passe "sky" do motor (0.12.0). Ângulos em radianos; direções normalizadas, eixos do mundo
+// (x leste, y para cima, z sul), relativas à câmera. Nenhuma depende do common.glsl.
+
+// Direção de um azimute e uma elevação (radianos), convenção do Minecraft: azimute 0 = sul (+z), PI/2 = oeste (-x),
+// PI = norte, -PI/2 = leste; elevação PI/2 = zênite. Igual a Sky.Direction.of no Java.
+vec3 caSkyDir(float azimuth, float elevation) {
+    float c = cos(elevation);
+    return vec3(-sin(azimuth) * c, sin(elevation), cos(azimuth) * c);
+}
+
+// Ângulo entre duas direções normalizadas, radianos 0..PI; estável perto de 0 e de PI (atan do seno e do cosseno).
+float caAngle(vec3 a, vec3 b) {
+    return atan(length(cross(a, b)), dot(a, b));
+}
+
+// Base do céu em volta de center (normalizada): colunas (direita, cima, center) como quem olha para center as vê;
+// "cima" aponta para o zênite (para o sul quando center é vertical). roll gira a base no sentido anti-horário de quem
+// olha (radianos).
+mat3 caSkyBasis(vec3 center, float roll) {
+    vec3 ref = abs(center.y) > 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+    vec3 right = normalize(cross(center, ref));
+    vec3 up = cross(right, center);
+    float c = cos(roll), s = sin(roll);
+    return mat3(right * c + up * s, up * c - right * s, center);
+}
+
+// Coordenadas locais de dir em volta de basis[2] (projeção azimutal equidistante): o comprimento é o ângulo até o
+// centro (radianos) e a direção é a do plano (direita, cima). Círculos no céu continuam círculos em qualquer tamanho.
+// Direção oposta ao centro: comprimento PI.
+vec2 caSkyLocal(vec3 dir, mat3 basis) {
+    vec2 plane = vec2(dot(dir, basis[0]), dot(dir, basis[1]));
+    float len = length(plane);
+    float angle = atan(len, dot(dir, basis[2]));
+    return len > 1e-7 ? plane / len * angle : vec2(angle, 0.0);
+}
+
+// Inversa de caSkyLocal: a direção cujas coordenadas locais são local.
+vec3 caSkyFromLocal(vec2 local, mat3 basis) {
+    float angle = length(local);
+    if (angle < 1e-7) return basis[2];
+    vec2 n = local / angle;
+    return normalize(basis[2] * cos(angle) + (basis[0] * n.x + basis[1] * n.y) * sin(angle));
+}
+
+// Lente gravitacional de massa pontual: de onde vem a luz vista nas coordenadas locais theta (radianos) de uma lente
+// com raio de Einstein einstein: beta = theta (1 - E² / |theta|²). No anel de Einstein (|theta| = E) a luz vem de trás
+// do centro; dentro dele a imagem se inverte. O desvio some aos poucos até extent: vezes (1 - (|theta| / extent)²)²,
+// que chega a 0 sem quina (sem borda visível onde a distorção termina).
+vec2 caLensSource(vec2 theta, float einstein, float extent) {
+    float t = length(theta);
+    if (t < 1e-6 || einstein <= 0.0 || t >= extent) return theta;
+    float k = 1.0 - (t / extent) * (t / extent);
+    float fade = k * k;
+    return theta * (1.0 - fade * einstein * einstein / (t * t));
+}
+
+// Disco com borda suave: 1 dentro de radius, 0 fora, transição de largura edge em volta da borda (mesma unidade).
+float caDisc(float r, float radius, float edge) {
+    return 1.0 - smoothstep(radius - edge, radius + edge, r);
+}
+
+// Ruído de valor 2D 0..1 (sem textura, contínuo, interpolação suave) e soma de 2 a 4 oitavas (octaves 2..4).
+float caNoise2(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    float a = caHash13(vec3(i, 3.0)), b = caHash13(vec3(i + vec2(1.0, 0.0), 3.0));
+    float c = caHash13(vec3(i + vec2(0.0, 1.0), 3.0)), d = caHash13(vec3(i + vec2(1.0), 3.0));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+float caFbm2(vec2 p, float octaves) {
+    float sum = 0.0, amp = 0.5, norm = 0.0;
+    for (int i = 0; i < 4; i++) {
+        if (float(i) >= octaves) break;
+        sum += amp * caNoise2(p);
+        norm += amp;
+        p = p * 2.03 + vec2(17.3, 9.1);
+        amp *= 0.5;
+    }
+    return sum / max(norm, 1e-6);
+}
+
+// Céu que o jogo pinta numa direção (estimativa): a cor do céu na câmera (skyColor, ClientLevel.getSkyColor) no alto
+// e a névoa do quadro (fogColor) junto ao horizonte, como o disco de céu 16 blocos acima com a névoa FOG_SKY
+// (cilíndrica, de 0 à distância de renderização). Abaixo do horizonte, a névoa.
+vec3 caVanillaSky(vec3 dir, vec3 skyColor, vec3 fogColor, float renderDistance) {
+    if (dir.y <= 0.0) return fogColor;
+    float horizontal = 16.0 * sqrt(max(1.0 - dir.y * dir.y, 0.0)) / max(dir.y, 1e-3);
+    return mix(skyColor, fogColor, smoothstep(0.0, max(renderDistance, 16.0), horizontal));
 }

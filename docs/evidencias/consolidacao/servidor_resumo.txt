@@ -1,0 +1,11 @@
+[19:24:57] [Server thread/INFO] [co.re.RespectCraft/]: Bounty 05fceac7 on Bia claimed by Juca (kill)
+[19:24:57] [Server thread/INFO] [minecraft/MinecraftServer]: Bia was executed by Juca
+[19:24:57] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:player (Bia): SUCCESS (killed)
+[19:24:57] [Server thread/INFO] [co.re.RespectCraft/]: Defeat counter of Bia = 1
+[19:25:27] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on minecraft:player (Bia): FAILED (death was prevented)
+[19:25:52] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (player request)
+[19:26:03] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown refused against minecraft:wither (BOSS): BOSS_REQUIRES_EXCLUSIVE
+[19:26:03] [Server thread/INFO] [minecraft/MinecraftServer]: The takedown finisher cannot be used against Wither. Bosses can only be executed by their own exclusive finisher.
+[19:26:15] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (server stopping)
+[19:26:15] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
+[19:26:18] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage: All dimensions are saved

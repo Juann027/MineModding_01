@@ -6,8 +6,8 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   comando único `/respectcraft` (ramos `anim`, `test` e `realm`), configs `respectcraft-*-server.toml`. O nome antigo só fica em
   handoffs históricos; não o reintroduza nem como alias. Mundos anteriores à 4.7.1 não são compatíveis.
 - **Stack:** Minecraft 1.21.1, NeoForge 21.1.x (só APIs 21.1), Java 21, GeckoLib 4.9.3, SmartBrainLib 1.16.11 (sem uso no código desde a 4.9.1),
-  Rimulib 1.3.0 (Etapa 4.8; CurseMaven, não embutido; `mc1211.client.api` só em `client`), Calamidade_Awakening 0.10.0
-  (Etapa 4.10; obrigatório, jar do release do GitHub em `libs/` com SHA-256, não embutido; `api.v1.client` só em `client`).
+  Rimulib 1.3.0 (Etapa 4.8; CurseMaven, não embutido; `mc1211.client.api` só em `client`), Calamidade_Awakening 0.14.0
+  (Etapa 4.10; aceita `[0.14.0,0.15.0)`; obrigatório, jar do release do GitHub em `libs/` com SHA-256, não embutido; `api.v1.client` só em `client`).
   Sem UI Lib/Architectury e sem dependências novas sem pedido.
 - **Comece por** `README.md`, `CLAUDE.md` e só os arquivos do pedido. Não faça auditorias gerais. Handoffs em
   `docs/handoffs/` (índice no `README.md` de lá): leia só o do sistema que a tarefa toca.
@@ -36,10 +36,18 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   (cartões na tela `HoloToasts` + seção Alerts do menu K) e `notice.NoticeFx` o único dono dos faróis de aviso no
   Calamidade. Fontes: chefe que aparece/derrotado (sem recompensa), portal do Nether aceso, chegada ao Inverted Realm,
   caça a recompensa; API pronta para chefes/portais/eventos futuros. `bounty.BountyService` é o único dono do quadro
-  (`BountyBoard`, SavedData `respectcraft_bounties`): recompensa = itens da mão principal, paga ao caçador que aceitou,
-  devolvida no cancelamento/expiração. Menu K com sete seções (Alerts e Bounty Hunt no fim).
+  (`BountyBoard`, SavedData `respectcraft_bounties`): recompensa = itens da mão principal, paga ao caçador que aceitou
+  quando o alvo morre (finalização só com `SUCCESS`), devolvida no cancelamento/expiração. Menu K com sete seções (Alerts e Bounty Hunt no fim).
 - **Finalizações (Etapa 4.8):** cada participante usa o próprio rig (`FinisherParticipants`, `EntityFinisherClip`);
   sessão sempre com um jogador; contador só de jogador; `BossDefeatEvent` é só preparação (nada concedido).
+- **Execuções e chefes (Etapa 4.10.1):** cena concluída = um golpe final real (`FinisherExecution`, dano comum
+  `respectcraft:finisher_execution`: loot, XP, estatísticas, totem, PvP e proteções do Minecraft); cancelamento nunca
+  executa; `SUCCESS` só com morte confirmada. **Regra permanente:** chefes (`c:bosses` ou `respectcraft:bosses`) morrem
+  normalmente em combate, mas só a finalização **exclusiva** deles (`FinisherTargeting.exclusiveTo`) pode executá-los;
+  finalizações comuns são recusadas no servidor antes da cena (também no comando de admin). Nenhum chefe ou exclusiva
+  existe ainda: não invente.
+- **Multiplayer (Etapa 4.10.2):** validado com dois clientes reais; servidor parando encerra as cenas
+  (`FinisherTestMechanic.onServerStopping`, `CANCELLED (server stopping)`) e limpa o estado estático.
 - **Menu K (Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C):** holográfico em `client.holo`, núcleo `HoloMenu`. Padrão = **no mundo**
   (`HoloWorld`: placas paradas no mundo, jogador anda/pula/olha; K invoca/dispensa, R chama de volta; sem `Screen`).
   Clique/arrasto/roda pela mira (Alt segurado = modo cursor) via `HoloWorldInput`: o dono do botão é decidido no aperto
@@ -57,3 +65,4 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   regras puras novas no `SelfTest`.
   Nunca diga que compilou ou testou sem rodar os comandos.
 - **Entrega:** branch própria, PR para a `main`, merge só com CI verde (fluxo completo no `CLAUDE.md`).
+- **Roadmap:** funcionalidades futuras em [`docs/ROADMAP.md`](docs/ROADMAP.md) — só registro, não implemente sem pedido.

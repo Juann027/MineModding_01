@@ -80,6 +80,16 @@ public final class BountyRules {
                 && !b.poster().equals(killer) && b.hunting(killer) && !expired(b, now);
     }
 
+    /**
+     * Uma finalizacao concluida cobra o contrato? So jogador x jogador com morte confirmada ({@code SUCCESS}): desde a
+     * Etapa 4.10.1 a cena executa o alvo de verdade, e totem/protecao ({@code FAILED}) ou cancelamento nunca pagam.
+     * Na morte confirmada o {@code LivingDeathEvent} costuma cobrar primeiro; este caminho e so a garantia, e a
+     * remocao do contrato do quadro impede pagamento duplo.
+     */
+    public static boolean finisherClaims(boolean playerVsPlayer, boolean killConfirmed) {
+        return playerVsPlayer && killConfirmed;
+    }
+
     public static boolean expired(Bounty b, long now) { return now >= b.expires(); }
 
     public static long remaining(Bounty b, long now) { return Math.max(0L, b.expires() - now); }

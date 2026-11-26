@@ -1,0 +1,17 @@
+Cliente real (Xvfb, llvmpipe) + servidor dedicado com Calamidade_Awakening 0.11.1, roteiro docs/evidencias/etapa4_10_1/cenario_cliente_real.sh sem mudanca.
+
+Calamidade_Awakening 0.11.1 (calamidade_awakening)
+RespectCraft finisher FX registered on Calamidade_Awakening
+Finisher respectcraft:takedown by minecraft:player on minecraft:zombie (z_kill): SUCCESS (killed)
+Finisher respectcraft:takedown by minecraft:player on minecraft:zombie (z_natural): SUCCESS (killed)
+Finisher respectcraft:takedown by minecraft:player on minecraft:zombie (z_totem): FAILED (death was prevented)
+Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (player request)
+Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (interrupted by damage)
+Finisher respectcraft:takedown refused against minecraft:wither (BOSS): BOSS_REQUIRES_EXCLUSIVE
+Live instances on server: 0 / 64
+Finisher (none) refused against minecraft:wither (BOSS): BOSS_REQUIRES_EXCLUSIVE
+Live instances on server: 0 / 64
+Boss defeat minecraft:wither (NORMAL), credited Juca
+Finisher respectcraft:combo by minecraft:player on minecraft:zombie: CANCELLED (disconnect)
+
+NoSuchMethodError/NoClassDefFoundError/ClassNotFoundException/NoSuchFieldError/AbstractMethodError: 0 (servidor e cliente).
