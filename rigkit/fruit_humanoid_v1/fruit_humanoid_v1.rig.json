@@ -1,0 +1,76 @@
+{
+  "format": "respectcraft:rig",
+  "format_version": 1,
+  "id": "respectcraft:fruit_humanoid_v1",
+  "contract_version": 1,
+  "description": "Reference humanoid family for anthropomorphic fruit mobs. Shared skeleton, free geometry on top of it.",
+  "units": "px (16 px = 1 block)",
+  "coordinates": "blockbench",
+  "forward": "-z",
+  "up": "+y",
+  "right": "+x",
+  "reference_height": 32,
+  "pivot_tolerance": 2.0,
+  "controller": "main",
+  "animation_prefix": "animation.fruit_humanoid_v1.",
+  "animation_file": "respectcraft:animations/rig/fruit_humanoid_v1.animation.json",
+  "capabilities": [
+    "respectcraft:humanoid_limbs",
+    "respectcraft:hands",
+    "respectcraft:facial_bones"
+  ],
+  "optional_prefixes": ["extra_", "socket_", "expr_"],
+  "bones": [
+    {"name": "root",          "parent": null,            "pivot": [0, 0, 0],        "required": true,  "strict": true, "role": "entity origin, feet level; never keyed by shared clips"},
+    {"name": "pelvis",        "parent": "root",          "pivot": [0, 12, 0],       "required": true,  "role": "hips / center of mass; the only bone shared clips may translate"},
+    {"name": "torso",         "parent": "pelvis",        "pivot": [0, 13, 0],       "required": true,  "role": "waist pivot, carries chest, arms and head"},
+    {"name": "head",          "parent": "torso",         "pivot": [0, 24, 0],       "required": true,  "role": "neck pivot"},
+    {"name": "face",          "parent": "head",          "pivot": [0, 28, -4],      "required": false, "role": "expression root on the front of the head"},
+    {"name": "brow_right",    "parent": "face",          "pivot": [1.5, 30, -4],    "required": false, "role": "expression"},
+    {"name": "brow_left",     "parent": "face",          "pivot": [-1.5, 30, -4],   "required": false, "role": "expression"},
+    {"name": "eye_right",     "parent": "face",          "pivot": [1.5, 28.5, -4],  "required": false, "role": "expression"},
+    {"name": "eye_left",      "parent": "face",          "pivot": [-1.5, 28.5, -4], "required": false, "role": "expression"},
+    {"name": "mouth",         "parent": "face",          "pivot": [0, 26, -4],      "required": false, "role": "expression"},
+    {"name": "head_shell",    "parent": "head",          "pivot": [0, 24, 0],       "required": false, "role": "outer layer of the head (part: shell)"},
+    {"name": "torso_shell",   "parent": "torso",         "pivot": [0, 13, 0],       "required": false, "role": "outer layer of the body: peel, rind, armor plate (part: shell)"},
+    {"name": "torso_core",    "parent": "torso",         "pivot": [0, 13, 0],       "required": false, "role": "inner component revealed when the shell is removed (part: core)"},
+    {"name": "right_arm",     "parent": "torso",         "pivot": [5, 22, 0],       "required": true,  "role": "right shoulder"},
+    {"name": "right_forearm", "parent": "right_arm",     "pivot": [5.5, 17, 0],     "required": true,  "role": "right elbow"},
+    {"name": "right_hand",    "parent": "right_forearm", "pivot": [5.5, 12.5, 0],   "required": true,  "role": "right wrist"},
+    {"name": "left_arm",      "parent": "torso",         "pivot": [-5, 22, 0],      "required": true,  "role": "left shoulder"},
+    {"name": "left_forearm",  "parent": "left_arm",      "pivot": [-5.5, 17, 0],    "required": true,  "role": "left elbow"},
+    {"name": "left_hand",     "parent": "left_forearm",  "pivot": [-5.5, 12.5, 0],  "required": true,  "role": "left wrist"},
+    {"name": "right_thigh",   "parent": "pelvis",        "pivot": [2, 12, 0],       "required": true,  "role": "right hip joint"},
+    {"name": "right_shin",    "parent": "right_thigh",   "pivot": [2, 6.5, 0],      "required": true,  "role": "right knee"},
+    {"name": "right_foot",    "parent": "right_shin",    "pivot": [2, 1.5, 0],      "required": true,  "role": "right ankle"},
+    {"name": "left_thigh",    "parent": "pelvis",        "pivot": [-2, 12, 0],      "required": true,  "role": "left hip joint"},
+    {"name": "left_shin",     "parent": "left_thigh",    "pivot": [-2, 6.5, 0],     "required": true,  "role": "left knee"},
+    {"name": "left_foot",     "parent": "left_shin",     "pivot": [-2, 1.5, 0],     "required": true,  "role": "left ankle"}
+  ],
+  "sockets": [
+    {"name": "head",           "bone": "head",       "offset": [0, 4, 0],     "kind": "head"},
+    {"name": "chest",          "bone": "torso",      "offset": [0, 6, -2.5],  "kind": "chest"},
+    {"name": "right_hand",     "bone": "right_hand", "offset": [0, -2, 0],    "kind": "hand"},
+    {"name": "left_hand",      "bone": "left_hand",  "offset": [0, -2, 0],    "kind": "hand"},
+    {"name": "grab_point",     "bone": "torso",      "offset": [0, 8, -2],    "kind": "grab"},
+    {"name": "impact_point",   "bone": "torso",      "offset": [0, 5, -3],    "kind": "impact"},
+    {"name": "ground_contact", "bone": "root",       "offset": [0, 0, 0],     "kind": "ground"},
+    {"name": "vfx_core",       "bone": "torso",      "offset": [0, 4, 0],     "kind": "vfx"},
+    {"name": "weapon_right",   "bone": "right_hand", "offset": [0, -3, -1],   "kind": "weapon"}
+  ],
+  "parts": [
+    {"name": "shell", "bones": ["torso_shell", "head_shell"], "default_visible": true,  "detachable": true},
+    {"name": "core",  "bones": ["torso_core"],                "default_visible": false, "detachable": false}
+  ],
+  "alignment": {"distance": null, "lateral": 0.0, "yaw_offset": 0.0},
+  "animations": {
+    "idle":                     {"ticks": 40, "loop": true},
+    "finisher.takedown_victim": {"ticks": 60, "loop": false},
+    "finisher.demo_peel":       {"ticks": 60, "loop": false}
+  },
+  "shared_animation_bones": [
+    "pelvis", "torso", "head", "face", "brow_right", "brow_left", "eye_right", "eye_left", "mouth",
+    "right_arm", "right_forearm", "right_hand", "left_arm", "left_forearm", "left_hand",
+    "right_thigh", "right_shin", "right_foot", "left_thigh", "left_shin", "left_foot"
+  ]
+}

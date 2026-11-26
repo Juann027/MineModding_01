@@ -43,3 +43,7 @@ repo/
 smoke/
 # Jars de terceiros baixados pelo build (Calamidade_Awakening): nunca versionar.
 libs/
+
+# Etapa 4.12: kit de rigs
+__pycache__/
+tools/rigkit/.backup/
