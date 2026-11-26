@@ -36,7 +36,7 @@ else
   # (sem jogador nao ha sessao). O Leao do Fim saiu do mod: o teste usa so mobs vanilla.
   # Etapa 4.9: Inverted Realm (dimensao em dados: gera a chegada e uma amostra 5x5) e as agua-vivas.
   # Etapa 4.10: /calamidade status confirma o Calamidade_Awakening carregado e nenhum efeito preso no servidor.
-  for cmd in "time set midnight" "summon minecraft:zombie 0 -60 0" "summon minecraft:zombie 0 -60 0 {Tags:[\"rc_a\"],PersistenceRequired:1b}" "summon minecraft:zombie 2 -60 0 {Tags:[\"rc_b\"],PersistenceRequired:1b}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "calamidade status" "tupini selftest"; do
+  for cmd in "time set midnight" "summon minecraft:zombie 0 -60 0" "summon minecraft:zombie 0 -60 0 {Tags:[\"rc_a\"],PersistenceRequired:1b}" "summon minecraft:zombie 2 -60 0 {Tags:[\"rc_b\"],PersistenceRequired:1b}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "respectcraft notice kinds" "respectcraft notice test boss_spawn" "respectcraft bounty list" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "calamidade status" "tupini selftest"; do
     echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
@@ -77,6 +77,12 @@ grep -qE 'Calamidade_Awakening 0\.10\.[0-9]+ \(calamidade_awakening\)' "$log" \
   || fail "Calamidade_Awakening 0.10.x não foi carregado no servidor dedicado"
 grep -q 'RespectCraft finisher FX registered on Calamidade_Awakening' "$log" \
   || fail "efeitos das finalizações não foram registrados no Calamidade"
+# Etapa 4.11: avisos holograficos (farois no Calamidade) e caca a recompensa.
+grep -q 'RespectCraft notice FX registered on Calamidade_Awakening' "$log" \
+  || fail "faróis dos avisos não foram registrados no Calamidade_Awakening"
+grep -q 'Notice kinds: system world_event\* boss_spawn\*' "$log" || fail "/respectcraft notice kinds não respondeu"
+grep -q 'Notice boss_spawn sent to 0 players' "$log" || fail "/respectcraft notice test não respondeu"
+grep -qE 'Bounties: [0-9]+ active, [0-9]+ rewards waiting' "$log" || fail "/respectcraft bounty list não respondeu"
 grep -q 'Live instances on server: 0 / 64' "$log" || fail "/calamidade status não respondeu ou há efeito preso"
 # Etapa 4.8: o jar do RespectCraft nao embute o Rimulib (o jogador instala ao lado).
 jar=$(ls build/libs/respectcraft-*.jar 2>/dev/null | grep -v -- '-sources' | head -1)

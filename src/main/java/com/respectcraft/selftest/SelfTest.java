@@ -64,6 +64,8 @@ public final class SelfTest {
             rimulib(f);
             finisherFx(f);
             holoGeometry(f);
+            notices(f);
+            bounties(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
@@ -954,6 +956,107 @@ public final class SelfTest {
             }
         }
         check(f, fired == 1, "chefe: derrota anunciada uma única vez");
+    }
+
+    /** Etapa 4.11: avisos holograficos (duplicata, direcao/distancia grosseiras, cartao) e o pacote do aviso. */
+    private static void notices(List<String> f) {
+        String k = "boss_spawn:1";
+        check(f, com.respectcraft.notice.NoticeRules.isDuplicate(k, k, 1_000L, 1_000L + com.respectcraft.notice.NoticeRules.DEDUPE_MILLIS - 1),
+                "avisos: mesma chave na janela e duplicata");
+        check(f, !com.respectcraft.notice.NoticeRules.isDuplicate(k, k, 1_000L, 1_000L + com.respectcraft.notice.NoticeRules.DEDUPE_MILLIS),
+                "avisos: fora da janela nao e duplicata");
+        check(f, !com.respectcraft.notice.NoticeRules.isDuplicate("", "", 0L, 1L), "avisos: chave vazia nunca e duplicata");
+        check(f, !com.respectcraft.notice.NoticeRules.isDuplicate("a", "b", 0L, 1L), "avisos: chaves diferentes");
+        String[] winds = com.respectcraft.notice.NoticeRules.WINDS;
+        check(f, winds[com.respectcraft.notice.NoticeRules.direction(0, -10)].equals("N")
+                && winds[com.respectcraft.notice.NoticeRules.direction(10, 0)].equals("E")
+                && winds[com.respectcraft.notice.NoticeRules.direction(0, 10)].equals("S")
+                && winds[com.respectcraft.notice.NoticeRules.direction(-10, 0)].equals("W")
+                && winds[com.respectcraft.notice.NoticeRules.direction(7, -7)].equals("NE")
+                && winds[com.respectcraft.notice.NoticeRules.direction(-7, 7)].equals("SW"), "avisos: oito ventos (norte = -Z)");
+        check(f, com.respectcraft.notice.NoticeRules.direction(0, 0) == -1, "avisos: sem direcao em cima do ponto");
+        check(f, com.respectcraft.notice.NoticeRules.roughDistance(42) == 40 && com.respectcraft.notice.NoticeRules.roughDistance(437) == 440
+                && com.respectcraft.notice.NoticeRules.roughDistance(2_345) == 2_300, "avisos: distancia arredondada");
+        check(f, com.respectcraft.notice.NoticeRules.inRadius(3, 4, 0, 5) && !com.respectcraft.notice.NoticeRules.inRadius(3, 4, 1, 5),
+                "avisos: raio");
+        check(f, com.respectcraft.notice.NoticeRules.toastVisibility(0F, 5F) == 0F
+                && com.respectcraft.notice.NoticeRules.toastVisibility(2F, 5F) == 1F
+                && com.respectcraft.notice.NoticeRules.toastVisibility(5.5F, 5F) == 0F, "avisos: entrada/saida do cartao");
+        for (com.respectcraft.notice.NoticeKind kind : com.respectcraft.notice.NoticeKind.values()) {
+            check(f, com.respectcraft.notice.NoticeKind.byId(kind.id()) == kind
+                    && com.respectcraft.notice.NoticeKind.byOrdinal(kind.ordinal()) == kind, "avisos: id da categoria " + kind.id());
+        }
+        check(f, com.respectcraft.notice.NoticeKind.byOrdinal(999) == com.respectcraft.notice.NoticeKind.SYSTEM, "avisos: categoria desconhecida");
+        var notice = com.respectcraft.notice.HoloNotice.of(com.respectcraft.notice.NoticeKind.PORTAL,
+                        net.minecraft.network.chat.Component.literal("t"), net.minecraft.network.chat.Component.translatable("x.y", 3))
+                .severity(com.respectcraft.notice.NoticeSeverity.CRITICAL).dedupe("portal:1");
+        notice = new com.respectcraft.notice.HoloNotice(notice.kind(), notice.severity(), notice.title(), notice.body(),
+                Optional.of(new com.respectcraft.notice.HoloNotice.Location(com.respectcraft.RespectCraft.id("inverted_realm"),
+                        new net.minecraft.core.BlockPos(1, 64, -3))), notice.dedupeKey());
+        var buf = new net.minecraft.network.RegistryFriendlyByteBuf(Unpooled.buffer(),
+                net.minecraft.core.RegistryAccess.fromRegistryOfRegistries(net.minecraft.core.registries.BuiltInRegistries.REGISTRY));
+        com.respectcraft.notice.HoloNotice.STREAM_CODEC.encode(buf, notice);
+        var back = com.respectcraft.notice.HoloNotice.STREAM_CODEC.decode(buf);
+        check(f, back.kind() == notice.kind() && back.severity() == notice.severity() && back.title().equals(notice.title())
+                && back.body().equals(notice.body()) && back.location().equals(notice.location())
+                && back.dedupeKey().equals("portal:1"), "avisos: pacote ida e volta");
+    }
+
+    /** Etapa 4.11: regras da caca a recompensa e o Codec do contrato. */
+    private static void bounties(List<String> f) {
+        java.util.UUID poster = new java.util.UUID(1, 1), target = new java.util.UUID(2, 2), hunter = new java.util.UUID(3, 3),
+                other = new java.util.UUID(4, 4);
+        check(f, com.respectcraft.bounty.BountyRules.canPlace(poster, target, true, false, 0, false, 3) == com.respectcraft.bounty.BountyRules.Result.OK,
+                "recompensa: abrir valido");
+        check(f, com.respectcraft.bounty.BountyRules.canPlace(poster, poster, true, false, 0, false, 3) == com.respectcraft.bounty.BountyRules.Result.SELF,
+                "recompensa: em si mesmo recusado");
+        check(f, com.respectcraft.bounty.BountyRules.canPlace(poster, target, false, false, 0, false, 3) == com.respectcraft.bounty.BountyRules.Result.TARGET_UNKNOWN,
+                "recompensa: alvo offline recusado");
+        check(f, com.respectcraft.bounty.BountyRules.canPlace(poster, target, true, true, 0, false, 3) == com.respectcraft.bounty.BountyRules.Result.NO_REWARD,
+                "recompensa: sem itens recusado");
+        check(f, com.respectcraft.bounty.BountyRules.canPlace(poster, target, true, false, 0, false, 2) == com.respectcraft.bounty.BountyRules.Result.BAD_DURATION,
+                "recompensa: duracao invalida");
+        check(f, com.respectcraft.bounty.BountyRules.canPlace(poster, target, true, false, 0, true, 3) == com.respectcraft.bounty.BountyRules.Result.DUPLICATE,
+                "recompensa: par repetido");
+        check(f, com.respectcraft.bounty.BountyRules.canPlace(poster, target, true, false, com.respectcraft.bounty.BountyRules.MAX_ACTIVE_PER_POSTER,
+                false, 3) == com.respectcraft.bounty.BountyRules.Result.POSTER_LIMIT, "recompensa: limite por pagador");
+        long now = 1_000L;
+        var b = new com.respectcraft.bounty.Bounty(new java.util.UUID(9, 9), target, "T", poster, "P",
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND, 3), now,
+                com.respectcraft.bounty.BountyRules.expiresAt(now, 1), List.of());
+        check(f, b.expires() == now + com.respectcraft.bounty.BountyRules.TICKS_PER_DAY, "recompensa: um dia = 24000 ticks");
+        check(f, com.respectcraft.bounty.BountyRules.canAccept(b, poster, 0, now) == com.respectcraft.bounty.BountyRules.Result.OWN_BOUNTY
+                && com.respectcraft.bounty.BountyRules.canAccept(b, target, 0, now) == com.respectcraft.bounty.BountyRules.Result.YOU_ARE_TARGET
+                && com.respectcraft.bounty.BountyRules.canAccept(b, hunter, com.respectcraft.bounty.BountyRules.MAX_CONTRACTS_PER_HUNTER, now)
+                        == com.respectcraft.bounty.BountyRules.Result.HUNTER_LIMIT
+                && com.respectcraft.bounty.BountyRules.canAccept(b, hunter, 0, b.expires()) == com.respectcraft.bounty.BountyRules.Result.EXPIRED
+                && com.respectcraft.bounty.BountyRules.canAccept(null, hunter, 0, now) == com.respectcraft.bounty.BountyRules.Result.NOT_FOUND
+                && com.respectcraft.bounty.BountyRules.canAccept(b, hunter, 0, now) == com.respectcraft.bounty.BountyRules.Result.OK,
+                "recompensa: aceitar");
+        var hunted = b.withHunter(hunter).withHunter(hunter);
+        check(f, hunted.hunters().size() == 1 && com.respectcraft.bounty.BountyRules.canAccept(hunted, hunter, 1, now)
+                == com.respectcraft.bounty.BountyRules.Result.ALREADY_HUNTING, "recompensa: aceitar duas vezes");
+        check(f, com.respectcraft.bounty.BountyRules.claims(hunted, target, hunter, now)
+                && !com.respectcraft.bounty.BountyRules.claims(b, target, hunter, now)
+                && !com.respectcraft.bounty.BountyRules.claims(hunted, target, other, now)
+                && !com.respectcraft.bounty.BountyRules.claims(hunted, other, hunter, now)
+                && !com.respectcraft.bounty.BountyRules.claims(hunted, target, hunter, hunted.expires()), "recompensa: so cacador que aceitou cobra");
+        check(f, com.respectcraft.bounty.BountyRules.canCancel(b, poster, false) == com.respectcraft.bounty.BountyRules.Result.OK
+                && com.respectcraft.bounty.BountyRules.canCancel(hunted, poster, false) == com.respectcraft.bounty.BountyRules.Result.HAS_HUNTERS
+                && com.respectcraft.bounty.BountyRules.canCancel(b, other, false) == com.respectcraft.bounty.BountyRules.Result.NOT_POSTER
+                && com.respectcraft.bounty.BountyRules.canCancel(hunted, other, true) == com.respectcraft.bounty.BountyRules.Result.OK,
+                "recompensa: cancelar");
+        check(f, com.respectcraft.bounty.BountyRules.canAbandon(hunted, hunter) == com.respectcraft.bounty.BountyRules.Result.OK
+                && com.respectcraft.bounty.BountyRules.canAbandon(b, hunter) == com.respectcraft.bounty.BountyRules.Result.NOT_HUNTING
+                && hunted.withoutHunter(hunter).hunters().isEmpty(), "recompensa: abandonar");
+        check(f, com.respectcraft.bounty.BountyRules.nextDuration(1, 1) == 3 && com.respectcraft.bounty.BountyRules.nextDuration(7, 1) == 1
+                && com.respectcraft.bounty.BountyRules.nextDuration(1, -1) == 7, "recompensa: seletor de duracao");
+        check(f, com.respectcraft.bounty.BountyRules.remaining(b, b.expires() + 5) == 0, "recompensa: tempo restante nao fica negativo");
+        Tag tag = com.respectcraft.bounty.Bounty.CODEC.encodeStart(NbtOps.INSTANCE, hunted).getOrThrow();
+        var parsed = com.respectcraft.bounty.Bounty.CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow();
+        check(f, parsed.id().equals(hunted.id()) && parsed.hunters().equals(hunted.hunters()) && parsed.expires() == hunted.expires()
+                && parsed.reward().getCount() == 3 && parsed.reward().is(net.minecraft.world.item.Items.DIAMOND)
+                && parsed.targetName().equals("T"), "recompensa: codec do contrato");
     }
 
     /**
