@@ -378,6 +378,8 @@
   "biome.respectcraft.twisted_wilds": "Twisted Wilds",
   "entity.respectcraft.agua_viva": "Giant Jellyfish",
   "entity.respectcraft.agua_viva_filhote": "Baby Jellyfish",
+  "entity.respectcraft.dev_rig_mannequin_a": "Rig Mannequin A (dev fixture)",
+  "entity.respectcraft.dev_rig_mannequin_b": "Rig Mannequin B (dev fixture)",
   "item.respectcraft.agua_viva_spawn_egg": "Giant Jellyfish Spawn Egg",
   "item.respectcraft.agua_viva_filhote_spawn_egg": "Baby Jellyfish Spawn Egg",
   "gui.respectcraft.holo.settings.toasts": "Notice cards",

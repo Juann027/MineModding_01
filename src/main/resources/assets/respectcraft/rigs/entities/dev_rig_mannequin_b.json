@@ -1,0 +1,25 @@
+{
+  "format": "respectcraft:rig_binding",
+  "format_version": 1,
+  "_comment": "DEV FIXTURE (Stage 4.12): short, wide mannequin with shell/core parts and an extra detachable leaf. Uses only the family's shared animations.",
+  "entity": "respectcraft:dev_rig_mannequin_b",
+  "rig": "respectcraft:fruit_humanoid_v1",
+  "contract_version": 1,
+  "geo": "respectcraft:geo/entity/dev_rig_mannequin_b.geo.json",
+  "texture": "respectcraft:textures/entity/dev_rig_mannequin_b.png",
+  "animation_file": null,
+  "proportion": [1.3, 0.8, 1.25],
+  "render_scale": 1.0,
+  "extra_bones": [
+    {"name": "extra_leaf", "parent": "head", "pivot": [0, 25.6, 0]}
+  ],
+  "capabilities": ["respectcraft:detachable_parts", "respectcraft:inner_core"],
+  "parts": [
+    {"name": "leaf", "bones": ["extra_leaf"], "default_visible": true, "detachable": true}
+  ],
+  "sockets": [
+    {"name": "impact_point", "bone": "torso", "offset": [0, 4, -4.5], "kind": "impact"}
+  ],
+  "alignment": {"distance": 1.6, "lateral": 0.0, "yaw_offset": 0.0},
+  "clip_overrides": []
+}
