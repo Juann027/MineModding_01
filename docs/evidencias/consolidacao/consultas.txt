@@ -1,0 +1,74 @@
+> list
+[19:24:42] [Server thread/INFO] [minecraft/MinecraftServer]: There are 3 of a max of 20 players online: Juca, Bia, Ana
+> execute as Ana run respectcraft bounty place Bia 1
+[19:24:48] [Server thread/INFO] [co.re.RespectCraft/]: Bounty 05fceac7 placed by Ana on Bia (minecraft:diamond x5, 1 days)
+[19:24:48] [Server thread/INFO] [minecraft/MinecraftServer]: Done.
+> respectcraft bounty list
+[19:24:50] [Server thread/INFO] [minecraft/MinecraftServer]: Bounties: 1 active, 0 rewards waiting for their owners
+[19:24:50] [Server thread/INFO] [minecraft/MinecraftServer]:  [05fceac7] Bia · 5× Diamond · by Ana · hunters 0 · 19 min left
+# bounty id = 05fceac7
+> execute as Juca run respectcraft bounty accept 05fceac7
+[19:24:51] [Server thread/INFO] [minecraft/MinecraftServer]: Done.
+> clear Juca minecraft:diamond 0
+[19:24:53] [Server thread/INFO] [minecraft/MinecraftServer]: No items were found on player Juca
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[19:24:54] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+> respectcraft bounty list
+[19:25:08] [Server thread/INFO] [minecraft/MinecraftServer]: Bounties: 0 active, 0 rewards waiting for their owners
+> clear Juca minecraft:diamond 0
+[19:25:10] [Server thread/INFO] [minecraft/MinecraftServer]: Found 5 matching item(s) on player Juca
+> clear Ana minecraft:diamond 0
+[19:25:11] [Server thread/INFO] [minecraft/MinecraftServer]: No items were found on player Ana
+# pagamentos do contrato: 1
+> calamidade status
+[19:25:13] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
+> execute as Ana run respectcraft bounty place Bia 1
+[19:25:19] [Server thread/INFO] [co.re.RespectCraft/]: Bounty ac34b38c placed by Ana on Bia (minecraft:diamond x3, 1 days)
+[19:25:19] [Server thread/INFO] [minecraft/MinecraftServer]: Done.
+> respectcraft bounty list
+[19:25:20] [Server thread/INFO] [minecraft/MinecraftServer]: Bounties: 1 active, 0 rewards waiting for their owners
+[19:25:20] [Server thread/INFO] [minecraft/MinecraftServer]:  [ac34b38c] Bia · 3× Diamond · by Ana · hunters 0 · 19 min left
+# bounty id = ac34b38c
+> execute as Juca run respectcraft bounty accept ac34b38c
+[19:25:22] [Server thread/INFO] [minecraft/MinecraftServer]: Done.
+> respectcraft admin finisher Juca Bia respectcraft:takedown
+[19:25:24] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+> respectcraft bounty list
+[19:25:38] [Server thread/INFO] [minecraft/MinecraftServer]: Bounties: 1 active, 0 rewards waiting for their owners
+[19:25:38] [Server thread/INFO] [minecraft/MinecraftServer]:  [ac34b38c] Bia · 3× Diamond · by Ana · hunters 1 · 19 min left
+> clear Juca minecraft:diamond 0
+[19:25:39] [Server thread/INFO] [minecraft/MinecraftServer]: Found 5 matching item(s) on player Juca
+# pagamentos do contrato: 1
+> calamidade status
+[19:25:42] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[19:25:48] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+> execute as Bia run stopitstopnow
+[19:25:52] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (player request)
+> respectcraft bounty list
+[19:25:56] [Server thread/INFO] [minecraft/MinecraftServer]: Bounties: 1 active, 0 rewards waiting for their owners
+[19:25:56] [Server thread/INFO] [minecraft/MinecraftServer]:  [ac34b38c] Bia · 3× Diamond · by Ana · hunters 1 · 19 min left
+> clear Juca minecraft:diamond 0
+[19:25:57] [Server thread/INFO] [minecraft/MinecraftServer]: Found 5 matching item(s) on player Juca
+# pagamentos do contrato: 1
+> calamidade status
+[19:25:59] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
+> respectcraft finishers @e[tag=rc_w,limit=1]
+[19:26:02] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher eligibility for minecraft:wither (BOSS):
+ respectcraft:takedown: BOSS_REQUIRES_EXCLUSIVE
+ respectcraft:rasteira: BOSS_REQUIRES_EXCLUSIVE
+ respectcraft:combo: BOSS_REQUIRES_EXCLUSIVE
+ Boss profile: none (normal defeat only)
+> respectcraft admin finisher Juca @e[tag=rc_w,limit=1] respectcraft:takedown
+[19:26:03] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown refused against minecraft:wither (BOSS): BOSS_REQUIRES_EXCLUSIVE
+[19:26:03] [Server thread/INFO] [minecraft/MinecraftServer]: The takedown finisher cannot be used against Wither. Bosses can only be executed by their own exclusive finisher.
+> calamidade status
+[19:26:05] [Server thread/INFO] [minecraft/MinecraftServer]: Live instances on server: 0 / 64
+> respectcraft admin finisher Juca Bia respectcraft:combo
+[19:26:12] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+com.mojang.authlib.exceptions.MinecraftClientException: Failed to read from https://api.minecraftservices.com/publickeys due to api.minecraftservices.com
+Caused by: java.net.UnknownHostException: api.minecraftservices.com
+[19:25:52] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (player request)
+[19:26:15] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:combo by minecraft:player on minecraft:player: CANCELLED (server stopping)
+[19:26:15] [Server thread/INFO] [minecraft/MinecraftServer]: Stopping server
+[19:26:15] [Server thread/INFO] [minecraft/MinecraftServer]: Saving worlds
