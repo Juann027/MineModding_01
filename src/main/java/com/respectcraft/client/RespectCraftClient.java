@@ -73,6 +73,11 @@ public final class RespectCraftClient {
             ClientPlayerAnimations.clear();
             ProfileClientCache.clear();
             CinematicCamera.reset();
+            com.respectcraft.network.RigVisualClientCache.clear();
+        });
+        // Etapa 4.12: partes de rig da entidade que saiu do nivel do cliente (o id pode ser reaproveitado).
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent event) -> {
+            if (event.getLevel().isClientSide()) com.respectcraft.network.RigVisualClientCache.forget(event.getEntity().getId());
         });
         // Respawn e troca de dimensao recriam o jogador local: a camera nunca fica presa na cena.
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.Clone event) -> CinematicCamera.reset());
@@ -107,5 +112,10 @@ public final class RespectCraftClient {
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.AGUA_VIVA.get(), AguaVivaRenderer::giant);
         event.registerEntityRenderer(ModEntities.AGUA_VIVA_FILHOTE.get(), AguaVivaRenderer::hatchling);
+        // Etapa 4.12: fixtures do Custom Rig Framework, com o renderer generico de rig.
+        event.registerEntityRenderer(ModEntities.DEV_RIG_MANNEQUIN_A.get(),
+                ctx -> new com.respectcraft.client.rig.RigGeoRenderer<>(ctx, com.respectcraft.rig.Rigs.MANNEQUIN_A_ID));
+        event.registerEntityRenderer(ModEntities.DEV_RIG_MANNEQUIN_B.get(),
+                ctx -> new com.respectcraft.client.rig.RigGeoRenderer<>(ctx, com.respectcraft.rig.Rigs.MANNEQUIN_B_ID));
     }
 }

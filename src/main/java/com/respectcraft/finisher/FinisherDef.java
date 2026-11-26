@@ -25,13 +25,17 @@ import net.minecraft.resources.ResourceLocation;
  *                      particulas e sons vanilla de antes. Quem os desenha e {@code fx.FinisherFx}.
  * @param targeting     quem a finalizacao pode executar (Etapa 4.10.1): {@link FinisherTargeting#REGULAR} (padrao:
  *                      jogadores e mobs, nunca chefes) ou exclusiva de um chefe ({@link FinisherTargeting#exclusiveTo})
+ * @param rigs          clips por familia de rig e requisitos de participante (Etapa 4.12; {@link FinisherRigs#NONE} = como
+ *                      antes). A duracao dos clips de familia e conferida no registro das familias ({@code rig.Rigs}).
  */
 public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
                           CameraTrack camera, ResourceLocation requiresSkill, int weight, boolean recoveryInScene,
-                          List<EntityFinisherClip> entityClips, FinisherFxDef fxDef, FinisherTargeting targeting) {
+                          List<EntityFinisherClip> entityClips, FinisherFxDef fxDef, FinisherTargeting targeting,
+                          FinisherRigs rigs) {
     public FinisherDef {
         entityClips = List.copyOf(entityClips);
         if (targeting == null) targeting = FinisherTargeting.REGULAR;
+        if (rigs == null) rigs = FinisherRigs.NONE;
         int scene = Math.max(attacker.durationTicks(), victim.durationTicks());
         Set<String> seen = new HashSet<>();
         for (EntityFinisherClip clip : entityClips) {
@@ -43,6 +47,12 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
                 throw new IllegalArgumentException("Clip repetido para " + clip.entityType() + " (" + clip.role() + ") em " + id);
             }
         }
+    }
+
+    public FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
+                       CameraTrack camera, ResourceLocation requiresSkill, int weight, boolean recoveryInScene,
+                       List<EntityFinisherClip> entityClips, FinisherFxDef fxDef, FinisherTargeting targeting) {
+        this(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting, FinisherRigs.NONE);
     }
 
     public FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
@@ -85,7 +95,7 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
     public FinisherDef withEntityClip(EntityFinisherClip clip) {
         List<EntityFinisherClip> clips = new ArrayList<>(entityClips);
         clips.add(clip);
-        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, clips, fxDef, targeting);
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, clips, fxDef, targeting, rigs);
     }
 
     /** Efeitos visuais do Calamidade, se a finalizacao tiver. */
@@ -93,7 +103,7 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
 
     /** Copia com estes efeitos (null = sem efeitos; use antes de {@link Finishers#register}). */
     public FinisherDef withFx(FinisherFxDef fx) {
-        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fx, targeting);
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fx, targeting, rigs);
     }
 
     /**
@@ -101,6 +111,23 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
      * deve ser registrada quando o chefe, a animacao e a regra de desbloqueio existirem (nada de exclusiva provisoria).
      */
     public FinisherDef withTargeting(FinisherTargeting targeting) {
-        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting);
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting, rigs);
+    }
+
+    /** Copia com outro id (fixtures e testes: a copia nunca entra no catalogo por acidente com o id do original). */
+    public FinisherDef withId(ResourceLocation newId) {
+        return new FinisherDef(newId, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting, rigs);
+    }
+
+    /** Copia com mais um clip de familia de rig (Etapa 4.12; use antes de {@link Finishers#register}). */
+    public FinisherDef withRigClip(FinisherRigs.Clip clip) {
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting,
+                rigs.withClip(clip));
+    }
+
+    /** Copia com mais um requisito de participante (Etapa 4.12). */
+    public FinisherDef withRigRequirement(FinisherRigs.Requirement requirement) {
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting,
+                rigs.withRequirement(requirement));
     }
 }

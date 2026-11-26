@@ -2,6 +2,7 @@ package com.respectcraft.registry;
 
 import com.respectcraft.RespectCraft;
 import com.respectcraft.entity.AguaVivaEntity;
+import com.respectcraft.entity.dev.RigMannequinEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -33,12 +34,28 @@ public final class ModEntities {
                     .clientTrackingRange(8)
                     .build("agua_viva_filhote"));
 
+    /**
+     * Etapa 4.12: FIXTURES TECNICAS do Custom Rig Framework (manequins da familia {@code respectcraft:fruit_humanoid_v1}).
+     * MISC (nao some longe do jogador), sem spawn natural, sem ovo e fora da aba criativa: so {@code /summon}.
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<RigMannequinEntity>> DEV_RIG_MANNEQUIN_A = ENTITY_TYPES.register(
+            "dev_rig_mannequin_a",
+            () -> EntityType.Builder.<RigMannequinEntity>of(RigMannequinEntity::new, MobCategory.MISC)
+                    .sized(0.6F, 1.95F).clientTrackingRange(8).build("dev_rig_mannequin_a"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<RigMannequinEntity>> DEV_RIG_MANNEQUIN_B = ENTITY_TYPES.register(
+            "dev_rig_mannequin_b",
+            () -> EntityType.Builder.<RigMannequinEntity>of(RigMannequinEntity::new, MobCategory.MISC)
+                    .sized(0.9F, 1.6F).clientTrackingRange(8).build("dev_rig_mannequin_b"));
+
     private ModEntities() {
     }
 
     public static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(AGUA_VIVA.get(), AguaVivaEntity.createAttributes().build());
         event.put(AGUA_VIVA_FILHOTE.get(), AguaVivaEntity.createHatchlingAttributes().build());
+        event.put(DEV_RIG_MANNEQUIN_A.get(), RigMannequinEntity.createAttributes().build());
+        event.put(DEV_RIG_MANNEQUIN_B.get(), RigMannequinEntity.createAttributes().build());
     }
 
     /** Agua-vivas surgem no ar livre do bioma twisted_wilds (lista "ambient" do bioma). */

@@ -87,6 +87,23 @@ public final class GeoFxKeyframes {
      */
     public static List<KeyframeFx> scan(JsonObject file, String animation) {
         List<KeyframeFx> out = new ArrayList<>();
+        for (Instruction i : instructions(file, animation)) {
+            for (ResourceLocation id : parseInstructions(i.text())) out.add(new KeyframeFx(i.tick(), id));
+        }
+        out.sort(Comparator.comparingInt(KeyframeFx::tick));
+        return out;
+    }
+
+    /** Uma instrucao de keyframe ({@code "timeline"}), ja no tick da animacao. */
+    public record Instruction(int tick, String text) {}
+
+    /**
+     * Todas as instrucoes do bloco {@code "timeline"} de uma animacao GeckoLib 4, em ordem de tick (segundos × 20,
+     * arredondado); valores texto ou lista de textos, cada um separado por {@code ;}. Usado por este gancho
+     * ({@code calamidade:}) e pelas partes de rig ({@code rig:}, Etapa 4.12).
+     */
+    public static List<Instruction> instructions(JsonObject file, String animation) {
+        List<Instruction> out = new ArrayList<>();
         if (file == null || !file.has("animations")) return out;
         JsonObject animations = file.getAsJsonObject("animations");
         if (!animations.has(animation)) return out;
@@ -108,9 +125,11 @@ public final class GeoFxKeyframes {
             } else if (value.isJsonPrimitive()) {
                 texts.add(value.getAsString());
             }
-            for (String text : texts) for (ResourceLocation id : parseInstructions(text)) out.add(new KeyframeFx(tick, id));
+            for (String text : texts) {
+                for (String part : text.split(";")) if (!part.isBlank()) out.add(new Instruction(tick, part.trim()));
+            }
         }
-        out.sort(Comparator.comparingInt(KeyframeFx::tick));
+        out.sort(Comparator.comparingInt(Instruction::tick));
         return out;
     }
 
@@ -154,7 +173,8 @@ public final class GeoFxKeyframes {
         }
     }
 
-    private static JsonObject load(ResourceLocation file) {
+    /** Arquivo de animacao do jar (cache imutavel); objeto vazio se nao existir. */
+    public static JsonObject load(ResourceLocation file) {
         return FILES.computeIfAbsent(file, id -> {
             String path = "/assets/" + id.getNamespace() + "/" + id.getPath();
             try (InputStream in = GeoFxKeyframes.class.getResourceAsStream(path)) {
