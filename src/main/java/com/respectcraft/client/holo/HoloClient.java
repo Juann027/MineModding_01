@@ -14,6 +14,7 @@ import net.neoforged.neoforge.common.NeoForge;
  * Registro do menu holografico no cliente: config propria, estagio do Rimulib, limpeza no logout e (Etapa 4.8.4-A)
  * os eventos do modo mundo: superficies antes do quadro, passada no mundo, ciclo de vida e a tela da 4.8.1 trocada
  * pelos paineis no mundo. Etapa 4.8.4-B: entrada nos paineis ({@link HoloWorldInput}) e a dica ao lado da mira.
+ * Etapa 4.11: cartoes dos avisos automaticos ({@link HoloToasts}) e limpeza das caches de avisos e recompensas.
  */
 public final class HoloClient {
     private HoloClient() {}
@@ -36,7 +37,16 @@ public final class HoloClient {
         NeoForge.EVENT_BUS.addListener(HoloWorldInput::onInteraction);
         NeoForge.EVENT_BUS.addListener(HoloWorldInput::onClientTick);
         NeoForge.EVENT_BUS.addListener(HoloWorldInput::onLoggingOut);
-        modBus.addListener((RegisterGuiLayersEvent event) -> event.registerAbove(VanillaGuiLayers.CROSSHAIR,
-                RespectCraft.id("holo_tooltip"), (graphics, deltaTracker) -> HoloWorld.renderTooltip(graphics)));
+        modBus.addListener((RegisterGuiLayersEvent event) -> {
+            event.registerAbove(VanillaGuiLayers.CROSSHAIR,
+                    RespectCraft.id("holo_tooltip"), (graphics, deltaTracker) -> HoloWorld.renderTooltip(graphics));
+            // Etapa 4.11: cartoes dos avisos holograficos automaticos.
+            event.registerAbove(VanillaGuiLayers.CHAT, RespectCraft.id("holo_notices"),
+                    (graphics, deltaTracker) -> HoloToasts.render(graphics));
+        });
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
+            com.respectcraft.network.NoticeClientCache.clear();
+            com.respectcraft.network.BountyClientCache.clear();
+        });
     }
 }

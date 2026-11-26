@@ -133,7 +133,7 @@ final class HoloMenu {
         this.section = initial == null ? Section.OVERVIEW : initial;
         this.carousel = section.ordinal();
         this.views = new HoloView[]{new OverviewView(this), new CharacterView(this), new BodyView(this),
-                new SpecialityView(this), new SkillsView(this)};
+                new SpecialityView(this), new SkillsView(this), new NoticesView(this), new BountyView(this)};
         for (Section s : Section.values()) {
             plates[s.ordinal()] = new HoloPanel("plate_" + s.id, true);
             chips[s.ordinal()] = new HoloPanel("chip_" + s.id, true);
@@ -170,7 +170,8 @@ final class HoloMenu {
         headerW = Math.min(plateW + 80F, layoutW - 20F);
         chipH = small ? 16F : 18F;
         chipsY = oy + effH - chipH - (small ? 7F : 16F);
-        chipW = Math.min(74F, (Math.min(layoutW - 30F, plateW + 70F)) / Section.values().length - 5F);
+        // Etapa 4.11: sete secoes; a fileira pode passar um pouco da placa e o chip estreito vira so icone (HoloNav).
+        chipW = Math.min(74F, (Math.min(layoutW - 30F, plateW + 130F)) / Section.values().length - 5F);
         plateTop = headerY + headerH + (small ? 8F : 12F);
         plateMaxH = chipsY - (small ? 8F : 14F) - plateTop;
         dockAvailable = layoutW >= 420F && effH >= 220F;
@@ -449,7 +450,7 @@ final class HoloMenu {
             p.pivotY = 0F;
             boolean active = s == section;
             float k = p == hotPanel ? 1F : 0F;
-            onArc(p, (s.ordinal() - 2) * stepDeg, chipRadius - (active ? eyeZ * 0.03F : 0F) - k * eyeZ * 0.012F, chipsY, chipW, chipH);
+            onArc(p, (s.ordinal() - (Section.values().length - 1) / 2F) * stepDeg, chipRadius - (active ? eyeZ * 0.03F : 0F) - k * eyeZ * 0.012F, chipsY, chipW, chipH);
             p.pitch = 16F;
             p.accent = s.accent;
             assemble(p, 0.2F + s.ordinal() * 0.035F, 1F, 0.04F);

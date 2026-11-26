@@ -35,15 +35,20 @@ final class HoloNav {
 
         // acoes a direita (icones com dica)
         float bs = h - 8F;
-        float bx = w - 6F - 4 * (bs + 3F);
+        float bx = w - 6F - 5 * (bs + 3F);
         boolean born = p.born();
         action(c, "act.edit", bx, 4F, bs, SkillDef.iconTexture("identidade_dinheiro"), null, HoloStyle.CYAN_SOFT,
                 "gui.respectcraft.hub.edit", "", menu::openCreator);
         action(c, "act.birth", bx + (bs + 3F), 4F, bs, SkillDef.iconTexture("trevo"), null, born ? HoloStyle.GOLD : HoloStyle.GREEN,
                 born ? "gui.respectcraft.hub.birth_done" : "gui.respectcraft.hub.birth", born ? "" : "!", menu::openRoulette);
-        action(c, "act.display", bx + 2 * (bs + 3F), 4F, bs, null, "⚙", HoloStyle.VIOLET, "gui.respectcraft.holo.display", "",
+        // Etapa 4.11: avisos holograficos (selo = nao lidos) leva a secao Alerts.
+        int unread = com.respectcraft.network.NoticeClientCache.unread();
+        action(c, "act.alerts", bx + 2 * (bs + 3F), 4F, bs, null, "✉", unread > 0 ? HoloStyle.MAGENTA : HoloStyle.CYAN_SOFT,
+                "gui.respectcraft.holo.alerts.open", unread > 0 ? (unread > 9 ? "+" : String.valueOf(unread)) : "",
+                () -> menu.select(HoloCharacterScreen.Section.ALERTS));
+        action(c, "act.display", bx + 3 * (bs + 3F), 4F, bs, null, "⚙", HoloStyle.VIOLET, "gui.respectcraft.holo.display", "",
                 menu::openSettings);
-        action(c, "act.close", bx + 3 * (bs + 3F), 4F, bs, null, "✕", HoloStyle.RED, "gui.respectcraft.hub.close", "",
+        action(c, "act.close", bx + 4 * (bs + 3F), 4F, bs, null, "✕", HoloStyle.RED, "gui.respectcraft.hub.close", "",
                 menu::requestClose);
 
         // pontos
@@ -105,6 +110,15 @@ final class HoloNav {
         if (hot) c.tooltip(List.of(Component.translatable(labelKey)));
     }
 
+    /** Ponto aceso no chip: avisos nao lidos (Alerts) ou recompensa contra mim (Bounty). */
+    static int badge(HoloCharacterScreen.Section s) {
+        return switch (s) {
+            case ALERTS -> com.respectcraft.network.NoticeClientCache.unread();
+            case BOUNTY -> com.respectcraft.network.BountyClientCache.onMe();
+            default -> 0;
+        };
+    }
+
     /** Chip de secao na fileira curva: icone e nome; o ativo acende na cor da secao. */
     void drawChip(HoloCanvas c, HoloCharacterScreen.Section s, float w, float h, boolean active) {
         float since = menu.time() - 0.3F;
@@ -122,10 +136,23 @@ final class HoloNav {
         }
         c.stage(since, s.ordinal());
         float size = Math.min(12F, h - 4F);
-        c.icon(s.icon, 4F, (h - size) / 2F, size, 1F);
         String label = HoloView.tr(s.key());
-        String shown = Ui.fit(c.font, label, (int) (w - size - 10F));
-        c.text(shown, 6F + size, (h - 8F) / 2F, active ? 0xFFFFFFFF : Ui.lerpColor(c.muted(), c.text(), k), false);
+        // Etapa 4.11: chip estreito (sete secoes em telas pequenas) mostra so o icone; o nome fica na dica.
+        boolean compact = w < 58F || c.font.width(label) > w - size - 10F && w < 66F;
+        if (compact) {
+            c.icon(s.icon, (w - size) / 2F, (h - size) / 2F, size, 1F);
+        } else {
+            c.icon(s.icon, 4F, (h - size) / 2F, size, 1F);
+            String shown = Ui.fit(c.font, label, (int) (w - size - 10F));
+            c.text(shown, 6F + size, (h - 8F) / 2F, active ? 0xFFFFFFFF : Ui.lerpColor(c.muted(), c.text(), k), false);
+        }
+        int badge = badge(s);
+        if (badge > 0) {
+            int col = s == HoloCharacterScreen.Section.BOUNTY ? HoloStyle.RED : s.accent;
+            float pulse = 0.75F + 0.25F * (float) Math.sin(c.time * 5F);
+            c.fill(w - 7F, 1F, 6F, 6F, Ui.alpha(col, pulse));
+            c.glow(w - 4F, 4F, 6F, Ui.alpha(col, 0.5F * pulse));
+        }
         HoloZone z = c.zone(0, 0, w, h);
         z.click = () -> menu.select(s);
         menu.hoverSound("chip." + s.id, hot);

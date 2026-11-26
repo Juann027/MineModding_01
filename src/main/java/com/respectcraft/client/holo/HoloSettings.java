@@ -40,6 +40,9 @@ final class HoloSettings {
         toggle(c, "contrast", x, y, sw, HoloConfig.highContrast(), HoloConfig::toggleHighContrast);
         y += 15F;
         toggle(c, "backdrop", x, y, sw, HoloConfig.worldBackdrop(), HoloConfig::toggleBackdrop);
+        y += 15F;
+        // Etapa 4.11: cartoes dos avisos automaticos na tela (o historico continua na secao Alerts).
+        toggle(c, "toasts", x, y, sw, HoloConfig.noticeToasts(), HoloConfig::toggleNoticeToasts);
         y += 17F;
         c.alpha = c.panel.contentAlpha;
         float doneY = h - 20F;

@@ -45,7 +45,11 @@ public final class HoloCharacterScreen extends RespectScreen {
         CHARACTER("character", "identidade_dinheiro", HoloStyle.CYAN_SOFT, true),
         BODY("body", "penico", HoloStyle.GREEN, false),
         SPECIALITY("speciality", "moeda_real", HoloStyle.VIOLET, false),
-        SKILLS("skills", "niobio", HoloStyle.GOLD, true);
+        SKILLS("skills", "niobio", HoloStyle.GOLD, true),
+        /** Etapa 4.11: historico dos avisos holograficos automaticos. */
+        ALERTS("alerts", "estadio", HoloStyle.MAGENTA, false),
+        /** Etapa 4.11: caca a recompensa contra outros jogadores. */
+        BOUNTY("bounty", "caveira", 0xFFFF9A3C, false);
 
         final String id;
         final ResourceLocation icon;
@@ -418,7 +422,7 @@ public final class HoloCharacterScreen extends RespectScreen {
             case GLFW.GLFW_KEY_RIGHT_BRACKET -> menu.view(section).arrow(1);
             case GLFW.GLFW_KEY_R -> recenter();
             default -> {
-                if (keyCode >= GLFW.GLFW_KEY_1 && keyCode <= GLFW.GLFW_KEY_5) {
+                if (keyCode >= GLFW.GLFW_KEY_1 && keyCode < GLFW.GLFW_KEY_1 + Section.values().length) {
                     menu.select(Section.values()[keyCode - GLFW.GLFW_KEY_1]);
                 } else {
                     return super.keyPressed(keyCode, scanCode, modifiers);
