@@ -65,3 +65,4 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   regras puras novas no `SelfTest`.
   Nunca diga que compilou ou testou sem rodar os comandos.
 - **Entrega:** branch própria, PR para a `main`, merge só com CI verde (fluxo completo no `CLAUDE.md`).
+- **Roadmap:** funcionalidades futuras em [`docs/ROADMAP.md`](docs/ROADMAP.md) — só registro, não implemente sem pedido.

@@ -332,4 +332,5 @@ python3 tools/fx/check_shaders.py        # shaders fx montados como a Rimulib + 
   Alerts/Bounty Hunt e caça a recompensa → 4.11 (`HANDOFF_STAGE4_11_NOTICES_BOUNTIES.md`); ciclo de vida do Finisher
   (contador só com `SUCCESS`, `/kill` na cena) e registro de chefes personalizados → 4.11
   (`HANDOFF_STAGE4_11_FINISHER_CONSOLIDATION_BOSSES.md`).
+- **Roadmap** (funcionalidades futuras, só registro — não implemente sem pedido): [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.
