@@ -67,6 +67,8 @@ public final class RespectCraft {
         // Etapa 4.10: efeitos das finalizacoes no Calamidade_Awakening (lado comum: o servidor tambem os conhece).
         com.respectcraft.fx.FinisherFx.register();
         NeoForge.EVENT_BUS.addListener(com.respectcraft.fx.GeoFxKeyframes::onEntityTick);
+        // Etapa 4.11: farois dos avisos holograficos no Calamidade_Awakening (lado comum).
+        com.respectcraft.notice.NoticeFx.register();
         Skills.bootstrap();
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(ModEntities::registerSpawnPlacements);
@@ -121,6 +123,17 @@ public final class RespectCraft {
         NeoForge.EVENT_BUS.addListener(NeedsService::onRespawn);
         // Etapa 4.9: Inverted Realm (dimensao e bioma em dados; aqui so o registro de volta do /respectcraft realm).
         NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.InvertedRealm::onClone);
+        // Etapa 4.11: avisos holograficos automaticos e caca a recompensa entre jogadores.
+        modBus.addListener(com.respectcraft.network.HoloNetworking::register);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.notice.HoloNotices::onEntityJoin);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.notice.HoloNotices::onBossDefeat);
+        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, com.respectcraft.notice.HoloNotices::onPortalSpawn);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.notice.HoloNotices::onChangedDimension);
+        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, com.respectcraft.bounty.BountyService::onDeath);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.bounty.BountyService::onFinisherCompleted);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.bounty.BountyService::onServerTick);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.bounty.BountyService::onLogin);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.bounty.BountyService::onLogout);
     }
 
     public static ResourceLocation id(String path) {

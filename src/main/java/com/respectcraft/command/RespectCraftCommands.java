@@ -113,7 +113,10 @@ public final class RespectCraftCommands {
                 .then(PlayerAnimationCommands.node())
                 .then(TestGameCommands.node())
                 // Etapa 4.9: acesso de teste ao Inverted Realm (sem portal ainda).
-                .then(com.respectcraft.dimension.InvertedRealmCommands.node()));
+                .then(com.respectcraft.dimension.InvertedRealmCommands.node())
+                // Etapa 4.11: avisos holograficos (teste) e caca a recompensa.
+                .then(com.respectcraft.notice.NoticeCommands.node())
+                .then(com.respectcraft.bounty.BountyCommands.node()));
     }
 
     private static int profile(CommandContext<CommandSourceStack> c, ServerPlayer player) {
