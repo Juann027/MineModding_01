@@ -4,7 +4,8 @@ RPG de humor para **Minecraft Java 1.21.1 / NeoForge 21.1.x / Java 21**: criador
 nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas,
 finalizações cinematográficas que **executam** o alvo de verdade (Etapa 4.10.1; efeitos visuais pelo motor
 **Calamidade_Awakening**, Etapa 4.10), contador de derrotas, infraestrutura de chefes personalizados (Etapa 4.11),
-avisos holográficos automáticos e caça a recompensa entre jogadores (Etapa 4.11) e
+avisos holográficos automáticos e caça a recompensa entre jogadores (Etapa 4.11), o Custom Rig Framework com o kit
+Blockbench (Etapa 4.12) e
 (Etapa 4.9, MVP) a dimensão **Inverted Realm**
 (céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
 
@@ -58,7 +59,8 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `boss` | **Chefes personalizados** (Etapa 4.11): `Bosses` (registro em código, **vazio**), `BossProfile` (tipo, exclusivas, condições), `BossCondition` (`HealthBelow`, `RequiresSkill`, `RequiresProgress`), `BossExecutionCheckEvent` (só recusa). Avaliado em `FinisherTestMechanic.eligibility` antes da cena. |
 | `notice`, `client.holo.HoloToasts` | **Avisos holográficos automáticos** (Etapa 4.11). `HoloNotices` é o **único** caminho de um aviso (audiência, `HoloNoticeEvent` cancelável, pacote, farol); dados `HoloNotice` (`NoticeKind`, `NoticeSeverity`), regras puras `NoticeRules` (no `SelfTest`); faróis no Calamidade em `NoticeFx` (único dono). Fontes de hoje: chefe que aparece, chefe derrotado, portal do Nether aceso, chegada ao Inverted Realm, caça a recompensa; API pronta para chefes/portais/eventos futuros (`bossAppeared`, `portalOpened`, `worldEvent`). Cliente: `network.NoticeClientCache` (fila + histórico), cartões na tela `HoloToasts`, seção Alerts `client.holo.NoticesView`. Comando `/respectcraft notice`. |
 | `bounty` | **Caça a recompensa** contra jogadores (Etapa 4.11). `BountyService` é o único dono do quadro `BountyBoard` (SavedData do Overworld); contrato `Bounty`; regras puras `BountyRules` (no `SelfTest`); aba Bounty Hunt `client.holo.BountyView` + cache `network.BountyClientCache`; pacotes em `network.HoloNetworking`; comando `/respectcraft bounty`. |
-| `selftest` | `SelfTest`: regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
+| `rig`, `client.rig` | **Custom Rig Framework** (Etapa 4.12). Famílias de rig = manifesto `assets/<ns>/rigs/<id>.rig.json` (`RigDefinition`); entidade → família = `rigs/entities/<entidade>.json` (`RigBinding`); catálogo `CustomRigRegistry.GLOBAL` preenchido por `Rigs.bootstrap()` (os dois lados). Clips por família e requisitos de participante em `FinisherDef.rigs()` (`finisher.FinisherRigs`); elegibilidade única `finisher.FinisherEligibility` (+ `FinisherTestMechanic.check`). Partes (ocultar/expor) só por `RigVisuals` (attachment sem save, pacote `network.RigNetworking`); sockets em pose de repouso `RigSockets`. Cliente: `RigGeoModel`/`RigGeoRenderer` genéricos. Fixtures `entity.dev.RigMannequinEntity` (`dev_rig_mannequin_a/b`). Comando `/respectcraft rig`. Kit externo em `rigkit/` + `tools/rigkit/`. |
+| `selftest` | `SelfTest` (+ `RigSelfTest`): regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
 | `biome`, `npc` | Só `LEIA-ME.md`: sem código (biomas são dados desde a 4.9). |
 
 ## Regras importantes
@@ -123,6 +125,21 @@ sistema em que vai mexer; veja o fim deste arquivo).
   clips de mob: só registre `EntityFinisherClip` quando o asset existir. Chefe personalizado (Etapa 4.11) = ficha em
   `boss.Bosses` (exclusivas + condições); não registre chefe sem aprovação do dono. Chefe = tag `c:bosses` ou `respectcraft:bosses`;
   `BossDefeatEvent` sai no máximo uma vez por chefe e **ninguém concede recompensa** até as regras serem pedidas.
+- **Custom Rig Framework (Etapa 4.12):** compatibilidade de rig é **explícita** (binding declarado + validador);
+  nomes de bones iguais nunca bastam, sem retargeting. Resolução do clip de um mob: `entityClips` da finalização (tipo)
+  → `clip_overrides` do binding → clip da família (`FinisherRigs.Clip`) → parado; requisito `requiresClip` recusa o
+  parado **antes** da cena (com a mensagem do motivo). Requisitos por tipo, tag, família, capacidades e papel em
+  `FinisherRigs.Requirement`; o sorteio só oferece o que `FinisherEligibility` aceita. Rig **não** é classificação de
+  gameplay: a regra de chefes (tags) vale igual para entidades com rig. Partes só por `RigVisuals` (instruções de
+  timeline `rig:hide:<parte>`, `rig:show:<parte>`, `rig:reset`, agendadas pelo relógio da sessão), snapshot no início e
+  restauração em `release` (concluída, cancelada, golpe recusado); nunca gravadas no save. Sockets no servidor só em
+  pose de repouso (efeitos/alinhamento, nunca dano); pose animada só no cliente. Observador que começa a rastrear um
+  participante no meio da cena recebe o gatilho GeckoLib do clip (`FinisherTestMechanic.onStartTracking`). Manifestos
+  ficam no jar (lidos por `getResourceAsStream`, como `GeoFxKeyframes`); família/binding nova = manifesto + uma linha em
+  `Rigs.bootstrap()`. Os manequins `dev_rig_mannequin_a/b` e a cena `respectcraft:dev/rig_peel_demo` são **fixtures**
+  (sem spawn natural, ovo, drop ou progressão; a cena fica fora do catálogo). Não crie frutas, texturas/animações
+  artísticas nem finalizações exclusivas delas sem pedido. Assets da família/fixtures são gerados por
+  `tools/rigkit/make_assets.py` (protegido por hash, como o exportador do jogador).
 - **Câmera cinematográfica** segue o estado de animação sincronizado e restaura a perspectiva em qualquer saída.
 - **Regra permanente de chefes (Etapa 4.10.1):** chefes podem ser derrotados normalmente (dano comum, armas,
   habilidades; nunca imunes à morte), mas **só a finalização exclusiva designada para aquele chefe pode executá-lo pelo
@@ -250,6 +267,7 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 | `respectcraft_bounties` (campos `bounties`, `pending_returns` e os do Codec de `Bounty`) | SavedData do Overworld (`data/respectcraft_bounties.dat`): contratos abertos e recompensas a devolver (Etapa 4.11) |
 | ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
 | itens, blocos (`twisted_*`), block entities `twisted_sign`/`twisted_hanging_sign`, `respectcraft:agua_viva`, `respectcraft:agua_viva_filhote` | registries |
+| entidades `respectcraft:dev_rig_mannequin_a`, `respectcraft:dev_rig_mannequin_b` (fixtures da 4.12), família `respectcraft:fruit_humanoid_v1` (nomes dos bones e animações `animation.fruit_humanoid_v1.*` fazem parte do contrato v1) | registries / manifestos (Etapa 4.12); o attachment `respectcraft:rig_visual` não é salvo |
 | tipo de dano `respectcraft:finisher_execution` (mensagens `death.attack.respectcraft.finisher_execution*`), tag de entidade `respectcraft:bosses` | dados (Etapa 4.10.1) |
 | dimensão `respectcraft:inverted_realm`, bioma `respectcraft:twisted_wilds`, `WoodType`/`BlockSetType` e `Boat.Type` `respectcraft:twisted` (enum `RESPECTCRAFT_TWISTED`) | pasta do mundo, chunks e NBT de barcos (Etapa 4.9) |
 
@@ -283,6 +301,8 @@ bash .github/scripts/server-smoke-test.sh # servidor dedicado: zumbis vanilla, /
 python3 tools/player_anim/bbsync.py      # .bbmodel x .animation.json
 python3 tools/player_anim/test_export.py # proteção do exportador
 python3 tools/fx/check_shaders.py        # shaders fx montados como a Rimulib + glslangValidator (roda no CI)
+python3 tools/rigkit/test_rigkit.py      # validador de rigs, template e gerador em dia (roda no CI)
+python3 tools/rigkit/validate_rig.py --repo  # famílias e bindings do repositório
 ./gradlew runClient                      # cliente de desenvolvimento
 ./gradlew runServer                      # servidor dedicado (aceita comandos no console)
 ```
@@ -331,6 +351,7 @@ python3 tools/fx/check_shaders.py        # shaders fx montados como a Rimulib + 
   (`HANDOFF_STAGE4_10_2_MULTIPLAYER_VALIDATION.md`); avisos holográficos automáticos, faróis no Calamidade, seções
   Alerts/Bounty Hunt e caça a recompensa → 4.11 (`HANDOFF_STAGE4_11_NOTICES_BOUNTIES.md`); ciclo de vida do Finisher
   (contador só com `SUCCESS`, `/kill` na cena) e registro de chefes personalizados → 4.11
-  (`HANDOFF_STAGE4_11_FINISHER_CONSOLIDATION_BOSSES.md`).
+  (`HANDOFF_STAGE4_11_FINISHER_CONSOLIDATION_BOSSES.md`); Custom Rig Framework, família `fruit_humanoid_v1`, kit
+  Blockbench, validador e manequins → 4.12 (`HANDOFF_STAGE4_12_CUSTOM_RIG_FRAMEWORK.md`).
 - **Roadmap** (funcionalidades futuras, só registro — não implemente sem pedido): [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.
