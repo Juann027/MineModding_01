@@ -54,6 +54,15 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
   força 3, onda de poeira nas quedas e céu escurecido contra chefes. Respeitam as opções de acessibilidade do
   Calamidade (intensidade dos efeitos de tela, ocultar clarões, efeitos de movimento). A câmera continua a do RespectCraft.
 - **Contador de derrotas** acima do nick, com ícones próprios 🍆💦.
+- **Avisos holográficos automáticos (Etapa 4.11):** cartões no canto da tela com o visual do menu K quando um chefe
+  aparece ou é derrotado, um portal do Nether é aceso, você chega ao Inverted Realm ou algo acontece na caça a
+  recompensa — com distância e direção até o evento e um farol de luz do Calamidade_Awakening no local. Todos ficam na
+  nova seção **Alerts** do menu K (botão ✉ com os não lidos). Chefes, portais e eventos que ainda vão chegar usam o
+  mesmo caminho. Opção "Notice cards" no painel Display.
+- **Caça a recompensa (Etapa 4.11):** aba **Bounty Hunt** do menu K (ou `/respectcraft bounty`): ponha um preço na
+  cabeça de outro jogador online usando a pilha da mão principal como recompensa, por 1, 3 ou 7 dias de jogo. Caçadores
+  aceitam o contrato, veem a distância aproximada e a direção do alvo e recebem a recompensa ao matá-lo ou finalizá-lo.
+  Ao expirar (ou se for cancelado antes de alguém aceitar), os itens voltam a quem pagou.
 - **Inverted Realm (Etapa 4.9, MVP de teste):** dimensão de **céu roxo** em crepúsculo eterno (horizonte magenta,
   estrelas fracas, sem nuvens, luz levemente violeta), bioma Twisted Wilds com grama violeta, árvores retorcidas de copa
   carmesim, penhascos de terracota roxa, brotos de ametista que brilham, lagos violeta e ilhas flutuantes no alto.
@@ -121,5 +130,7 @@ sem `--force`. Guia completo: [`tools/player_anim/README.md`](tools/player_anim/
 - Inverted Realm é um MVP: sem portal (só o comando de admin), chão com blocos vanilla tingidos até a arte própria
   chegar, tronco retorcido com arte provisória e agua-vivas sem ataque.
 - `npc` é pasta reservada, ainda sem conteúdo.
+- Avisos de portal só cobrem o portal do Nether vanilla (o mod ainda não tem portais) e eventos de mundo ainda não
+  existem; a caça a recompensa só aceita alvos online na hora de abrir o contrato.
 
 Para desenvolvedores e agentes: [`CLAUDE.md`](CLAUDE.md) e [`AGENTS.md`](AGENTS.md).

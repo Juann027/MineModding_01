@@ -2,7 +2,8 @@
 
 RPG de humor para **Minecraft Java 1.21.1 / NeoForge 21.1.x / Java 21**: criador de personagem, roleta de
 nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador com animações sincronizadas,
-finalizações cinematográficas (efeitos visuais pelo motor **Calamidade_Awakening**, Etapa 4.10), contador de derrotas e
+finalizações cinematográficas (efeitos visuais pelo motor **Calamidade_Awakening**, Etapa 4.10), contador de derrotas,
+avisos holográficos automáticos e caça a recompensa entre jogadores (Etapa 4.11) e
 (Etapa 4.9, MVP) a dimensão **Inverted Realm**
 (céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
 
@@ -53,6 +54,8 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `entity`, `client.render`, `command` | Mobs **agua-vivas** (`AguaVivaEntity`, Etapa 4.9) e renderers. O Leão do Fim foi removido na Etapa 4.9.1 (não o reintroduza). `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim`, `test` e `realm`). |
 | `dimension`, `client.dimension` | **Inverted Realm** (Etapa 4.9, MVP): dimensão, bioma e features são **dados** (`data/respectcraft/dimension*`, `worldgen/...`); `InvertedRealm` (chave, viagem de teste, chão seguro) e `InvertedRealmCommands` (`/respectcraft realm`); céu/neblina/luz em `client.dimension.InvertedRealmEffects`. |
 | `block.wood`, `registry.ModBlocks` | **Madeira Retorcida** (Etapa 4.9, do pacote "O Avesso — Fase 2, Etapa A"): blocos em `ModBlocks`, itens em `ModItems`, placas/bancada em `TwistedFurniture`, barco por `enumextensions.json`; placas no cliente em `client.render.TwistedWoodRenderers`. |
+| `notice`, `client.holo.HoloToasts` | **Avisos holográficos automáticos** (Etapa 4.11). `HoloNotices` é o **único** caminho de um aviso (audiência, `HoloNoticeEvent` cancelável, pacote, farol); dados `HoloNotice` (`NoticeKind`, `NoticeSeverity`), regras puras `NoticeRules` (no `SelfTest`); faróis no Calamidade em `NoticeFx` (único dono). Fontes de hoje: chefe que aparece, chefe derrotado, portal do Nether aceso, chegada ao Inverted Realm, caça a recompensa; API pronta para chefes/portais/eventos futuros (`bossAppeared`, `portalOpened`, `worldEvent`). Cliente: `network.NoticeClientCache` (fila + histórico), cartões na tela `HoloToasts`, seção Alerts `client.holo.NoticesView`. Comando `/respectcraft notice`. |
+| `bounty` | **Caça a recompensa** contra jogadores (Etapa 4.11). `BountyService` é o único dono do quadro `BountyBoard` (SavedData do Overworld); contrato `Bounty`; regras puras `BountyRules` (no `SelfTest`); aba Bounty Hunt `client.holo.BountyView` + cache `network.BountyClientCache`; pacotes em `network.HoloNetworking`; comando `/respectcraft bounty`. |
 | `selftest` | `SelfTest`: regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
 | `biome`, `npc` | Só `LEIA-ME.md`: sem código (biomas são dados desde a 4.9). |
 
@@ -161,6 +164,24 @@ sistema em que vai mexer; veja o fim deste arquivo).
   `AppearanceDraft` e da roleta só em `RouletteSession`/`RouletteMachine` (as telas de reserva usam os mesmos): não
   duplique pedido, `requestId`, erro ou timeout da 4.8.2. Novo giro e Continuar com giro sobrando pedem segundo clique.
   As telas antigas saem na 4.8.5.
+- **Seções do menu K (Etapa 4.11):** sete — Overview, Character, Body & Traits, Speciality, Skills, **Alerts** e
+  **Bounty Hunt** (`HoloCharacterScreen.Section`, ids/ordem fazem parte das teclas 1–7 da tela de reserva). Seção nova =
+  valor no enum + `HoloView` no array de `HoloMenu` (o arco, os chips e as teclas se ajustam ao número de seções; chip
+  estreito vira só ícone com a dica). Ponto aceso no chip por `HoloNav.badge`; a fita tem o botão ✉ (não lidos).
+- **Avisos holográficos (Etapa 4.11):** só `notice.HoloNotices` manda aviso (nunca mande o pacote direto) e só
+  `notice.NoticeFx` acende farol de aviso no Calamidade (pilar + anel + luz no local, sem `film`/`shake`/câmera;
+  recusado pelos limites = aviso sem farol). Aviso é só exibição: nunca concede nada (chefe derrotado continua **sem
+  recompensa**). Duplicatas pela chave (`NoticeRules.DEDUPE_MILLIS`) são descartadas no cliente; histórico só no
+  cliente (`HISTORY_LIMIT`), limpo no logout. Cartões no canto superior esquerdo (somem com F3 ou com `noticeToasts`
+  desligado na config/Display; continuam na seção Alerts). Sistemas futuros (chefes do mod, portais, eventos) chamam a
+  API de `HoloNotices`; categoria nova entra no **fim** de `NoticeKind` (o pacote usa o ordinal).
+- **Caça a recompensa (Etapa 4.11):** servidor autoritativo em `BountyService`. Recompensa = a pilha inteira da mão
+  principal de quem paga, guardada no quadro (sem moeda/economia); paga ao caçador que **aceitou** o contrato quando ele
+  mata o alvo ou conclui uma finalização jogador × jogador nele; volta ao pagador no cancelamento (só sem caçadores) ou
+  ao expirar (1/3/7 dias de jogo, conferido a cada 5 s; offline = no próximo login). Limites em `BountyRules`. O quadro
+  vai a cada jogador no login, quando muda e quando a aba pede (a cada 5 s com a aba na frente, limite de 40 ticks por
+  jogador); o rastreio é só distância arredondada + oito ventos para quem aceitou, nunca a posição exata. A aba
+  "Post bounty" pede segundo clique (tira os itens da mão).
 - **Telas** herdam `client.ui.RespectScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
   Texto nunca passa da coluna/painel: quebre ou encurte com `Ui.wrap`/`Ui.fit` e ofereça a dica com o texto inteiro
   (Etapa 4.7.2). Confira GUI 2, GUI 3 e a menor GUI (320×240).
@@ -194,6 +215,7 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 | `respectcraft_character_appearance_v1`, `respectcraft_special_defeats`, `respectcraft_allow_mob_finishers_test`, `respectcraft_debug_fail_next_roll` | `persistentData` do jogador |
 | `respectcraft_boss_finisher_credit`, `respectcraft_boss_defeat_posted` | `persistentData` de entidades chefe (Etapa 4.8) |
 | `respectcraft_realm_return` | `persistentData` do jogador: volta do `/respectcraft realm leave` (Etapa 4.9) |
+| `respectcraft_bounties` (campos `bounties`, `pending_returns` e os do Codec de `Bounty`) | SavedData do Overworld (`data/respectcraft_bounties.dat`): contratos abertos e recompensas a devolver (Etapa 4.11) |
 | ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
 | itens, blocos (`twisted_*`), block entities `twisted_sign`/`twisted_hanging_sign`, `respectcraft:agua_viva`, `respectcraft:agua_viva_filhote` | registries |
 | dimensão `respectcraft:inverted_realm`, bioma `respectcraft:twisted_wilds`, `WoodType`/`BlockSetType` e `Boat.Type` `respectcraft:twisted` (enum `RESPECTCRAFT_TWISTED`) | pasta do mundo, chunks e NBT de barcos (Etapa 4.9) |
@@ -270,5 +292,6 @@ python3 tools/fx/check_shaders.py        # shaders fx montados como a Rimulib + 
   4.8.4-C; visual da roda da roleta (roda de prêmios) → `HANDOFF_ROULETTE_PRIZE_WHEEL.md`; dimensão Inverted Realm (céu
   roxo, terreno, `/respectcraft realm`), Madeira Retorcida e agua-vivas → 4.9 (`HANDOFF_STAGE4_9_PURPLE_DIMENSION_MVP.md`);
   remoção do Leão do Fim → 4.9.1; efeitos das finalizações no Calamidade_Awakening (ponte `fx`, shaders, gancho
-  GeckoLib, dependência) → 4.10 (`HANDOFF_STAGE4_10_FINISHER_FX_CALAMIDADE.md`).
+  GeckoLib, dependência) → 4.10 (`HANDOFF_STAGE4_10_FINISHER_FX_CALAMIDADE.md`); avisos holográficos automáticos,
+  faróis no Calamidade, seções Alerts/Bounty Hunt e caça a recompensa → 4.11 (`HANDOFF_STAGE4_11_NOTICES_BOUNTIES.md`).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

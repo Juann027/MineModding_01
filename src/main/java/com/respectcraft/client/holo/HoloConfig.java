@@ -18,6 +18,8 @@ public final class HoloConfig {
     public static final ModConfigSpec.DoubleValue WORLD_DISTANCE;
     public static final ModConfigSpec.DoubleValue SURFACE_DENSITY;
     public static final ModConfigSpec.DoubleValue DISMISS_DISTANCE;
+    public static final ModConfigSpec.BooleanValue NOTICE_TOASTS;
+    public static final ModConfigSpec.BooleanValue NOTICE_SOUNDS;
 
     /** Etapa 4.8.4-A: holograma no mundo (padrao) ou a tela da 4.8.1 (reserva temporaria de desenvolvimento). */
     public enum Mode { WORLD, SCREEN }
@@ -46,6 +48,10 @@ public final class HoloConfig {
                 .defineInRange("surfaceDensity", 3.0, 1.5, 4.0);
         DISMISS_DISTANCE = b.comment("World mode: the panels dismiss themselves when you walk farther than this from them (blocks).")
                 .defineInRange("dismissDistance", 16.0, 6.0, 64.0);
+        // Etapa 4.11: avisos holograficos automaticos (chefes, portais, eventos, caca a recompensa).
+        NOTICE_TOASTS = b.comment("Show holographic notice cards on the game screen (they always stay in the Alerts section).")
+                .define("noticeToasts", true);
+        NOTICE_SOUNDS = b.comment("Play a sound when a holographic notice card appears.").define("noticeSounds", true);
         b.pop();
         SPEC = b.build();
     }
@@ -64,6 +70,9 @@ public final class HoloConfig {
     public static boolean highContrast() { return SPEC.isLoaded() && HIGH_CONTRAST.get(); }
     public static boolean worldBackdrop() { return !SPEC.isLoaded() || WORLD_BACKDROP.get(); }
 
+    public static boolean noticeToasts() { return !SPEC.isLoaded() || NOTICE_TOASTS.get(); }
+    public static boolean noticeSounds() { return !SPEC.isLoaded() || NOTICE_SOUNDS.get(); }
+
     public static boolean worldMode() { return !SPEC.isLoaded() || MODE.get() == Mode.WORLD; }
     public static float worldDistance() { return SPEC.isLoaded() ? (float) (double) WORLD_DISTANCE.get() : 2F; }
     public static float surfaceDensity() { return SPEC.isLoaded() ? (float) (double) SURFACE_DENSITY.get() : 3F; }
@@ -74,6 +83,7 @@ public final class HoloConfig {
     static void setMotion(float v) { set(MOTION, Math.round(v * 20F) / 20.0); }
     static void toggleReducedMotion() { if (SPEC.isLoaded()) REDUCED_MOTION.set(!REDUCED_MOTION.get()); }
     static void toggleHighContrast() { if (SPEC.isLoaded()) HIGH_CONTRAST.set(!HIGH_CONTRAST.get()); }
+    static void toggleNoticeToasts() { if (SPEC.isLoaded()) NOTICE_TOASTS.set(!NOTICE_TOASTS.get()); }
     static void toggleBackdrop() { if (SPEC.isLoaded()) WORLD_BACKDROP.set(!WORLD_BACKDROP.get()); }
 
     private static void set(ModConfigSpec.DoubleValue value, double v) {
