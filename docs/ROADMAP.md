@@ -34,7 +34,9 @@ explícito → override do binding → família → parado, elegibilidade única
 `FinisherTestMechanic.check`), renderer genérico (`client.rig.RigGeoRenderer`), família de referência
 `respectcraft:fruit_humanoid_v1` e dois manequins de teste (`dev_rig_mannequin_a/b`). Comando `/respectcraft rig`.
 
-Continua futuro: outras famílias (quadrúpede, voadora, mecânica, serpente — o formato já aceita anatomia arbitrária),
+Continua futuro: **sincronização temporal dos clips para observadores tardios** (quem começa a rastrear uma entidade
+no meio de uma finalização hoje recebe o clip desde o início, porque o gatilho do GeckoLib 4.9.3 não aceita
+deslocamento; o ideal é entrar no ponto certo da cena); outras famílias (quadrúpede, voadora, mecânica, serpente — o formato já aceita anatomia arbitrária),
 pose animada no servidor (o GeckoLib 4.9.3 não tem), IK, retargeting, gore/fragmentos com física, extensão por addons
 fora do jar do mod (hoje os manifestos são lidos do jar).
 
