@@ -1155,6 +1155,11 @@ public final class SelfTest {
         check(f, aborted.getOutcome() == com.respectcraft.finisher.FinisherExecution.Outcome.CANCELLED
                 && completed.getOutcome() == com.respectcraft.finisher.FinisherExecution.Outcome.FAILED && !completed.killConfirmed(),
                 "execução: cancelada e cena concluída sem morte nunca são SUCCESS");
+        check(f, com.respectcraft.bounty.BountyRules.finisherClaims(true, success.killConfirmed())
+                && !com.respectcraft.bounty.BountyRules.finisherClaims(true, survived.killConfirmed())
+                && !com.respectcraft.bounty.BountyRules.finisherClaims(true, prevented.killConfirmed())
+                && !com.respectcraft.bounty.BountyRules.finisherClaims(false, success.killConfirmed()),
+                "recompensa: finalização só cobra jogador × jogador com SUCCESS (totem/FAILED não paga)");
 
         // Mundo (servidor rodando): tags de chefe e o tipo de dano com as regras de morte normais.
         check(f, com.respectcraft.finisher.FinisherParticipants.isBossType(net.minecraft.world.entity.EntityType.WITHER)

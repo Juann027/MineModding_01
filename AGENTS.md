@@ -36,8 +36,8 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   (cartões na tela `HoloToasts` + seção Alerts do menu K) e `notice.NoticeFx` o único dono dos faróis de aviso no
   Calamidade. Fontes: chefe que aparece/derrotado (sem recompensa), portal do Nether aceso, chegada ao Inverted Realm,
   caça a recompensa; API pronta para chefes/portais/eventos futuros. `bounty.BountyService` é o único dono do quadro
-  (`BountyBoard`, SavedData `respectcraft_bounties`): recompensa = itens da mão principal, paga ao caçador que aceitou,
-  devolvida no cancelamento/expiração. Menu K com sete seções (Alerts e Bounty Hunt no fim).
+  (`BountyBoard`, SavedData `respectcraft_bounties`): recompensa = itens da mão principal, paga ao caçador que aceitou
+  quando o alvo morre (finalização só com `SUCCESS`), devolvida no cancelamento/expiração. Menu K com sete seções (Alerts e Bounty Hunt no fim).
 - **Finalizações (Etapa 4.8):** cada participante usa o próprio rig (`FinisherParticipants`, `EntityFinisherClip`);
   sessão sempre com um jogador; contador só de jogador; `BossDefeatEvent` é só preparação (nada concedido).
 - **Execuções e chefes (Etapa 4.10.1):** cena concluída = um golpe final real (`FinisherExecution`, dano comum

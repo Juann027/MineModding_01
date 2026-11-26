@@ -208,7 +208,8 @@ sistema em que vai mexer; veja o fim deste arquivo).
   API de `HoloNotices`; categoria nova entra no **fim** de `NoticeKind` (o pacote usa o ordinal).
 - **Caça a recompensa (Etapa 4.11):** servidor autoritativo em `BountyService`. Recompensa = a pilha inteira da mão
   principal de quem paga, guardada no quadro (sem moeda/economia); paga ao caçador que **aceitou** o contrato quando ele
-  mata o alvo ou conclui uma finalização jogador × jogador nele; volta ao pagador no cancelamento (só sem caçadores) ou
+  mata o alvo (inclusive pela execução real de uma finalização jogador × jogador, `SUCCESS`; totem/`FAILED` e
+  cancelamento nunca pagam, `BountyRules.finisherClaims`; o contrato sai do quadro no primeiro pagamento); volta ao pagador no cancelamento (só sem caçadores) ou
   ao expirar (1/3/7 dias de jogo, conferido a cada 5 s; offline = no próximo login). Limites em `BountyRules`. O quadro
   vai a cada jogador no login, quando muda e quando a aba pede (a cada 5 s com a aba na frente, limite de 40 ticks por
   jogador); o rastreio é só distância arredondada + oito ventos para quem aceitou, nunca a posição exata. A aba

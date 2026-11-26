@@ -160,9 +160,14 @@ public final class BountyService {
         if (killer != null) claim(victim, killer, "kill");
     }
 
-    /** Finalizacao concluida jogador x jogador tambem cobra (a vitima nao morre na finalizacao). */
+    /**
+     * Finalizacao concluida jogador x jogador: so cobra com morte confirmada ({@code SUCCESS}). A execucao real
+     * (Etapa 4.10.1) ja passa pelo {@link #onDeath}; aqui e a garantia (contrato ja removido = nada a pagar de novo).
+     * {@code FAILED} (totem, protecao) e {@code Aborted} nunca cobram.
+     */
     public static void onFinisherCompleted(FinisherSessionEvent.Completed event) {
-        if (event.getInteraction() != FinisherParticipants.Interaction.PLAYER_VS_PLAYER) return;
+        if (!BountyRules.finisherClaims(event.getInteraction() == FinisherParticipants.Interaction.PLAYER_VS_PLAYER,
+                event.killConfirmed())) return;
         if (event.getAttacker() instanceof ServerPlayer hunter && event.getVictim() instanceof ServerPlayer victim) {
             claim(victim, hunter, "finisher");
         }
