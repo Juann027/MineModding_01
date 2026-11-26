@@ -122,10 +122,8 @@ comunicação, fogo amigo configurável, chefes, missões cooperativas, recompen
 apropriado. Pode abrir caminho para habilidades e finalizações com vários participantes (hoje a sessão tem dois).
 Regras a definir. Interage com a caça a recompensa (ex.: membro da party como alvo/caçador) — decidir na etapa.
 
-## Decisões pendentes do dono (registradas na consolidação)
+## Decisões do dono (consolidação)
 
-- **Numeração "4.11" duplicada:** duas etapas usaram 4.11 (consolidação do Finisher/chefes e avisos/caça a
-  recompensa). O índice de handoffs as distingue como "4.11 (finisher)" e "4.11 (avisos)"; renumerar é decisão do dono.
-- **Recompensa × crédito de morte:** `BountyService.onDeath` usa o crédito vanilla (`getKillCredit`) — um caçador que
-  feriu o alvo pouco antes recebe a recompensa mesmo se a morte final for `/kill` (inclusive durante uma cena, que a
-  Etapa 4.11 deixa passar). Comportamento herdado do #50; mudar exige regra do dono.
+- **Numeração "4.11":** mantida a histórica; as duas etapas são "4.11 (finisher)" e "4.11 (avisos)".
+- **Recompensa × crédito de morte:** mantido o crédito vanilla (`getKillCredit`) em `BountyService.onDeath`, inclusive
+  quando a morte final é `/kill` (também durante uma cena).
