@@ -4,6 +4,7 @@ import com.respectcraft.animation.PlayerAnimationDef;
 import com.respectcraft.animation.PlayerAnimationEvent;
 import com.respectcraft.animation.PlayerAnimationService;
 import com.respectcraft.RespectCraft;
+import com.respectcraft.entity.fruit.FruitMob;
 import com.respectcraft.boss.BossCondition;
 import com.respectcraft.boss.BossExecutionCheckEvent;
 import com.respectcraft.boss.BossProfile;
@@ -105,6 +106,8 @@ public final class FinisherTestMechanic {
         final Map<String, Boolean> targetParts;
         final java.util.List<PartEvent> partEvents = new java.util.ArrayList<>();
         int partCursor;
+        /** Etapa 4.13.3: eventos da vitima entidade (quedas, corte da musica), pelo relogio da sessao. */
+        int victimEventCursor;
 
         Session(LivingEntity attacker, LivingEntity target, FinisherDef finisher, FinisherParticipants.Interaction interaction,
                 FinisherParticipants.Clip attackerClip, FinisherParticipants.Clip targetClip,
@@ -425,11 +428,11 @@ public final class FinisherTestMechanic {
         params.putDouble(Finishers.PARAM_Y, Math.min(attacker.getY(), targetAnchor.y));
         params.putDouble(Finishers.PARAM_Z, middle.z);
         params.putFloat(Finishers.PARAM_YAW, yaw);
-        if (attacker instanceof ServerPlayer a && target instanceof ServerPlayer v) {
+        if (attacker instanceof ServerPlayer a && target instanceof ServerPlayer v && finisher.victim() != null) {
             PlayerAnimationService.playTogether(a, finisher.attacker(), v, finisher.victim(), params);
         } else if (attacker instanceof ServerPlayer a) {
             PlayerAnimationService.play(a, finisher.attacker(), now, Optional.of(target.getUUID()), params, true);
-        } else if (target instanceof ServerPlayer v) {
+        } else if (target instanceof ServerPlayer v && finisher.victim() != null) {
             PlayerAnimationService.play(v, finisher.victim(), now, Optional.of(attacker.getUUID()), params, true);
         }
         // Rigs GeckoLib proprios: mesmo tick do servidor que os jogadores (o GeckoLib sincroniza com quem ve).
@@ -459,6 +462,26 @@ public final class FinisherTestMechanic {
             session.partEvents.add(new PartEvent(entity, i.tick(), i.text()));
         }
         session.partEvents.sort(java.util.Comparator.comparingInt(PartEvent::tick));
+    }
+
+    /**
+     * Etapa 4.13.3: eventos do lado da vitima quando ela nao e jogador ({@code FinisherDef.entityVictimEvents}; jogador
+     * vitima recebe os do proprio clip pelo Animation Manager). Queda = poeira e baque; silencio = corte seco da musica
+     * da fruta no impacto decisivo (restaurada no cancelamento ou se a fruta sobreviver).
+     */
+    private static void tickVictimEvents(Session s, int elapsed) {
+        if (s.target instanceof ServerPlayer) return;
+        var events = s.finisher.entityVictimEvents();
+        while (s.victimEventCursor < events.size() && events.get(s.victimEventCursor).tick() <= elapsed) {
+            var e = events.get(s.victimEventCursor++);
+            if (e.type().equals(Finishers.EVENT_FALL)) fall(s, s.target, e.data());
+            else if (e.type().equals(Finishers.EVENT_SILENCE) && s.target instanceof FruitMob fruit) fruit.setMusicSilenced(true);
+        }
+    }
+
+    /** Musica da fruta de volta quando a cena acaba sem matar (cancelamento, golpe recusado, totem...). */
+    private static void restoreMusic(Session s) {
+        if (s.target instanceof FruitMob fruit && fruit.isAlive() && !fruit.isRemoved()) fruit.setMusicSilenced(false);
     }
 
     /** Eventos rig: que chegaram no tick da cena. */
@@ -519,7 +542,7 @@ public final class FinisherTestMechanic {
     }
 
     private static void stopIfOwn(LivingEntity entity, PlayerAnimationDef def) {
-        if (entity instanceof ServerPlayer player && PlayerAnimationService.current(player)
+        if (def != null && entity instanceof ServerPlayer player && PlayerAnimationService.current(player)
                 .filter(state -> state.animation().equals(def.id())).isPresent()) {
             PlayerAnimationService.stop(player, PlayerAnimationEvent.EndReason.STOPPED);
         }
@@ -564,12 +587,16 @@ public final class FinisherTestMechanic {
     private static void onFall(ServerPlayer player, String data) {
         Session s = SESSIONS.get(player.getUUID());
         if (s == null || s.target != player) return;
+        fall(s, player, data);
+    }
+
+    private static void fall(Session s, LivingEntity player, String data) {
         double[] fall = FinisherFxRules.parseFall(data);
         int strength = (int) fall[0];
         double back = fall[1];
         Vec3 behind = Vec3.directionFromRotation(0, player.getYRot()).scale(-back);
         double x = player.getX() + behind.x, y = player.getY(), z = player.getZ() + behind.z;
-        var level = player.serverLevel();
+        if (!(player.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
         var ground = level.getBlockState(net.minecraft.core.BlockPos.containing(x, y - 0.2, z));
         // Com FinisherFxDef a onda de poeira e a luz no chao sao do Calamidade (FinisherFx); o baque fica aqui.
         if (FinisherFxRules.vanillaParticles(s.finisher)) {
@@ -612,6 +639,7 @@ public final class FinisherTestMechanic {
     private static void abort(Session s, String reason) {
         if (SESSIONS.get(s.attacker.getUUID()) != s) return;
         release(s);
+        restoreMusic(s);
         FinisherFx.end(s.fx, FinisherFxRules.EndReason.ABORT);
         stopAnimations(s);
         // Etapa 4.10.1: cancelamento nunca executa (nenhum golpe final); fica no log para auditoria.
@@ -637,6 +665,7 @@ public final class FinisherTestMechanic {
         // Etapa 4.10.1: golpe final real, com os participantes ja liberados (o dano nao cai mais na trava da sessao).
         String targetName = name(s.target);
         FinisherExecution.Result result = FinisherExecution.execute(s.attacker, s.target, s.finisher);
+        if (!result.killConfirmed()) restoreMusic(s);
         RespectCraft.LOGGER.info("Finisher {} by {} on {} ({}): {} ({})", s.finisher.id(), FinisherParticipants.typeId(s.attacker),
                 FinisherParticipants.typeId(s.target), targetName, result.outcome(), result.detail());
         // Etapa 4.11 (decisao do dono): o contador so sobe com SUCCESS (morte confirmada). O jogador morto continua
@@ -662,6 +691,11 @@ public final class FinisherTestMechanic {
                     : "Execution failed: " + targetName + " survived (" + result.detail() + ").");
         }
         NeoForge.EVENT_BUS.post(new FinisherSessionEvent.Completed(s.attacker, s.target, s.finisher, s.interaction, result));
+    }
+
+    /** Participante de uma cena agora (servidor; IA de mobs, Etapa 4.13.3). */
+    public static boolean inSession(net.minecraft.world.entity.Entity entity) {
+        return SESSIONS.containsKey(entity.getUUID());
     }
 
     public static int emergencyStop(ServerPlayer player) {
@@ -723,6 +757,7 @@ public final class FinisherTestMechanic {
         }
         FinisherFx.tick(s.fx, (int) (now - s.startedAt));
         tickPartEvents(s, (int) (now - s.startedAt));
+        tickVictimEvents(s, (int) (now - s.startedAt));
         hold(s.attacker, s.attackerAnchor, s.attackerYaw);
         hold(s.target, s.targetAnchor, s.targetYaw);
     }

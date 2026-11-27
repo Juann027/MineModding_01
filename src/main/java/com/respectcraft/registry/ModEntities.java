@@ -49,8 +49,9 @@ public final class ModEntities {
                     .sized(0.9F, 1.6F).clientTrackingRange(8).build("dev_rig_mannequin_b"));
 
     /**
-     * Etapa 4.13.1: morango (familia {@code respectcraft:fruit_humanoid_v1}), vitima de finalizacoes. CREATURE, mas
-     * SEM spawn natural (nenhum bioma o lista): ovo, {@code /summon}. Caixa ~ geometria (14 x 34 px).
+     * Etapa 4.13.1: morango (familia {@code respectcraft:fruit_humanoid_v1}), vitima de finalizacoes. Caixa ~ geometria
+     * (14 x 34 px). Etapa 4.13.3: spawn natural so em plains/savanna do Overworld (biome modifier, peso 5, 1-2), CREATURE
+     * (teto de criaturas vanilla; nascidas pelo mundo somem longe dos jogadores, ovo/summon persistentes: FruitMob).
      */
     public static final DeferredHolder<EntityType<?>, EntityType<com.respectcraft.entity.fruit.StrawberryEntity>> STRAWBERRY = ENTITY_TYPES.register(
             "strawberry",
@@ -74,5 +75,8 @@ public final class ModEntities {
             event.register(type, SpawnPlacementTypes.NO_RESTRICTIONS, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                     AguaVivaEntity::checkSpawn, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         }
+        // Etapa 4.13.3: morango no chao (biomas no biome modifier neoforge/biome_modifier/strawberry_spawns.json).
+        event.register(STRAWBERRY.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                com.respectcraft.entity.fruit.FruitMob::checkFruitSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
     }
 }

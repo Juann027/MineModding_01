@@ -71,7 +71,8 @@ public final class FinisherFx {
             this.attacker = attacker;
             this.target = target;
             this.source = source;
-            this.cues = FinisherFxRules.forSession(FinisherFxRules.cues(def), target instanceof ServerPlayer);
+            // Etapa 4.13.3: cena so PvE tem as quedas da vitima entidade (entityVictimEvents), que valem com mob vitima.
+            this.cues = FinisherFxRules.forSession(FinisherFxRules.cues(def), target instanceof ServerPlayer || def.victim() == null);
         }
 
         /** Instancias desta cena ainda vivas no servidor (diagnostico e teste). */
@@ -325,13 +326,34 @@ public final class FinisherFx {
                 Placement p = from.distanceToSqr(at) > 1e-4 ? Placement.at(at).arrivingFrom(from)
                         : Placement.at(at).withYaw(scene.attacker.getYRot());
                 track(scene, Effects.start(scene.fx.hitEffect(cue.strength()), level, p.withSource(scene.source)), cue.marker());
+                juice(level, scene.target, at.add(0, scene.target.getBbHeight() * 0.7, 0), cue.strength(), false);
             } else {
                 // Onde o corpo bate: recuo para tras da vitima, como a poeira vanilla de antes.
                 Vec3 behind = Vec3.directionFromRotation(0, scene.target.getYRot()).scale(-cue.back());
                 Vec3 at = scene.target.position().add(behind.x, 0, behind.z);
                 track(scene, Effects.start(scene.fx.fallEffect(), level,
                         Placement.at(at).withYaw(scene.target.getYRot()).withSource(scene.source)), cue.marker());
+                juice(level, scene.target, at.add(0, 0.1, 0), cue.strength(), true);
             }
+        }
+    }
+
+    /**
+     * Etapa 4.13.3: vitima fruta ({@code FruitMob}) espirra suco (poeira colorida), sementes e, nos golpes de forca 3,
+     * lascas de casca/polpa. Particulas vanilla enviadas pelo servidor (todos veem); so visual, nada fica ativo.
+     */
+    private static void juice(ServerLevel level, LivingEntity target, Vec3 at, int strength, boolean ground) {
+        if (!(target instanceof com.respectcraft.entity.fruit.FruitMob fruit)) return;
+        var j = fruit.juice();
+        var color = new org.joml.Vector3f(((j.rgb() >> 16) & 0xFF) / 255F, ((j.rgb() >> 8) & 0xFF) / 255F, (j.rgb() & 0xFF) / 255F);
+        double spread = ground ? 0.5 : 0.25;
+        level.sendParticles(new net.minecraft.core.particles.DustParticleOptions(color, 1.4F), at.x, at.y, at.z,
+                10 * strength, spread, ground ? 0.03 : 0.25, spread, 0.15);
+        level.sendParticles(new net.minecraft.core.particles.ItemParticleOption(net.minecraft.core.particles.ParticleTypes.ITEM,
+                new net.minecraft.world.item.ItemStack(j.seeds())), at.x, at.y, at.z, 3 * strength, spread * 0.6, 0.1, spread * 0.6, 0.12);
+        if (strength >= 3) {
+            level.sendParticles(new net.minecraft.core.particles.ItemParticleOption(net.minecraft.core.particles.ParticleTypes.ITEM,
+                    new net.minecraft.world.item.ItemStack(j.rind())), at.x, at.y, at.z, 14, 0.35, 0.3, 0.35, 0.2);
         }
     }
 
