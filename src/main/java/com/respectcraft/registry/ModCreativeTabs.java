@@ -20,6 +20,7 @@ public final class ModCreativeTabs {
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.AGUA_VIVA_SPAWN_EGG.get());
                         output.accept(ModItems.AGUA_VIVA_FILHOTE_SPAWN_EGG.get());
+                        output.accept(ModItems.STRAWBERRY_SPAWN_EGG.get());
                         for (var item : ModItems.consumables()) output.accept(item.get());
                         for (var item : com.respectcraft.block.wood.TwistedWoodBlocks.CREATIVE_ORDER) output.accept(item.get());
                     }).build());

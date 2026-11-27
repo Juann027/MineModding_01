@@ -22,6 +22,9 @@ public final class ModItems {
     public static final DeferredItem<DeferredSpawnEggItem> AGUA_VIVA_FILHOTE_SPAWN_EGG = ITEMS.register(
             "agua_viva_filhote_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.AGUA_VIVA_FILHOTE, 0xB38CFF, 0xFF8AB8, new Item.Properties()));
+    // Etapa 4.13.1: morango (sem spawn natural; ovo e /summon).
+    public static final DeferredItem<DeferredSpawnEggItem> STRAWBERRY_SPAWN_EGG = ITEMS.register("strawberry_spawn_egg",
+            () -> new DeferredSpawnEggItem(ModEntities.STRAWBERRY, 0xD8232F, 0x3F9A2E, new Item.Properties()));
 
 
     // Consumiveis das necessidades (efeitos em NeedEffects; unidades: 100 = 1%).
@@ -71,6 +74,7 @@ public final class ModItems {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(AGUA_VIVA_SPAWN_EGG);
             event.accept(AGUA_VIVA_FILHOTE_SPAWN_EGG);
+            event.accept(STRAWBERRY_SPAWN_EGG);
         }
         if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
             for (DeferredItem<? extends Item> item : consumables()) event.accept(item);

@@ -117,5 +117,8 @@ public final class RespectCraftClient {
                 ctx -> new com.respectcraft.client.rig.RigGeoRenderer<>(ctx, com.respectcraft.rig.Rigs.MANNEQUIN_A_ID));
         event.registerEntityRenderer(ModEntities.DEV_RIG_MANNEQUIN_B.get(),
                 ctx -> new com.respectcraft.client.rig.RigGeoRenderer<>(ctx, com.respectcraft.rig.Rigs.MANNEQUIN_B_ID));
+        // Etapa 4.13.1: morango, o mesmo renderer generico (modelo/textura/partes pelo binding).
+        event.registerEntityRenderer(ModEntities.STRAWBERRY.get(),
+                ctx -> new com.respectcraft.client.rig.RigGeoRenderer<>(ctx, com.respectcraft.rig.Rigs.STRAWBERRY_ID));
     }
 }
