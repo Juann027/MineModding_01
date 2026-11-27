@@ -24,6 +24,13 @@ jobs:
       - name: Animacoes do jogador (.bbmodel x .animation.json em sincronia)
         run: python3 tools/player_anim/bbsync.py
 
+      # Etapa 4.12: kit de rigs (validador com casos quebrados, template e assets gerados em dia com o contrato).
+      - name: Kit de rigs (validador e template)
+        run: |
+          python3 tools/rigkit/test_rigkit.py
+          python3 tools/rigkit/validate_rig.py --repo --quiet
+          python3 tools/rigkit/package_kit.py
+
       - name: Build with Gradle
         run: ./gradlew build
 
@@ -44,6 +51,14 @@ jobs:
         with:
           name: respectcraft-jar
           path: build/libs/*.jar
+          if-no-files-found: ignore
+
+      - name: Upload do kit de rigs (ZIP)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: respectcraft-rigkit
+          path: build/rigkit/*.zip
           if-no-files-found: ignore
 
       - name: Upload dos logs do servidor

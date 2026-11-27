@@ -1,6 +1,7 @@
 # RespectCraft — Roadmap
 
-Direção futura do mod. **Nada aqui está implementado** e nada deve ser antecipado (sem classes vazias, registries
+Direção futura do mod. **Nada aqui está implementado**, exceto o que está marcado como implementado (Etapa 4.12:
+seções 1 e 2, base) e nada deve ser antecipado (sem classes vazias, registries
 provisórios, assets temporários ou abstrações especulativas). A ordem e a numeração das etapas serão decididas depois,
 pelas dependências técnicas. Cada item, quando virar etapa, ganha handoff próprio em `docs/handoffs/`.
 
@@ -22,28 +23,30 @@ recompensa e Calamidade_Awakening 0.14.0). Estado do código: `CLAUDE.md`.
   técnicos, validação, importação, comportamento, sincronização e integração.
 - Nada de abstração sem caso de uso real: o primeiro consumidor concreto define o formato.
 
-## 1. Custom Rig Framework
+## 1. Custom Rig Framework — **implementado na Etapa 4.12** (base)
 
-Expansão genérica da arquitetura multirig atual (`FinisherParticipants`, `EntityFinisherClip`, `GeoFxKeyframes`) para
-registrar **famílias de rigs** compatíveis (ex. conceituais: fruta, humanoide, mecânica, quadrúpede, rigs de chefes,
-rigs arbitrárias de addons). Não é sistema de frutas nem de chefes.
+Feito (handoff `HANDOFF_STAGE4_12_CUSTOM_RIG_FRAMEWORK.md`): pacote `rig` com famílias por manifesto JSON
+(`RigDefinition`, `assets/<ns>/rigs/<id>.rig.json`), associação entidade → família (`RigBinding`,
+`rigs/entities/<entidade>.json`), registro `CustomRigRegistry`, capacidades (`RigCapabilities`), sockets em pose de
+repouso no servidor (`RigSockets`), partes ocultáveis/destacáveis com estado visual sincronizado e restaurado no fim da
+cena (`RigVisuals`), clips por família e requisitos de participante na `FinisherDef` (`FinisherRigs`), resolução
+explícito → override do binding → família → parado, elegibilidade única (`FinisherEligibility` +
+`FinisherTestMechanic.check`), renderer genérico (`client.rig.RigGeoRenderer`), família de referência
+`respectcraft:fruit_humanoid_v1` e dois manequins de teste (`dev_rig_mannequin_a/b`). Comando `/respectcraft rig`.
 
-Prever: registro extensível de rigs e famílias; associação entidade → família; animações compartilhadas entre modelos
-compatíveis; contrato de bones obrigatórios/opcionais; convenções de nome, hierarquia, escala, orientação e pivôs;
-alinhamento por entidade (bones com o mesmo nome **não** garantem proporção, pivô ou alinhamento iguais); pontos
-semânticos de contato/agarrão; pontos de emissão de VFX; partes ocultáveis e destacáveis; animações próprias por
-entidade; validação automática dos assets importados; compatibilidade com o que existe; extensão por addons.
-Não substitui o Finisher Engine.
+Continua futuro: **sincronização temporal dos clips para observadores tardios** (quem começa a rastrear uma entidade
+no meio de uma finalização hoje recebe o clip desde o início, porque o gatilho do GeckoLib 4.9.3 não aceita
+deslocamento; o ideal é entrar no ponto certo da cena); outras famílias (quadrúpede, voadora, mecânica, serpente — o formato já aceita anatomia arbitrária),
+pose animada no servidor (o GeckoLib 4.9.3 não tem), IK, retargeting, gore/fragmentos com física, extensão por addons
+fora do jar do mod (hoje os manifestos são lidos do jar).
 
-## 2. Pipeline de produção externa (Blockbench)
+## 2. Pipeline de produção externa (Blockbench) — **kit entregue na Etapa 4.12**
 
-Modelos, texturas e animações artísticas dos mobs novos são feitos pelo dono no Blockbench; o Claude não gera modelos
-definitivos. Antes da produção, o Custom Rig Framework fornece, quando fizer sentido: templates `.bbmodel` editáveis,
-hierarquia de bones documentada, nomenclatura, pivôs/orientação de referência, escala, pontos de contato, convenção de
-partes destacáveis, requisitos de animações compartilhadas, instruções de exportação para GeckoLib 4.9.3 e o passo a
-passo de importar/registrar entidade. Possível **kit de rigs do RespectCraft** (templates, manifests, validadores,
-guia prático), aproveitando `tools/player_anim/` (exportador, `bbsync.py`, `blockbench/check.sh`). Formatos e nomes
-definitivos são decididos na implementação. Meta: integrar criatura nova sem mexer no Finisher Engine.
+Feito: `rigkit/` (README com guia de produção no Blockbench Web e de integração, `CONTRACT.md`, template
+`.bbmodel` editável com manequim, sockets e animações compartilhadas, referência exportada, exemplo de binding,
+`BBFORGE_PROMPT.md`), gerador protegido `tools/rigkit/make_assets.py`, validador `tools/rigkit/validate_rig.py`
+(ERROR/WARN/OK/CHECK), testes `tools/rigkit/test_rigkit.py` e ZIP independente (`tools/rigkit/package_kit.py`).
+Falta: abrir o template no Blockbench Web de verdade (teste manual do dono) e os modelos artísticos.
 
 ## 3. AI Fruit Love Island Mobs
 
@@ -57,7 +60,9 @@ destacáveis).
 Programação futura: registro das entidades, associação à família de rig, importação/validação dos assets, IA e
 comportamento, áudio ligado à entidade, partes destacáveis, destruição visual, finalizações e targeting,
 sincronização, integração com Animation Manager, Finisher Engine e Calamidade. A família "fruta" é só **uma
-implementação registrada** no Custom Rig Framework e serve de validação prática dele.
+implementação registrada** no Custom Rig Framework e serve de validação prática dele. Pronto desde a 4.12: o contrato
+`respectcraft:fruit_humanoid_v1` (esqueleto, sockets, partes `shell`/`core`, animações compartilhadas de referência)
+e o kit de produção; nenhuma fruta, textura, animação artística ou finalização exclusiva existe ainda.
 
 ## 4. Finisher Selection & Loadout
 

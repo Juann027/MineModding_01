@@ -43,5 +43,13 @@ public final class ModAttachments {
             ATTACHMENT_TYPES.register("geo_fx_schedule",
                     () -> AttachmentType.builder(com.respectcraft.fx.GeoFxKeyframes.Schedule::new).build());
 
+    /**
+     * Etapa 4.12: partes ocultas/expostas de uma entidade com rig customizada ({@code rig.RigVisuals}). Sem
+     * serializador: estado visual temporario, nunca salvo; some com a entidade.
+     */
+    public static final Supplier<AttachmentType<com.respectcraft.rig.RigVisuals.State>> RIG_VISUAL =
+            ATTACHMENT_TYPES.register("rig_visual",
+                    () -> AttachmentType.builder(com.respectcraft.rig.RigVisuals.State::new).build());
+
     private ModAttachments() {}
 }

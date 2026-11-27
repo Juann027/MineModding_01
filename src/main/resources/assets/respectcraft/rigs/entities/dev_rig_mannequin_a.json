@@ -1,0 +1,23 @@
+{
+  "format": "respectcraft:rig_binding",
+  "format_version": 1,
+  "_comment": "DEV FIXTURE (Stage 4.12): tall, slim mannequin. No shell/core bones; own override for the Takedown reaction.",
+  "entity": "respectcraft:dev_rig_mannequin_a",
+  "rig": "respectcraft:fruit_humanoid_v1",
+  "contract_version": 1,
+  "geo": "respectcraft:geo/entity/dev_rig_mannequin_a.geo.json",
+  "texture": "respectcraft:textures/entity/dev_rig_mannequin_a.png",
+  "animation_file": "respectcraft:animations/entity/dev_rig_mannequin_a.animation.json",
+  "proportion": [0.85, 1.0, 0.85],
+  "render_scale": 1.0,
+  "extra_bones": [
+    {"name": "extra_antenna", "parent": "head", "pivot": [0, 32, 0]}
+  ],
+  "capabilities": [],
+  "parts": [],
+  "sockets": [],
+  "alignment": null,
+  "clip_overrides": [
+    {"finisher": "respectcraft:takedown", "role": "victim", "animation": "animation.dev_rig_mannequin_a.takedown_victim", "ticks": 60}
+  ]
+}

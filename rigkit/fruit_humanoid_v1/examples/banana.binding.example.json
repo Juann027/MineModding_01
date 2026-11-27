@@ -1,0 +1,28 @@
+{
+  "format": "respectcraft:rig_binding",
+  "format_version": 1,
+  "_comment": "EXAMPLE ONLY (no banana exists in the mod). Copy to src/main/resources/assets/respectcraft/rigs/entities/<entity>.json and adjust.",
+  "entity": "respectcraft:banana",
+  "rig": "respectcraft:fruit_humanoid_v1",
+  "contract_version": 1,
+  "geo": "respectcraft:geo/entity/banana.geo.json",
+  "texture": "respectcraft:textures/entity/banana.png",
+  "animation_file": "respectcraft:animations/entity/banana.animation.json",
+  "proportion": [0.9, 1.15, 0.9],
+  "render_scale": 1.0,
+  "extra_bones": [
+    {"name": "extra_stem", "parent": "head", "pivot": [0, 36.8, 0]},
+    {"name": "extra_peel_flap_front", "parent": "torso_shell", "pivot": [0, 26, -3]}
+  ],
+  "capabilities": ["respectcraft:detachable_parts", "respectcraft:inner_core"],
+  "parts": [
+    {"name": "peel_flap", "bones": ["extra_peel_flap_front"], "default_visible": true, "detachable": true}
+  ],
+  "sockets": [
+    {"name": "grab_point", "bone": "torso", "offset": [0, 10, -2.5], "kind": "grab"}
+  ],
+  "alignment": {"distance": 1.3, "lateral": 0.0, "yaw_offset": 0.0},
+  "clip_overrides": [
+    {"finisher": "respectcraft:takedown", "role": "victim", "animation": "animation.banana.takedown_victim", "ticks": 60}
+  ]
+}

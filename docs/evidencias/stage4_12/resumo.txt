@@ -1,0 +1,42 @@
+Etapa 4.12 — evidências com clientes reais (Xvfb, llvmpipe; servidor dedicado de desenvolvimento)
+
+## Rodada 1 (Ana executa, Beto observa)
+ Parts: shell=visible(detachable) core=hidden leaf=visible(detachable)
+[21:30:17] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+[21:30:20] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on respectcraft:dev_rig_mannequin_a (entity.respectcraft.dev_rig_mannequin_a): SUCCESS (killed)
+[21:30:23] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher started.
+[21:30:26] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:takedown by minecraft:player on respectcraft:dev_rig_mannequin_b (entity.respectcraft.dev_rig_mannequin_b): SUCCESS (killed)
+[21:30:31] [Server thread/INFO] [minecraft/MinecraftServer]: Rig demo respectcraft:dev/rig_peel_demo started on respectcraft:dev_rig_mannequin_b.
+ Parts: shell=hidden(detachable) core=visible leaf=visible(detachable)
+[21:30:34] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:dev/rig_peel_demo by minecraft:player on respectcraft:dev_rig_mannequin_b (entity.respectcraft.dev_rig_mannequin_b): SUCCESS (killed)
+[21:30:41] [Server thread/INFO] [minecraft/MinecraftServer]: Rig demo respectcraft:dev/rig_peel_demo started on respectcraft:dev_rig_mannequin_a.
+[21:30:44] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:dev/rig_peel_demo by minecraft:player on respectcraft:dev_rig_mannequin_a (entity.respectcraft.dev_rig_mannequin_a): SUCCESS (killed)
+[21:30:50] [Server thread/INFO] [minecraft/MinecraftServer]: Rig demo respectcraft:dev/rig_peel_demo started on respectcraft:dev_rig_mannequin_b.
+ Parts: shell=hidden(detachable) core=visible leaf=visible(detachable)
+[21:30:53] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:dev/rig_peel_demo by minecraft:player on respectcraft:dev_rig_mannequin_b (entity.respectcraft.dev_rig_mannequin_b): SUCCESS (killed)
+[21:31:05] [Server thread/INFO] [minecraft/MinecraftServer]: Rig demo respectcraft:dev/rig_peel_demo started on respectcraft:dev_rig_mannequin_b.
+[21:31:07] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:dev/rig_peel_demo: late viewer Beto receives animation.fruit_humanoid_v1.finisher.demo_peel on respectcraft:dev_rig_mannequin_b
+[21:31:08] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:dev/rig_peel_demo by minecraft:player on respectcraft:dev_rig_mannequin_b (entity.respectcraft.dev_rig_mannequin_b): SUCCESS (killed)
+
+## Rodada 2 (cancelamento, rastreio de novo, recusa)
+ Parts: shell=hidden(detachable) core=visible leaf=visible(detachable)
+[21:34:23] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:dev/rig_peel_demo by minecraft:player on respectcraft:dev_rig_mannequin_b: CANCELLED (player request)
+ Parts: shell=visible(detachable) core=hidden leaf=visible(detachable)
+[21:34:26] [Server thread/INFO] [minecraft/MinecraftServer]: Rig parts of respectcraft:dev_rig_mannequin_b: {shell=false}
+[21:34:26] [Server thread/INFO] [minecraft/MinecraftServer]: Rig parts of respectcraft:dev_rig_mannequin_b: {shell=false, core=true}
+[21:34:39] [Server thread/INFO] [minecraft/MinecraftServer]: Rig parts of respectcraft:dev_rig_mannequin_b: {}
+[21:34:42] [Server thread/WARN] [co.re.RespectCraft/]: Finisher respectcraft:dev/rig_peel_demo refused: victim: minecraft:pig has no custom rig; requires respectcraft:fruit_humanoid_v1
+[21:34:42] [Server thread/INFO] [minecraft/MinecraftServer]: Could not start: victim: minecraft:pig has no custom rig; requires respectcraft:fruit_humanoid_v1.
+[21:34:43] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher check minecraft:player -> minecraft:pig:
+ respectcraft:takedown: ELIGIBLE
+ respectcraft:rasteira: ELIGIBLE
+ respectcraft:combo: ELIGIBLE
+ respectcraft:dev/rig_peel_demo: Could not start: victim: minecraft:pig has no custom rig; requires respectcraft:fruit_humanoid_v1.
+[21:34:44] [Server thread/INFO] [minecraft/MinecraftServer]: Finisher check minecraft:player -> respectcraft:dev_rig_mannequin_b:
+ respectcraft:takedown: ELIGIBLE
+ respectcraft:rasteira: ELIGIBLE
+ respectcraft:combo: ELIGIBLE
+ respectcraft:dev/rig_peel_demo: ELIGIBLE
+
+## Rodada 3 (build final, renderer com preRender)
+11_two_b_independent_parts.png: dois manequins B, partes independentes (um com nucleo exposto, outro com casca e sem folha)

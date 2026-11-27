@@ -1,0 +1,15 @@
+{
+  "model_sources/rig/dev_rig_mannequin_a.bbmodel": "3de3a5e2e3a2fbae8f160bca26932fadb6f355377462278e267bd7420e857abe",
+  "model_sources/rig/dev_rig_mannequin_b.bbmodel": "7b0ce8d3ecc83d8a8a45b8a3f5f8348c91c1bf835a3c7a761c932cdc475a3d7e",
+  "rigkit/fruit_humanoid_v1/fruit_humanoid_v1.rig.json": "1629a69ab6b09faa64b7abd12b9bd84730846c79e9e88fa722d2b209ed857d0a",
+  "rigkit/fruit_humanoid_v1/fruit_humanoid_v1_template.bbmodel": "1b763a6845d54d769927de4797c078aa661c0f6c510e5de97874ffb5e899dbdc",
+  "rigkit/fruit_humanoid_v1/reference/fruit_humanoid_v1.animation.json": "81e8d7480a4eaefa5917f8dc3acb1b185cf00f263b48d8075739cb4bb8dd39c3",
+  "rigkit/fruit_humanoid_v1/reference/fruit_humanoid_v1_template.geo.json": "402dbb2fd8a770c8af8518bdf13259eb4ef4b41ac99e9e829985a48afedb7d84",
+  "rigkit/fruit_humanoid_v1/reference/fruit_humanoid_v1_template.png": "a2c9dd227a297db93822426c09848e808ac8d363e997186e604f2f426ae9eb41",
+  "src/main/resources/assets/respectcraft/animations/entity/dev_rig_mannequin_a.animation.json": "5c97414b5836bcadbb65f7d823f52887190c2cd7a3e1f684d599d12b48450cdd",
+  "src/main/resources/assets/respectcraft/animations/rig/fruit_humanoid_v1.animation.json": "81e8d7480a4eaefa5917f8dc3acb1b185cf00f263b48d8075739cb4bb8dd39c3",
+  "src/main/resources/assets/respectcraft/geo/entity/dev_rig_mannequin_a.geo.json": "6d61ae7ac3502aae6f747c199c7d1c41fb474d392d4e3769ad5bd019c21f9354",
+  "src/main/resources/assets/respectcraft/geo/entity/dev_rig_mannequin_b.geo.json": "e5d3aa0bf49b7b61aba40fc7613293f117bb657565bacf0720065e134121341c",
+  "src/main/resources/assets/respectcraft/textures/entity/dev_rig_mannequin_a.png": "d3a39653c953ab76f1b13215b9073fea953088e7dfbad43c5d377f5221c4da08",
+  "src/main/resources/assets/respectcraft/textures/entity/dev_rig_mannequin_b.png": "fd4350c6f66f0fc699ab3ab6afca4373200ef0b913ba2bbb8d0c4ff595cea0e1"
+}

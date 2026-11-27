@@ -39,7 +39,7 @@ else
   # Etapa 4.10.1: classificacao de chefes e regra das finalizacoes (comuns nunca executam chefes) no servidor, e o
   # Wither continua morrendo por dano comum de combate (golpe de um golem; morto-vivo nao fere o Wither no vanilla),
   # anunciado como derrota NORMAL.
-  for cmd in "time set midnight" "summon minecraft:zombie 0 -60 0" "summon minecraft:zombie 0 -60 0 {Tags:[\"rc_a\"],PersistenceRequired:1b}" "summon minecraft:zombie 2 -60 0 {Tags:[\"rc_b\"],PersistenceRequired:1b}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "summon minecraft:wither 8 -58 8 {Tags:[\"rc_w\"],NoAI:1b,PersistenceRequired:1b,CustomName:'\"SmokeWither\"'}" "summon minecraft:ender_dragon 20 -40 20 {Tags:[\"rc_d\"],NoAI:1b}" "respectcraft finishers @e[tag=rc_a,limit=1]" "respectcraft finishers @e[tag=rc_w,limit=1]" "respectcraft finishers @e[tag=rc_d,limit=1]" "summon minecraft:iron_golem 4 -60 8 {Tags:[\"rc_g\"],NoAI:1b,PersistenceRequired:1b}" "damage @e[tag=rc_w,limit=1] 2000 minecraft:mob_attack by @e[tag=rc_g,limit=1]" "kill @e[tag=rc_d]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "respectcraft notice kinds" "respectcraft notice test boss_spawn" "respectcraft bounty list" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "calamidade status" "tupini selftest"; do
+  for cmd in "time set midnight" "summon minecraft:zombie 0 -60 0" "summon minecraft:zombie 0 -60 0 {Tags:[\"rc_a\"],PersistenceRequired:1b}" "summon minecraft:zombie 2 -60 0 {Tags:[\"rc_b\"],PersistenceRequired:1b}" "respectcraft admin finisher @e[tag=rc_a,limit=1] @e[tag=rc_b,limit=1]" "summon minecraft:wither 8 -58 8 {Tags:[\"rc_w\"],NoAI:1b,PersistenceRequired:1b,CustomName:'\"SmokeWither\"'}" "summon minecraft:ender_dragon 20 -40 20 {Tags:[\"rc_d\"],NoAI:1b}" "respectcraft finishers @e[tag=rc_a,limit=1]" "respectcraft finishers @e[tag=rc_w,limit=1]" "respectcraft finishers @e[tag=rc_d,limit=1]" "summon minecraft:iron_golem 4 -60 8 {Tags:[\"rc_g\"],NoAI:1b,PersistenceRequired:1b}" "damage @e[tag=rc_w,limit=1] 2000 minecraft:mob_attack by @e[tag=rc_g,limit=1]" "kill @e[tag=rc_d]" "respectcraft anim list" "respectcraft selftest" "respectcraft skills list" "respectcraft finishers" "respectcraft speciality odds" "respectcraft realm check 2" "respectcraft notice kinds" "respectcraft notice test boss_spawn" "respectcraft bounty list" "summon respectcraft:agua_viva_filhote 6 -55 6" "summon respectcraft:agua_viva 12 -50 12" "kill @e[type=respectcraft:agua_viva_filhote]" "summon respectcraft:dev_rig_mannequin_a -4 -60 4 {Tags:[\"rc_ma\"]}" "summon respectcraft:dev_rig_mannequin_b -6 -60 4 {Tags:[\"rc_mb\"]}" "respectcraft rig list" "respectcraft rig inspect @e[tag=rc_mb,limit=1]" "respectcraft rig inspect @e[tag=rc_a,limit=1]" "respectcraft rig clips @e[tag=rc_ma,limit=1]" "respectcraft rig clips @e[tag=rc_mb,limit=1]" "respectcraft rig clips @e[tag=rc_a,limit=1]" "respectcraft rig part @e[tag=rc_mb,limit=1] shell hide" "respectcraft rig part @e[tag=rc_mb,limit=1] reset" "respectcraft rig part @e[tag=rc_ma,limit=1] shell_missing hide" "respectcraft rig check @e[tag=rc_a,limit=1] @e[tag=rc_mb,limit=1]" "kill @e[tag=rc_ma]" "kill @e[tag=rc_mb]" "calamidade status" "tupini selftest"; do
     echo "$cmd" >&3; sleep 5
   done
   echo "stop" >&3
@@ -87,6 +87,25 @@ grep -q 'Inverted Realm ready: arrival .* biome respectcraft:twisted_wilds, fixe
   || fail "dimensão Inverted Realm não carregou/gerou terreno"
 grep -qE 'Summoned new (Baby Jellyfish|entity\.respectcraft\.agua_viva_filhote)' "$log" || fail "Baby Jellyfish não foi invocada"
 grep -qE 'Summoned new (Giant Jellyfish|entity\.respectcraft\.agua_viva\b)' "$log" || fail "Giant Jellyfish não foi invocada"
+# Etapa 4.12: Custom Rig Framework (familia de referencia, manequins de teste, resolucao de clips, partes).
+grep -q 'RespectCraft custom rigs: 1 rig(s), 2 bound entity type(s)' "$log" || fail "familias de rig não carregaram"
+grep -q 'respectcraft:fruit_humanoid_v1 v1: 25 bones (16 required), 9 sockets, 2 parts, 3 shared animations' "$log" \
+  || fail "/respectcraft rig list não mostrou a família de referência"
+grep -q 'Rig of respectcraft:dev_rig_mannequin_b: respectcraft:fruit_humanoid_v1 v1' "$log" || fail "manequim B sem rig"
+grep -q 'Rig of minecraft:zombie: none' "$log" || fail "zumbi deveria ficar sem rig"
+grep -q 'respectcraft:takedown VICTIM: BINDING main/animation.dev_rig_mannequin_a.takedown_victim' "$log" \
+  || fail "override do manequim A não foi resolvido"
+grep -q 'respectcraft:takedown VICTIM: FAMILY main/animation.fruit_humanoid_v1.finisher.takedown_victim' "$log" \
+  || fail "clip da família não foi resolvido para o manequim B"
+[ "$(grep -c 'respectcraft:dev/rig_peel_demo VICTIM: FAMILY main/animation.fruit_humanoid_v1.finisher.demo_peel' "$log")" -ge 2 ] \
+  || fail "os dois manequins não compartilham a animação da família"
+grep -q 'respectcraft:dev/rig_peel_demo VICTIM: REFUSED (victim: minecraft:zombie has no custom rig' "$log" \
+  || fail "cena de rig não recusou o zumbi"
+grep -q 'respectcraft:takedown VICTIM: HOLD hold 60t' "$log" || fail "zumbi não ficou parado no Takedown (retrocompatibilidade)"
+grep -q 'Rig parts of respectcraft:dev_rig_mannequin_b: {shell=false}' "$log" || fail "parte do manequim B não foi escondida"
+grep -q 'Rig parts of respectcraft:dev_rig_mannequin_b: {}' "$log" || fail "partes do manequim B não voltaram ao padrão"
+grep -q 'No rig or no such part on respectcraft:dev_rig_mannequin_a' "$log" || fail "parte inexistente não foi recusada"
+grep -q 'a finisher needs a player participant' "$log" || fail "rig check mob x mob não recusou"
 # Etapa 4.10: Calamidade_Awakening da versao de gradle.properties (hoje 0.14.0) carregado no servidor dedicado, efeitos das
 # finalizacoes registrados no lado comum e nenhuma instancia ativa sem sessao (a recusa mob x mob acima nao comeca efeito
 # nenhum). O zero e conferido qualquer que seja o limite exibido depois da barra (64 hoje; pode mudar entre versoes).

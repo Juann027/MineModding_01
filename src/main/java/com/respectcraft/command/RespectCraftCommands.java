@@ -120,7 +120,9 @@ public final class RespectCraftCommands {
                 .then(com.respectcraft.dimension.InvertedRealmCommands.node())
                 // Etapa 4.11: avisos holograficos (teste) e caca a recompensa.
                 .then(com.respectcraft.notice.NoticeCommands.node())
-                .then(com.respectcraft.bounty.BountyCommands.node()));
+                .then(com.respectcraft.bounty.BountyCommands.node())
+                // Etapa 4.12: diagnostico do Custom Rig Framework.
+                .then(com.respectcraft.rig.RigCommands.node()));
     }
 
     private static int profile(CommandContext<CommandSourceStack> c, ServerPlayer player) {

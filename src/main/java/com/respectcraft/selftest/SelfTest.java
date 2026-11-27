@@ -67,6 +67,7 @@ public final class SelfTest {
             holoGeometry(f);
             notices(f);
             bounties(f);
+            RigSelfTest.run(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }

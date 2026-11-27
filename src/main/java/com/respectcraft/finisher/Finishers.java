@@ -70,7 +70,11 @@ public final class Finishers {
                     new CameraTrack.Key(60, 20, 4.2, 2.3, 0.4, 1.0, 0)),
             null, 3).withFx(new FinisherFxDef(RespectCraft.id("finisher_fx/takedown_scene"),
                     FinisherFxDef.Look.TAKEDOWN_FOCUS, FinisherFxDef.Tier.SUBTLE,
-                    FinisherFxDef.Orientation.ARRIVING_FROM_ATTACKER)));
+                    FinisherFxDef.Orientation.ARRIVING_FROM_ATTACKER))
+            // Etapa 4.12: vitima da familia humanoide de referencia reage com a animacao compartilhada da familia
+            // (override por entidade no RigBinding). Nenhuma entidade de gameplay usa a familia ainda.
+            .withRigClip(new FinisherRigs.Clip(RespectCraft.id("fruit_humanoid_v1"), FinisherRole.VICTIM,
+                    "finisher.takedown_victim")));
 
     public static final FinisherDef RASTEIRA = register(new FinisherDef(RASTEIRA_ID,
             PlayerAnimations.register(PlayerAnimationDef
@@ -187,10 +191,21 @@ public final class Finishers {
     public static Optional<FinisherDef> pickFor(Collection<FinisherDef> catalog, FinisherParticipants.Kind victimKind,
                                                 ResourceLocation victimType, Predicate<ResourceLocation> hasSkill,
                                                 RandomGenerator random) {
+        return pickFor(catalog, victimKind, victimType, hasSkill, random, def -> true);
+    }
+
+    /**
+     * Igual, com um filtro extra (Etapa 4.12: {@code FinisherEligibility} — requisitos e clips de rig dos dois lados),
+     * para o sorteio nunca escolher uma cena que seria recusada.
+     */
+    public static Optional<FinisherDef> pickFor(Collection<FinisherDef> catalog, FinisherParticipants.Kind victimKind,
+                                                ResourceLocation victimType, Predicate<ResourceLocation> hasSkill,
+                                                RandomGenerator random, Predicate<FinisherDef> supported) {
         List<FinisherDef> options = new ArrayList<>();
         int total = 0;
         for (FinisherDef def : catalog) {
             if (!def.targeting().check(victimKind, victimType).eligible()) continue;
+            if (!supported.test(def)) continue;
             if (def.requiresSkill() == null || hasSkill.test(def.requiresSkill())) {
                 options.add(def);
                 total += def.weight();

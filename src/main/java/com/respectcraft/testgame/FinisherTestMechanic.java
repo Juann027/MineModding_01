@@ -9,6 +9,11 @@ import com.respectcraft.boss.BossExecutionCheckEvent;
 import com.respectcraft.boss.BossProfile;
 import com.respectcraft.boss.Bosses;
 import com.respectcraft.finisher.FinisherDef;
+import com.respectcraft.finisher.FinisherEligibility;
+import com.respectcraft.rig.CustomRigRegistry;
+import com.respectcraft.rig.RigBinding;
+import com.respectcraft.rig.RigSockets;
+import com.respectcraft.rig.RigVisuals;
 import com.respectcraft.finisher.FinisherExecution;
 import com.respectcraft.finisher.FinisherParticipants;
 import com.respectcraft.finisher.FinisherRole;
@@ -95,6 +100,11 @@ public final class FinisherTestMechanic {
         long lastProcessed = Long.MIN_VALUE;
         /** Efeitos do Calamidade desta sessao (null = finalizacao sem fx). */
         FinisherFx.Scene fx;
+        /** Etapa 4.12: partes de rig antes da cena (restauradas em qualquer fim) e eventos rig: dos clips. */
+        final Map<String, Boolean> attackerParts;
+        final Map<String, Boolean> targetParts;
+        final java.util.List<PartEvent> partEvents = new java.util.ArrayList<>();
+        int partCursor;
 
         Session(LivingEntity attacker, LivingEntity target, FinisherDef finisher, FinisherParticipants.Interaction interaction,
                 FinisherParticipants.Clip attackerClip, FinisherParticipants.Clip targetClip,
@@ -111,8 +121,13 @@ public final class FinisherTestMechanic {
             this.targetYaw = targetYaw;
             this.finishAt = finishAt;
             this.startedAt = finishAt - finisher.durationTicks();
+            this.attackerParts = RigVisuals.snapshot(attacker);
+            this.targetParts = RigVisuals.snapshot(target);
         }
     }
+
+    /** Instrucao {@code rig:} de um clip de rig, no tick da cena. */
+    private record PartEvent(LivingEntity entity, int tick, String instruction) {}
 
     private static final Map<UUID, Invite> PENDING = new HashMap<>();
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
@@ -333,6 +348,21 @@ public final class FinisherTestMechanic {
         return check.getDenial().orElse(null);
     }
 
+    /**
+     * Etapa 4.12: a mesma consulta de {@link #start} sem tocar no mundo nem nas travas de sessao/cooldown — combinacao
+     * com jogador, regra de chefes (ficha e condicoes), PvP, clips e requisitos de rig. E o ponto unico para o futuro
+     * seletor de finalizacoes e para o diagnostico {@code /respectcraft rig check}.
+     */
+    public static StartResult check(LivingEntity attacker, LivingEntity target, FinisherDef finisher) {
+        if (FinisherParticipants.interaction(FinisherParticipants.kindOf(attacker), FinisherParticipants.kindOf(target)).isEmpty()) {
+            return StartResult.refused("Could not start: a finisher needs a player participant.");
+        }
+        StartResult refused = eligibility(attacker, target, finisher);
+        if (refused != null) return refused;
+        FinisherEligibility.Verdict verdict = FinisherEligibility.evaluate(finisher, attacker, target);
+        return verdict.eligible() ? new StartResult(true, "Eligible.") : StartResult.refused("Could not start: " + verdict.problem() + ".");
+    }
+
     private static StartResult start(LivingEntity attacker, LivingEntity target, FinisherDef chosen, boolean force) {
         // Primeiro: sem jogador nao ha sessao (ela so avanca no tick do jogador), seja qual for a distancia.
         Optional<FinisherParticipants.Interaction> interaction = FinisherParticipants.interaction(
@@ -345,9 +375,11 @@ public final class FinisherTestMechanic {
         // Etapa 4.10.1: a finalizacao e escolhida ANTES das travas, entre as que podem executar este alvo (chefe sem
         // exclusiva liberada = nenhuma), e a regra de alvos/PvP recusa antes de qualquer palco, animacao ou trava.
         FinisherDef finisher = chosen != null ? chosen : attacker instanceof ServerPlayer player
-                ? Finishers.pickFor(FinisherParticipants.kindOf(target), FinisherParticipants.typeId(target),
+                ? Finishers.pickFor(Finishers.all(), FinisherParticipants.kindOf(target), FinisherParticipants.typeId(target),
                         skill -> ProfileService.get(player).hasSkill(skill.toString()),
-                        com.respectcraft.profile.BirthRoulette.newRandom()).orElse(null)
+                        com.respectcraft.profile.BirthRoulette.newRandom(),
+                        // Etapa 4.12: so sorteia o que os rigs dos dois lados suportam (requisitos, clips).
+                        def -> FinisherEligibility.evaluate(def, attacker, target).eligible()).orElse(null)
                 : Finishers.TAKEDOWN;
         StartResult refused = eligibility(attacker, target, finisher);
         if (refused != null) return refused;
@@ -361,7 +393,7 @@ public final class FinisherTestMechanic {
         if (!attackerRes.valid() || !targetRes.valid()) {
             RespectCraft.LOGGER.warn("Finisher {} refused: {}", finisher.id(),
                     attackerRes.valid() ? targetRes.problem() : attackerRes.problem());
-            return StartResult.refused("Could not start: invalid rig for this finisher.");
+            return StartResult.refused("Could not start: " + (attackerRes.valid() ? targetRes.problem() : attackerRes.problem()) + ".");
         }
         FinisherParticipants.Clip attackerClip = attackerRes.clip().get();
         FinisherParticipants.Clip targetClip = targetRes.clip().get();
@@ -403,6 +435,9 @@ public final class FinisherTestMechanic {
         // Rigs GeckoLib proprios: mesmo tick do servidor que os jogadores (o GeckoLib sincroniza com quem ve).
         triggerEntityClip(attacker, attackerClip);
         triggerEntityClip(target, targetClip);
+        // Etapa 4.12: instrucoes rig: (partes) dos clips de rig, agendadas pelo relogio da sessao.
+        schedulePartEvents(session, attacker, attackerClip);
+        schedulePartEvents(session, target, targetClip);
         sendVisual(session, true);
         // Calamidade: efeito HERO da cena no ponto da cena (o mesmo dos parametros da animacao) e, contra chefe,
         // a atmosfera. Comeca no mesmo tick dos clips; golpes e quedas saem nos marcadores (onPlayerTick).
@@ -413,6 +448,43 @@ public final class FinisherTestMechanic {
         if (attacker instanceof ServerPlayer p) message(p, "Test finisher started. /stopitstopnow cancels.");
         if (target instanceof ServerPlayer p) message(p, "Test started. Press Shift or /stopitstopnow to cancel.");
         return StartResult.STARTED;
+    }
+
+    private static void schedulePartEvents(Session session, LivingEntity entity, FinisherParticipants.Clip clip) {
+        if (!(clip instanceof FinisherParticipants.EntityClip e)) return;
+        Optional<RigBinding> binding = RigVisuals.binding(entity);
+        if (binding.isEmpty()) return;
+        String animation = e.clip().animation();
+        for (var i : RigVisuals.partEvents(CustomRigRegistry.GLOBAL.animationFile(binding.get(), animation), animation)) {
+            session.partEvents.add(new PartEvent(entity, i.tick(), i.text()));
+        }
+        session.partEvents.sort(java.util.Comparator.comparingInt(PartEvent::tick));
+    }
+
+    /** Eventos rig: que chegaram no tick da cena. */
+    private static void tickPartEvents(Session s, int elapsed) {
+        while (s.partCursor < s.partEvents.size() && s.partEvents.get(s.partCursor).tick() <= elapsed) {
+            PartEvent event = s.partEvents.get(s.partCursor++);
+            RigVisuals.apply(event.entity(), event.instruction());
+        }
+    }
+
+    /**
+     * Etapa 4.12: quem comeca a ver um participante de rig no meio da cena recebe o gatilho do clip (o GeckoLib so
+     * manda o {@code triggerAnim} para quem ja via; sem isto o observador tardio veria a entidade parada). O clip comeca
+     * do inicio para ele (o GeckoLib nao aceita deslocamento) e para no fim da cena junto com os outros.
+     */
+    public static void onStartTracking(PlayerEvent.StartTracking event) {
+        if (!(event.getEntity() instanceof ServerPlayer viewer) || !(event.getTarget() instanceof LivingEntity entity)) return;
+        Session s = SESSIONS.get(entity.getUUID());
+        if (s == null) return;
+        FinisherParticipants.Clip clip = s.attacker == entity ? s.attackerClip : s.targetClip;
+        if (clip instanceof FinisherParticipants.EntityClip e) {
+            RespectCraft.LOGGER.info("Finisher {}: late viewer {} receives {} on {}", s.finisher.id(),
+                    viewer.getGameProfile().getName(), e.clip().animation(), FinisherParticipants.typeId(entity));
+            PacketDistributor.sendToPlayer(viewer, new software.bernie.geckolib.network.packet.EntityAnimTriggerPacket(
+                    entity.getId(), false, e.clip().controller(), e.clip().animation()));
+        }
     }
 
     private static void triggerEntityClip(LivingEntity entity, FinisherParticipants.Clip clip) {
@@ -477,6 +549,9 @@ public final class FinisherTestMechanic {
             level.sendParticles(ParticleTypes.EXPLOSION, target.getX(), target.getY() + 0.3, target.getZ(), 1, 0, 0, 0, 0);
             level.sendParticles(ParticleTypes.CLOUD, target.getX(), target.getY() + 0.1, target.getZ(), 20, 0.6, 0.05, 0.6, 0.05);
         }
+        // Etapa 4.12: alvo com rig customizada mostra o golpe no socket impact_point (pose de repouso; so visual).
+        RigSockets.restWorld(target, "impact_point").ifPresent(p ->
+                level.sendParticles(ParticleTypes.CRIT, p.x, p.y, p.z, 6 * strength, 0.08, 0.08, 0.08, 0.25));
         level.playSound(null, target.blockPosition(), strength >= 2 ? ModSounds.FINISHER_IMPACT_HEAVY.get()
                 : ModSounds.FINISHER_IMPACT.get(), SoundSource.PLAYERS, 1F, 0.9F + level.random.nextFloat() * 0.2F);
         if (strength >= 3) level.playSound(null, target.blockPosition(), ModSounds.FINISHER_STING.get(), SoundSource.PLAYERS, 0.7F, 1F);
@@ -528,6 +603,9 @@ public final class FinisherTestMechanic {
         SESSIONS.remove(s.target.getUUID());
         stopEntityClip(s.attacker, s.attackerClip);
         stopEntityClip(s.target, s.targetClip);
+        // Etapa 4.12: nenhuma cena deixa partes de rig trocadas (concluida, cancelada ou golpe recusado).
+        RigVisuals.restore(s.attacker, s.attackerParts);
+        RigVisuals.restore(s.target, s.targetParts);
         sendVisual(s, false);
     }
 
@@ -644,6 +722,7 @@ public final class FinisherTestMechanic {
             return;
         }
         FinisherFx.tick(s.fx, (int) (now - s.startedAt));
+        tickPartEvents(s, (int) (now - s.startedAt));
         hold(s.attacker, s.attackerAnchor, s.attackerYaw);
         hold(s.target, s.targetAnchor, s.targetYaw);
     }

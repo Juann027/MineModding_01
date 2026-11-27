@@ -64,6 +64,11 @@ public final class RespectCraft {
         ModSounds.SOUNDS.register(modBus);
         PlayerAnimations.bootstrap();
         Finishers.bootstrap();
+        // Etapa 4.12: familias de rig e entidades associadas (manifestos do jar, os dois lados).
+        com.respectcraft.rig.Rigs.bootstrap();
+        modBus.addListener(com.respectcraft.network.RigNetworking::register);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.rig.RigVisuals::onStartTracking);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.testgame.FinisherTestMechanic::onStartTracking);
         // Etapa 4.10: efeitos das finalizacoes no Calamidade_Awakening (lado comum: o servidor tambem os conhece).
         com.respectcraft.fx.FinisherFx.register();
         NeoForge.EVENT_BUS.addListener(com.respectcraft.fx.GeoFxKeyframes::onEntityTick);

@@ -66,3 +66,7 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   Nunca diga que compilou ou testou sem rodar os comandos.
 - **Entrega:** branch própria, PR para a `main`, merge só com CI verde (fluxo completo no `CLAUDE.md`).
 - **Roadmap:** funcionalidades futuras em [`docs/ROADMAP.md`](docs/ROADMAP.md) — só registro, não implemente sem pedido.
+- **Rigs customizadas (Etapa 4.12):** pacote `rig` (famílias por manifesto `.rig.json`, bindings por entidade,
+  `CustomRigRegistry`, `RigVisuals` para partes, `RigSockets`), `FinisherRigs`/`FinisherEligibility` no Finisher Engine,
+  renderer genérico `client.rig`, fixtures `dev_rig_mannequin_a/b`, comando `/respectcraft rig`. Kit externo em
+  `rigkit/` (template `.bbmodel`, contrato, prompt) e ferramentas em `tools/rigkit/` (gerador, validador, testes, ZIP).

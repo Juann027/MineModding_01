@@ -5,6 +5,11 @@ import com.respectcraft.animation.PlayerAnimations;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
+import com.respectcraft.rig.CustomRigRegistry;
+import com.respectcraft.rig.RigBinding;
+import com.respectcraft.rig.RigDefinition;
 import com.respectcraft.RespectCraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -92,10 +97,16 @@ public final class FinisherParticipants {
     /** Entidade sem clip para esta finalizacao: fica parada no palco com as animacoes normais dela. */
     public record Hold(int durationTicks) implements Clip {}
 
+    /**
+     * De onde veio o clip (Etapa 4.12, diagnostico): rig do jogador, clip explicito da finalizacao para o tipo,
+     * override do {@code RigBinding} da entidade, clip da familia de rig, ou parado.
+     */
+    public enum Source { PLAYER, ENTITY, BINDING, FAMILY, HOLD }
+
     /** Resultado da resolucao: um clip ou o motivo da recusa (nunca os dois). */
-    public record Resolution(Optional<Clip> clip, String problem) {
-        static Resolution ok(Clip clip) { return new Resolution(Optional.of(clip), null); }
-        static Resolution fail(String problem) { return new Resolution(Optional.empty(), problem); }
+    public record Resolution(Optional<Clip> clip, String problem, Source source) {
+        static Resolution ok(Clip clip, Source source) { return new Resolution(Optional.of(clip), null, source); }
+        static Resolution fail(String problem) { return new Resolution(Optional.empty(), problem, null); }
         public boolean valid() { return clip.isPresent(); }
     }
 
@@ -114,25 +125,81 @@ public final class FinisherParticipants {
     }
 
     /**
-     * Clip de um participante.
+     * Clip de um participante (catalogo global de rigs, sem tags).
      *
      * @param entityType tipo da entidade (ignorado para jogador)
      * @param geckoRig   a entidade implementa {@link GeoEntity} (pode receber {@code triggerAnim})
      */
     public static Resolution resolve(FinisherDef def, FinisherRole role, Kind kind, ResourceLocation entityType, boolean geckoRig) {
+        return resolve(CustomRigRegistry.GLOBAL, def, role, kind, entityType, geckoRig, tag -> false);
+    }
+
+    /**
+     * Clip de um participante (Etapa 4.12), regra pura. Ordem: jogador → rig do jogador; entidade → clip explicito da
+     * finalizacao para o tipo ({@code entityClips}) → override do {@code RigBinding} → clip da familia de rig →
+     * parado. Depois, os requisitos do papel ({@link FinisherRigs.Requirement}); um requisito {@code requiresClip}
+     * recusa o parado. Nada aqui toca no mundo: a recusa acontece antes de palco, animacao ou efeito.
+     */
+    public static Resolution resolve(CustomRigRegistry registry, FinisherDef def, FinisherRole role, Kind kind,
+                                     ResourceLocation entityType, boolean geckoRig, Predicate<ResourceLocation> hasTag) {
         if (kind == Kind.PLAYER) {
             PlayerAnimationDef clip = def.playerClip(role);
             if (PlayerAnimations.get(clip.id()) != clip) {
                 return Resolution.fail("player clip " + clip.id() + " of " + def.id() + " is not registered");
             }
-            return Resolution.ok(new PlayerClip(clip));
+            Optional<String> denied = requirements(def, role, FinisherRigs.Requirement.PLAYER_TYPE, hasTag, null, Set.of(), true);
+            return denied.isPresent() ? Resolution.fail(denied.get()) : Resolution.ok(new PlayerClip(clip), Source.PLAYER);
         }
-        Optional<EntityFinisherClip> clip = def.entityClip(entityType, role);
-        if (clip.isEmpty()) return Resolution.ok(new Hold(def.durationTicks()));
-        if (!geckoRig) {
+        Optional<RigBinding> binding = registry.binding(entityType);
+        Resolution res = entityClip(registry, def, role, entityType, binding);
+        if (res.valid() && res.clip().get() instanceof EntityClip && !geckoRig) {
             return Resolution.fail(entityType + " has a clip in " + def.id() + " but no GeckoLib rig (GeoEntity)");
         }
-        return Resolution.ok(new EntityClip(clip.get()));
+        if (!res.valid()) return res;
+        Optional<String> denied = requirements(def, role, entityType, hasTag, binding.map(RigBinding::rig).orElse(null),
+                binding.map(registry::capabilities).orElse(Set.of()), !(res.clip().get() instanceof Hold));
+        return denied.isPresent() ? Resolution.fail(denied.get()) : res;
+    }
+
+    private static Resolution entityClip(CustomRigRegistry registry, FinisherDef def, FinisherRole role,
+                                         ResourceLocation entityType, Optional<RigBinding> binding) {
+        Optional<EntityFinisherClip> explicit = def.entityClip(entityType, role);
+        if (explicit.isPresent()) return Resolution.ok(new EntityClip(explicit.get()), Source.ENTITY);
+        if (binding.isEmpty()) return Resolution.ok(new Hold(def.durationTicks()), Source.HOLD);
+        Optional<RigDefinition> rig = registry.rig(binding.get().rig());
+        if (rig.isEmpty()) return Resolution.fail(entityType + " is bound to unknown rig " + binding.get().rig());
+        EntityFinisherClip.Alignment alignment = binding.get().alignment() != null ? binding.get().alignment() : rig.get().alignment();
+        Optional<RigBinding.ClipOverride> override = binding.get().clipOverride(def.id(), role);
+        if (override.isPresent()) {
+            if (override.get().ticks() != def.durationTicks()) {
+                return Resolution.fail("override " + override.get().animation() + " of " + entityType + " has " + override.get().ticks()
+                        + " ticks; " + def.id() + " has " + def.durationTicks());
+            }
+            return Resolution.ok(new EntityClip(new EntityFinisherClip(entityType, role, rig.get().controller(),
+                    override.get().animation(), override.get().ticks(), alignment)), Source.BINDING);
+        }
+        Optional<FinisherRigs.Clip> family = def.rigs().clip(rig.get().id(), role);
+        if (family.isPresent()) {
+            RigDefinition.SharedAnimation shared = rig.get().animations().get(family.get().key());
+            if (shared == null) return Resolution.fail("rig " + rig.get().id() + " has no shared animation " + family.get().key());
+            if (shared.ticks() != def.durationTicks()) {
+                return Resolution.fail("shared animation " + family.get().key() + " of " + rig.get().id() + " has " + shared.ticks()
+                        + " ticks; " + def.id() + " has " + def.durationTicks());
+            }
+            return Resolution.ok(new EntityClip(new EntityFinisherClip(entityType, role, rig.get().controller(),
+                    rig.get().animationName(shared.key()), shared.ticks(), alignment)), Source.FAMILY);
+        }
+        return Resolution.ok(new Hold(def.durationTicks()), Source.HOLD);
+    }
+
+    private static Optional<String> requirements(FinisherDef def, FinisherRole role, ResourceLocation type,
+                                                 Predicate<ResourceLocation> hasTag, ResourceLocation rig,
+                                                 Set<ResourceLocation> caps, boolean animated) {
+        for (FinisherRigs.Requirement r : def.rigs().requirements(role)) {
+            Optional<String> problem = r.check(type, hasTag, rig, caps, animated);
+            if (problem.isPresent()) return Optional.of(role.name().toLowerCase(java.util.Locale.ROOT) + ": " + problem.get());
+        }
+        return Optional.empty();
     }
 
     /**
@@ -145,7 +212,22 @@ public final class FinisherParticipants {
         if (victim instanceof EntityClip e) return e.clip().alignment();
         if (!(attacker instanceof PlayerClip) && STAGING.containsKey(attackerType)) return STAGING.get(attackerType);
         if (!(victim instanceof PlayerClip) && STAGING.containsKey(victimType)) return STAGING.get(victimType);
+        // Etapa 4.12: entidade parada associada a uma familia de rig usa o palco do binding (ou da familia).
+        if (!(attacker instanceof PlayerClip)) {
+            Optional<EntityFinisherClip.Alignment> a = rigAlignment(attackerType);
+            if (a.isPresent()) return a.get();
+        }
+        if (!(victim instanceof PlayerClip)) {
+            Optional<EntityFinisherClip.Alignment> a = rigAlignment(victimType);
+            if (a.isPresent()) return a.get();
+        }
         return EntityFinisherClip.Alignment.AUTO;
+    }
+
+    private static Optional<EntityFinisherClip.Alignment> rigAlignment(ResourceLocation type) {
+        return CustomRigRegistry.GLOBAL.binding(type).map(b -> b.alignment() != null ? b.alignment()
+                : CustomRigRegistry.GLOBAL.rig(b.rig()).map(RigDefinition::alignment).orElse(EntityFinisherClip.Alignment.AUTO))
+                .filter(a -> a != EntityFinisherClip.Alignment.AUTO);
     }
 
     /**
@@ -193,6 +275,8 @@ public final class FinisherParticipants {
     }
 
     public static Resolution resolve(FinisherDef def, FinisherRole role, LivingEntity entity) {
-        return resolve(def, role, kindOf(entity), typeId(entity), entity instanceof GeoEntity);
+        EntityType<?> type = entity.getType();
+        return resolve(CustomRigRegistry.GLOBAL, def, role, kindOf(entity), typeId(entity), entity instanceof GeoEntity,
+                tag -> type.is(TagKey.create(Registries.ENTITY_TYPE, tag)));
     }
 }
