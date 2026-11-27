@@ -293,14 +293,15 @@ def check_texture(desc, bones, texture, rep):
 
 # ------------------------------------------------------------------------------------------------ animacoes
 
-def check_animations(c, anim, bones, rep, where, shared=False, expected_names=None):
+def check_animations(c, anim, bones, rep, where, shared=False, expected_names=None, extra_parts=()):
     if not isinstance(anim, dict) or not isinstance(anim.get("animations"), dict):
         rep.add("ERROR", where, "missing 'animations' object (export with GeckoLib: Export Animations)")
         return {}
     prefix = c.get("animation_prefix", "")
     shared_bones = set(c.get("shared_animation_bones", []))
     contract = {b["name"] for b in c["bones"]}
-    parts = {p["name"] for p in c.get("parts", [])}
+    # partes do contrato + as declaradas pelo binding (Etapa 4.13.3: clips proprios da entidade usam as do binding)
+    parts = {p["name"] for p in c.get("parts", [])} | set(extra_parts)
     lengths = {}
     if not shared and prefix:
         dup = [n for n in anim["animations"] if n.startswith(prefix)]
@@ -506,7 +507,8 @@ def validate(rig, geo=None, texture=None, anims=(), bbmodel=None, binding=None, 
     for a in anims:
         data = read_json(a, rep, "animations")
         if data is not None:
-            lengths.update(check_animations(c, data, bones, rep, f"anim:{pathlib.Path(a).name}"))
+            lengths.update(check_animations(c, data, bones, rep, f"anim:{pathlib.Path(a).name}",
+                                            extra_parts=[p.get("name") for p in (b or {}).get("parts", [])]))
     if b is not None:
         check_override_clips(b, lengths, rep)
         fam = resolve(c.get("animation_file"), assets_root, pathlib.Path(binding).parent)
