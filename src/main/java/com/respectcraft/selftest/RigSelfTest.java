@@ -62,8 +62,8 @@ final class RigSelfTest {
                 && rig.sockets().size() == 9 && rig.parts().size() == 2 && rig.controller().equals("main"),
                 "familia de referencia carregada do manifesto do jar (25 bones, 16 obrigatorios, 9 sockets, 2 partes)");
         if (rig == null) return;
-        check(f, g.bindingsOf(FAMILY).size() == 2 && g.binding(A).isPresent() && g.binding(B).isPresent(),
-                "dois manequins associados a mesma familia");
+        check(f, g.bindingsOf(FAMILY).size() == 3 && g.binding(A).isPresent() && g.binding(B).isPresent()
+                && g.binding(Rigs.STRAWBERRY_ID).isPresent(), "dois manequins e o morango associados a mesma familia");
         check(f, g.binding(ZOMBIE).isEmpty(), "mob vanilla sem binding");
         for (FinisherDef def : Finishers.all()) check(f, Rigs.clipProblems(g, def).isEmpty(), "clips de rig em dia: " + def.id());
         check(f, Rigs.clipProblems(g, Rigs.PEEL_DEMO).isEmpty() && Finishers.get(Rigs.PEEL_DEMO.id()) == null,
@@ -74,6 +74,7 @@ final class RigSelfTest {
         requirements(f);
         sockets(f, rig);
         parts(f);
+        strawberry(f);
     }
 
     private static void registry(List<String> f, RigDefinition rig) {
@@ -255,5 +256,95 @@ final class RigSelfTest {
         check(f, events.size() == 2 && events.stream().allMatch(i -> i.tick() == 22)
                 && events.stream().map(GeoFxKeyframes.Instruction::text).toList().containsAll(List.of("rig:hide:shell", "rig:show:core")),
                 "eventos de parte lidos do timeline da animacao compartilhada (tick 22)");
+    }
+
+    // ---- Etapa 4.13.1: morango (assets externos, binding oficial do artista) ----
+
+    /** Aplica instrucoes {@code rig:} a um estado (mesma semantica de {@link RigVisuals#set}/{@code reset}). */
+    private static Map<String, Boolean> play(List<RigDefinition.Part> parts, Map<String, Boolean> start, String timeline) {
+        Map<String, Boolean> state = new java.util.HashMap<>(start);
+        for (String raw : timeline.split(";")) {
+            if (raw.isBlank()) continue;
+            var ins = RigVisuals.parse(raw).orElseThrow(() -> new IllegalArgumentException("bad instruction " + raw));
+            if (ins.reset()) { state.clear(); continue; }
+            var part = parts.stream().filter(p -> p.name().equals(ins.part())).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("unknown part " + ins.part()));
+            if (ins.visible() == part.defaultVisible()) state.remove(part.name()); else state.put(part.name(), ins.visible());
+        }
+        return state;
+    }
+
+    private static boolean shown(List<RigDefinition.Part> parts, Map<String, Boolean> state, String name) {
+        return parts.stream().filter(p -> p.name().equals(name)).findFirst().map(p -> RigVisuals.visible(p, state)).orElse(false);
+    }
+
+    /** Rosto coerente: rosto normal XOR variantes; no maximo um olho, uma boca; variante sempre com olho+sobrancelha+boca. */
+    private static boolean faceCoherent(List<RigDefinition.Part> parts, Map<String, Boolean> s) {
+        boolean normal = shown(parts, s, "face_normal");
+        int eyes = (shown(parts, s, "eyes_wide") ? 1 : 0) + (shown(parts, s, "eyes_closed") ? 1 : 0);
+        int mouths = (shown(parts, s, "mouth_open") ? 1 : 0) + (shown(parts, s, "mouth_scream") ? 1 : 0);
+        boolean brows = shown(parts, s, "brows_panic");
+        if (normal) return eyes == 0 && mouths == 0 && !brows;
+        return eyes == 1 && mouths == 1 && brows;
+    }
+
+    /** Estados de expressao do {@code strawberry_visual_states.md} (convencao das cenas; nao e campo do schema). */
+    static final Map<String, String> STRAWBERRY_EXPRESSIONS = Map.of(
+            "shock", "rig:hide:face_normal;rig:show:eyes_wide;rig:show:brows_panic;rig:show:mouth_open;",
+            "scream", "rig:hide:face_normal;rig:show:eyes_wide;rig:show:brows_panic;rig:show:mouth_scream;",
+            "squeezed", "rig:hide:face_normal;rig:show:eyes_closed;rig:show:brows_panic;rig:show:mouth_scream;");
+
+    private static void strawberry(List<String> f) {
+        var reg = CustomRigRegistry.GLOBAL;
+        var bind = reg.binding(Rigs.STRAWBERRY_ID).orElse(null);
+        check(f, bind != null, "morango associado a familia");
+        if (bind == null) return;
+        var problems = CustomRigRegistry.bindingProblems(Rigs.FRUIT_HUMANOID_V1, bind);
+        check(f, problems.isEmpty(), "binding oficial do morango valido: " + problems);
+        var parts = reg.parts(bind);
+        Map<String, Boolean> none = Map.of();
+        List<String> visible = List.of("shell", "face_normal", "leaves", "stem", "top", "earrings");
+        List<String> hidden = List.of("core", "eyes_wide", "eyes_closed", "brows_panic", "mouth_open", "mouth_scream",
+                "damage_head", "damage_torso");
+        check(f, parts.size() == visible.size() + hidden.size() && visible.stream().allMatch(n -> shown(parts, none, n))
+                && hidden.stream().noneMatch(n -> shown(parts, none, n)), "morango: visibilidade padrao do binding");
+        check(f, reg.capabilities(bind).containsAll(Set.of(RigCapabilities.HANDS, RigCapabilities.INNER_CORE, RigCapabilities.DETACHABLE_PARTS)),
+                "morango: capacidades da familia + binding");
+        check(f, faceCoherent(parts, none), "morango: rosto padrao coerente");
+        for (var e : STRAWBERRY_EXPRESSIONS.entrySet()) {
+            var s = play(parts, none, e.getValue());
+            check(f, faceCoherent(parts, s) && shown(parts, s, "shell"), "morango: expressao " + e.getKey() + " sem sobreposicao");
+        }
+        // Sobreposicao detectada: variante sem esconder o rosto normal, ou dois olhos/duas bocas ao mesmo tempo.
+        check(f, !faceCoherent(parts, play(parts, none, "rig:show:eyes_wide;rig:show:brows_panic;rig:show:mouth_open;"))
+                && !faceCoherent(parts, play(parts, none, STRAWBERRY_EXPRESSIONS.get("shock") + "rig:show:eyes_closed;"))
+                && !faceCoherent(parts, play(parts, none, STRAWBERRY_EXPRESSIONS.get("shock") + "rig:show:mouth_scream;")),
+                "morango: sobreposicoes de olhos/bocas/rosto detectadas");
+        // Cena de destruicao: casca fora + panico; voltar ao rosto normal com rig:reset devolveria a casca (por isso
+        // a troca de expressao no meio da cena e explicita, por hide/show).
+        var peeled = play(parts, none, "rig:hide:shell;rig:show:core;rig:show:damage_torso;" + STRAWBERRY_EXPRESSIONS.get("scream"));
+        check(f, faceCoherent(parts, peeled) && !shown(parts, peeled, "shell") && shown(parts, peeled, "core")
+                && shown(parts, peeled, "damage_torso"), "morango: descascado + rachado + grito");
+        var viaReset = play(parts, peeled, "rig:reset;");
+        var explicit = play(parts, peeled, "rig:hide:eyes_wide;rig:hide:brows_panic;rig:hide:mouth_scream;rig:show:face_normal;");
+        check(f, shown(parts, viaReset, "shell") && !shown(parts, explicit, "shell") && shown(parts, explicit, "core")
+                && faceCoherent(parts, explicit), "morango: rig:reset restaura TUDO; troca explicita preserva a destruicao");
+        var bare = play(parts, none, "rig:hide:leaves;rig:hide:stem;rig:hide:top;rig:hide:earrings;");
+        check(f, !shown(parts, bare, "leaves") && !shown(parts, bare, "stem") && play(parts, bare, "rig:reset;").isEmpty(),
+                "morango: folhas/caule/acessorios ocultaveis e restaurados");
+        // Finalizacoes: vitima pela familia (Takedown e cena de teste), sem override proprio; nunca executor.
+        var t = res(Finishers.TAKEDOWN, FinisherRole.VICTIM, Rigs.STRAWBERRY_ID);
+        check(f, t.valid() && t.source() == Source.FAMILY && "animation.fruit_humanoid_v1.finisher.takedown_victim".equals(anim(t)),
+                "morango: Takedown pela animacao compartilhada da vitima");
+        var d = res(Rigs.PEEL_DEMO, FinisherRole.VICTIM, Rigs.STRAWBERRY_ID);
+        check(f, d.valid() && d.source() == Source.FAMILY, "morango: cena de teste demo_peel pela familia");
+        var playerP = new FinisherEligibility.Participant(Kind.PLAYER, FinisherRigs.Requirement.PLAYER_TYPE, false, NO_TAGS);
+        var sP = new FinisherEligibility.Participant(Kind.MOB, Rigs.STRAWBERRY_ID, true, NO_TAGS);
+        check(f, FinisherEligibility.evaluate(reg, Finishers.TAKEDOWN, playerP, sP).eligible()
+                && FinisherEligibility.evaluate(reg, Rigs.PEEL_DEMO, playerP, sP).eligible(),
+                "morango: vitima elegivel (Takedown e cena de teste)");
+        // Sockets sem override: pivo do contrato + deslocamento (proporcao 1).
+        check(f, bind.sockets().isEmpty() && RigSockets.local(reg, bind, "impact_point").map(v -> near(v, new Vec3(0, 18, -3))).orElse(false),
+                "morango: sockets do contrato sem override");
     }
 }

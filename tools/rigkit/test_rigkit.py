@@ -48,8 +48,8 @@ def run_geo(tmp, geo, anim=None, binding=None, texture=None, name="m"):
 def main():
     with redirect_stdout(io.StringIO()):
         reps = V.repo_reports()
-    check(len(reps) == 3 and all(r.count("ERROR") == 0 and r.count("WARN") == 0 for r in reps),
-          "repo: contrato, animacoes compartilhadas e os dois manequins sem erro nem aviso")
+    check(len(reps) == 4 and all(r.count("ERROR") == 0 and r.count("WARN") == 0 for r in reps),
+          "repo: contrato, animacoes compartilhadas, os dois manequins e o morango sem erro nem aviso")
     check(all(levels(r, "CHECK") for r in reps[1:]), "repo: o validador sempre pede inspecao visual (nunca declara compatibilidade visual)")
     check(make_assets.main(["--check"]) == 0, "gerador: template, manequins e animacoes em dia com o contrato")
     check((K.REPO / "rigkit/fruit_humanoid_v1/fruit_humanoid_v1.rig.json").read_text() == RIG.read_text(),
