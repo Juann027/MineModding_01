@@ -64,9 +64,9 @@ Para cada entidade nova da família:
    `geo/entity/<e>.geo.json`, `textures/entity/<e>.png`, `animations/entity/<e>.animation.json` (opcional).
 2. Crie o binding `rigs/entities/<e>.json` (modelo: `fruit_humanoid_v1/examples/banana.binding.example.json`):
    proporção, bones `extra_`, partes e sockets próprios, alinhamento, capacidades e `clip_overrides`.
-3. Registre o tipo de entidade em `registry.ModEntities` (classe que implementa `GeoEntity` — pode estender o padrão de
-   `entity.dev.RigMannequinEntity`: um controlador `main` com o `idle` da família e `triggerableAnim` para
-   `CustomRigRegistry.GLOBAL.triggerables(binding)`), os atributos e, no cliente, o renderer genérico:
+3. Registre o tipo de entidade em `registry.ModEntities` (estenda `entity.rig.CustomRigMob`, como `entity.fruit.StrawberryEntity`: um controlador
+   `main` com o `idle` da família e `triggerableAnim` para `CustomRigRegistry.GLOBAL.triggerables(binding)`; a subclasse
+   só define IA e atributos), os atributos e, no cliente, o renderer genérico:
    `event.registerEntityRenderer(TIPO, ctx -> new RigGeoRenderer<>(ctx, id))`.
 4. Associe a família em `rig.Rigs.bootstrap()`: `bind(RespectCraft.id("<e>"))`.
 5. Valide: `python3 tools/rigkit/validate_rig.py --repo`, `./gradlew build`, `bash .github/scripts/server-smoke-test.sh`
