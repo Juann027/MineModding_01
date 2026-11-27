@@ -46,7 +46,20 @@ Feito: `rigkit/` (README com guia de produção no Blockbench Web e de integraç
 `.bbmodel` editável com manequim, sockets e animações compartilhadas, referência exportada, exemplo de binding,
 `BBFORGE_PROMPT.md`), gerador protegido `tools/rigkit/make_assets.py`, validador `tools/rigkit/validate_rig.py`
 (ERROR/WARN/OK/CHECK), testes `tools/rigkit/test_rigkit.py` e ZIP independente (`tools/rigkit/package_kit.py`).
-Falta: abrir o template no Blockbench Web de verdade (teste manual do dono) e os modelos artísticos.
+Template aberto e testado no Blockbench Web pelo dono; primeiro modelo artístico integrado na Etapa 4.13.1
+(morango). Próximo: `strawberry.animation.json` + `.bbmodel` atualizado, produzidos externamente pelo dono.
+
+### 2.1 Ferramenta de autoria de finishers (PlayerRig + CustomRig) — **só registro, não implementar ainda**
+
+Uma **cena de referência do Blockbench** com o rig do jogador (`respectcraft_player_combat`) e um modelo de família
+(CustomRig, ex.: morango) lado a lado, na distância/alinhamento de palco da finalização, para animar os dois
+participantes juntos: ver contato, mãos nos sockets e tempos dos golpes; manter a mesma duração e os mesmos
+marcadores de evento (`EVENT_HIT`/`EVENT_FALL`, `rig:`/`calamidade:` no timeline) nos dois; e **exportar cada clip
+separadamente** para o destino de sempre — o do jogador para a biblioteca de combate (`tools/player_anim`, com a
+proteção por hash e o `bbsync.flip`) e o do mob para o `<entidade>.animation.json` (ou a família), com o
+`clip_overrides`/`FinisherRigs.Clip` correspondente — conferidos pelo `validate_rig.py` e pelo `bbsync.py`. Estende
+o que existe (`respectcraft_combo_scene.bbmodel`, `tools/player_anim`, `tools/rigkit`); não cria engine nem formato
+novo, e o jogo continua tocando um clip por participante pelo Finisher Engine.
 
 ## 3. AI Fruit Love Island Mobs
 
@@ -62,7 +75,8 @@ comportamento, áudio ligado à entidade, partes destacáveis, destruição visu
 sincronização, integração com Animation Manager, Finisher Engine e Calamidade. A família "fruta" é só **uma
 implementação registrada** no Custom Rig Framework e serve de validação prática dele. Pronto desde a 4.12: o contrato
 `respectcraft:fruit_humanoid_v1` (esqueleto, sockets, partes `shell`/`core`, animações compartilhadas de referência)
-e o kit de produção; nenhuma fruta, textura, animação artística ou finalização exclusiva existe ainda.
+e o kit de produção. Etapa 4.13.1: morango `respectcraft:strawberry` (assets do artista, vítima, sem spawn natural);
+nenhuma animação própria, outra fruta ou finalização exclusiva existe ainda.
 
 ## 4. Finisher Selection & Loadout
 
