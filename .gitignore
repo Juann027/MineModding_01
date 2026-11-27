@@ -47,3 +47,4 @@ libs/
 # Etapa 4.12: kit de rigs
 __pycache__/
 tools/rigkit/.backup/
+tools/scenekit/.backup/
