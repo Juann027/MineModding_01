@@ -1,0 +1,22 @@
+{
+  "scenekit/examples/player_vs_fruit_mannequin/player_vs_fruit_mannequin_demo.attacker.animation.json": "622fd2b74885efab52bacc03a3925cf78012451c5a4a9d34d85ebaabdb859299",
+  "scenekit/examples/player_vs_fruit_mannequin/player_vs_fruit_mannequin_demo.compiled_export.animation.json": "11bab9345a072bbeb67cc67fe27d9e9b8e97200929eaa61c6134983c862f8d17",
+  "scenekit/examples/player_vs_fruit_mannequin/player_vs_fruit_mannequin_demo.events.txt": "84fe29f9d60575113edf6124b03d71980f993cf5c88baa604cbf416fd5958aa7",
+  "scenekit/examples/player_vs_fruit_mannequin/player_vs_fruit_mannequin_demo.export_meta.json": "003c663e56dc644ee8927b4bdbd8e567bf95245d090f51a27a827d7cf899bc19",
+  "scenekit/examples/player_vs_fruit_mannequin/player_vs_fruit_mannequin_demo.validation.txt": "501e6a63647d91ff930059c01a58b9f0ad6d3ad3c2112804927c2eb97a7d4cc7",
+  "scenekit/examples/player_vs_fruit_mannequin/player_vs_fruit_mannequin_demo.victim.animation.json": "8c415a4ba223ebe08f993740ce4e481298182c4ee91165f637d43cd457b2fa47",
+  "scenekit/examples/player_vs_strawberry/player_vs_strawberry_demo.attacker.animation.json": "ddb34c08a4a4a47d826f8221492818855e3355f0bdd38872958b6244ea3c2ea0",
+  "scenekit/examples/player_vs_strawberry/player_vs_strawberry_demo.compiled_export.animation.json": "de5d046e457c1f57a8d39e3b74cefc6a2c5eb8cf79819d43e225240a6fcb102b",
+  "scenekit/examples/player_vs_strawberry/player_vs_strawberry_demo.events.txt": "60d9c260bdbcd10e05b624f0057896c3df3ce1c2bcef5b205fd4b6dfde2ca686",
+  "scenekit/examples/player_vs_strawberry/player_vs_strawberry_demo.export_meta.json": "e12088f7df2a49a2dbfc6a762448a000cc9cc9016a365bd1e671f96920155024",
+  "scenekit/examples/player_vs_strawberry/player_vs_strawberry_demo.validation.txt": "22c6b6a9e8e5943cef87634d07edb53ba2267e4bf482e82813463a110585148f",
+  "scenekit/examples/player_vs_strawberry/player_vs_strawberry_demo.victim.animation.json": "a0b1eac2d2b2fdddb7f34cdf73b1ee1dbd69bb5e4fb9f5d40fd1aed6e3031757",
+  "scenekit/scenes/dev_player_vs_mannequin_b/dev_player_vs_mannequin_b.bbmodel": "7ba8c2413ff438b2c21a0c03de3b44f73be5d19848436a4ff698c1d6428cc047",
+  "scenekit/scenes/dev_player_vs_mannequin_b/dev_player_vs_mannequin_b.scene.json": "6ffcf05008d36a8f430c564c52eebb180af3f88ebc0f3c15f9fe609b64499761",
+  "scenekit/scenes/player_vs_fruit_mannequin/respectcraft_player_vs_fruit_mannequin_template.bbmodel": "6bbc1c342ba9e1b3e51c6e35afd0cf2e990cf78af29de989e5e08a624998117f",
+  "scenekit/scenes/player_vs_fruit_mannequin/respectcraft_player_vs_fruit_mannequin_template.scene.json": "32f1c6304f26a0fa3fcb5faed54576250f3acfc430b50263548170eeed5d998f",
+  "scenekit/scenes/player_vs_strawberry/respectcraft_player_vs_strawberry_template.bbmodel": "cdb66d5eb138b0f47247fb983c2290a18d638f337c2796a648f659474530c54a",
+  "scenekit/scenes/player_vs_strawberry/respectcraft_player_vs_strawberry_template.scene.json": "2603c54194a13d167b558478e09a00456f4056a3e590bc195089b68c5b1f446d",
+  "src/main/resources/assets/respectcraft/animations/entity/dev_rig_mannequin_b.animation.json": "0694c4a9147479c7617f91b773270e0477a31c88b7d41a61ee798546ce9f57e1",
+  "src/main/resources/assets/respectcraft/animations/player/respectcraft_dev_scenes.animation.json": "cd9b0dac905c86a197300908b851841b3238448dd4908726c562a877389ee6b8"
+}

@@ -1,0 +1,32 @@
+Scene respectcraft_player_vs_strawberry_template: 60 ticks
+tick  owner     event         data -> runtime
+   0  @attacker sound         respectcraft:finisher.whoosh -> PlayerAnimations.EVENT_SOUND
+   0  @scene    camera        150,4.6,1.7,1.1,1.0,0 -> CameraTrack.Key
+  14  @attacker hit           2 -> Finishers.EVENT_HIT
+  14  @attacker shake         0.5,8 -> PlayerAnimations.EVENT_CAMERA_SHAKE
+  14  @attacker note          contact RightHandAttachment -> victim socket_impact_point -> documentation only
+  14  @scene    camera        75,3.0,1.2,1.0,0.95,-2 -> CameraTrack.Key
+  15  @victim   instruction   rig:hide:face_normal -> keyframe timeline (rig)
+  15  @victim   instruction   rig:show:eyes_wide -> keyframe timeline (rig)
+  15  @victim   instruction   rig:show:brows_panic -> keyframe timeline (rig)
+  15  @victim   instruction   rig:show:mouth_open -> keyframe timeline (rig)
+  15  @victim   note          reaction recoil (root offset returns to zero at 1.6 s) -> documentation only
+  22  @victim   instruction   rig:hide:shell -> keyframe timeline (rig)
+  22  @victim   instruction   rig:show:core -> keyframe timeline (rig)
+  22  @victim   instruction   rig:show:damage_torso -> keyframe timeline (rig)
+  22  @victim   note          pulp shell hidden, core exposed (restored by the session at the end) -> documentation only
+  32  @attacker note          grab LeftHandAttachment -> victim socket_grab_point -> documentation only
+  32  @scene    camera        40,2.6,0.9,0.6,0.85,-5 -> CameraTrack.Key
+  60  @scene    camera        20,4.2,2.3,0.4,1.0,0 -> CameraTrack.Key
+  60  @scene    execute        -> FinisherExecution (scene end)
+
+attacker (Java):
+    .event(0, PlayerAnimations.EVENT_SOUND, "respectcraft:finisher.whoosh")
+    .event(14, Finishers.EVENT_HIT, "2")
+    .event(14, PlayerAnimations.EVENT_CAMERA_SHAKE, "0.5,8")
+
+camera (Java):
+    new CameraTrack.Key(0, 150, 4.6, 1.7, 1.1, 1.0, 0)
+    new CameraTrack.Key(14, 75, 3.0, 1.2, 1.0, 0.95, -2)
+    new CameraTrack.Key(32, 40, 2.6, 0.9, 0.6, 0.85, -5)
+    new CameraTrack.Key(60, 20, 4.2, 2.3, 0.4, 1.0, 0)

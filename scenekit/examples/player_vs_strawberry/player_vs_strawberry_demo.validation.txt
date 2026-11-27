@@ -1,0 +1,5 @@
+OK    duration 60 ticks (3 s) for both participants
+OK    stage calibration STAGE_VICTIM_SCALE (scale 1.066667) kept out of the clips
+OK    attacker: 7 animated bone(s)
+OK    victim: 5 animated bone(s)
+OK    19 timeline event(s) with owner
