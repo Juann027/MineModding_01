@@ -5,7 +5,8 @@ nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador co
 finalizações cinematográficas que **executam** o alvo de verdade (Etapa 4.10.1; efeitos visuais pelo motor
 **Calamidade_Awakening**, Etapa 4.10), contador de derrotas, infraestrutura de chefes personalizados (Etapa 4.11),
 avisos holográficos automáticos e caça a recompensa entre jogadores (Etapa 4.11), o Custom Rig Framework com o kit
-Blockbench (Etapa 4.12), o Finisher Scene Authoring Kit (Etapa 4.13.2) e
+Blockbench (Etapa 4.12), o Finisher Scene Authoring Kit (Etapa 4.13.2), o morango de gameplay com cinco
+finalizações exclusivas e música própria (Etapa 4.13.3) e
 (Etapa 4.9, MVP) a dimensão **Inverted Realm**
 (céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
 
@@ -45,7 +46,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `client.playergeo` | **Rig GeckoLib do jogador.** `PlayerRigLayer` é a primeira camada do `PlayerRenderer` vanilla: lê a pose vanilla, desenha o rig e devolve a pose ao `PlayerModel` (armadura, itens e camadas acompanham). F8 = modo de teste, F9 = aceno. |
 | `client.bodylayer` | **Body Layers**: busto, cabelo, pele, rosto e acessórios como `BodyLayerDefinition` em `BodyLayers`. |
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/respectcraft anim`. |
-| `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Execuções reais (Etapa 4.10.1): `FinisherTargeting` (quem cada finalização pode executar; chefes só pela exclusiva) e `FinisherExecution` (golpe final = dano comum `respectcraft:finisher_execution`, resultado `SUCCESS`/`CANCELLED`/`FAILED`). Comandos `/respectcraft test` (e `/stopitstopnow`), `/respectcraft finishers <alvo>` (elegibilidade). |
+| `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Execuções reais (Etapa 4.10.1): `FinisherTargeting` (quem cada finalização pode executar; chefes só pela exclusiva) e `FinisherExecution` (golpe final = dano comum `respectcraft:finisher_execution`, resultado `SUCCESS`/`CANCELLED`/`FAILED`). Política de seleção por categoria de vítima `FinisherSelection` e pools de NPC `FruitFinishers` (Etapa 4.13.3). Comandos `/respectcraft test` (e `/stopitstopnow`), `/respectcraft finishers <alvo>` (elegibilidade). |
 | `fx`, `client.fx` | **Ponte com o Calamidade_Awakening** (Etapa 4.10). `FinisherFx` é o **único dono** dos efeitos de finalização (registro no construtor do mod, HERO da cena, golpes/quedas nos marcadores, fim/abort); dados em `FinisherFxDef` (campo opcional `FinisherDef.fx()`), regras puras em `FinisherFxRules` (no `SelfTest`). Gancho de mobs `GeoFxKeyframes` (keyframe `calamidade:<efeito>`, lido no servidor). Passes de pós e shaders só em `client.fx.FinisherFxClient` + `assets/respectcraft/shaders/fx/finisher_*.fsh` (com a cópia de `calamidade_fx.glsl`). |
 | `character`, `client.character` | **Character Creator** (primeira vez na tecla K): aparência (`CharacterAppearance`, `CharacterAppearanceService`), só Body, Hairstyle e Hair Color (Etapa 4.8.4-C); rascunho sem desenho `AppearanceDraft`. |
 | `client.holo`, `ui` | **Menu holográfico da tecla K** (Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C). Criador e roleta são **janelas** do mesmo arco (`HoloPopup`: `CreatorView`, `RouletteView`); roleta sem desenho em `ui.RouletteMachine` (pura, no `SelfTest`) + `client.roulette.RouletteSession`; desenho da roda só em `client.roulette.PrizeWheel` (janela e tela de reserva). Núcleo `HoloMenu` (arco das seções Overview, Character, Body & Traits, Speciality, Skills, superfícies por painel, passada 3D `Holo3D`, `press` comum de clique) com duas cascas: **`HoloWorld`** (padrão: placas paradas no mundo, `RenderFrameEvent.Pre` + `RenderLevelStageEvent` AFTER_LEVEL, K/Recall, posição sem paredes `ui.HoloPlacement`, mira/clique/arrasto/roda/dica) e `HoloCharacterScreen` (tela da 4.8.1, reserva temporária `mode = "SCREEN"`). Entrada no mundo: **`HoloWorldInput`** (dono por aperto com `ui.HoloInputArbiter`, modo cursor). Geometria pura em `ui.HoloGeometry` (no `SelfTest`); config de cliente `respectcraft-holomenu-client.toml`. |
@@ -59,7 +60,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `boss` | **Chefes personalizados** (Etapa 4.11): `Bosses` (registro em código, **vazio**), `BossProfile` (tipo, exclusivas, condições), `BossCondition` (`HealthBelow`, `RequiresSkill`, `RequiresProgress`), `BossExecutionCheckEvent` (só recusa). Avaliado em `FinisherTestMechanic.eligibility` antes da cena. |
 | `notice`, `client.holo.HoloToasts` | **Avisos holográficos automáticos** (Etapa 4.11). `HoloNotices` é o **único** caminho de um aviso (audiência, `HoloNoticeEvent` cancelável, pacote, farol); dados `HoloNotice` (`NoticeKind`, `NoticeSeverity`), regras puras `NoticeRules` (no `SelfTest`); faróis no Calamidade em `NoticeFx` (único dono). Fontes de hoje: chefe que aparece, chefe derrotado, portal do Nether aceso, chegada ao Inverted Realm, caça a recompensa; API pronta para chefes/portais/eventos futuros (`bossAppeared`, `portalOpened`, `worldEvent`). Cliente: `network.NoticeClientCache` (fila + histórico), cartões na tela `HoloToasts`, seção Alerts `client.holo.NoticesView`. Comando `/respectcraft notice`. |
 | `bounty` | **Caça a recompensa** contra jogadores (Etapa 4.11). `BountyService` é o único dono do quadro `BountyBoard` (SavedData do Overworld); contrato `Bounty`; regras puras `BountyRules` (no `SelfTest`); aba Bounty Hunt `client.holo.BountyView` + cache `network.BountyClientCache`; pacotes em `network.HoloNetworking`; comando `/respectcraft bounty`. |
-| `rig`, `client.rig` | **Custom Rig Framework** (Etapa 4.12). Famílias de rig = manifesto `assets/<ns>/rigs/<id>.rig.json` (`RigDefinition`); entidade → família = `rigs/entities/<entidade>.json` (`RigBinding`); catálogo `CustomRigRegistry.GLOBAL` preenchido por `Rigs.bootstrap()` (os dois lados). Clips por família e requisitos de participante em `FinisherDef.rigs()` (`finisher.FinisherRigs`); elegibilidade única `finisher.FinisherEligibility` (+ `FinisherTestMechanic.check`). Partes (ocultar/expor) só por `RigVisuals` (attachment sem save, pacote `network.RigNetworking`); sockets em pose de repouso `RigSockets`. Cliente: `RigGeoModel`/`RigGeoRenderer` genéricos. Base de mob `entity.rig.CustomRigMob`; fixtures `entity.dev.RigMannequinEntity` (`dev_rig_mannequin_a/b`); morango `entity.fruit.StrawberryEntity` (4.13.1). Comando `/respectcraft rig`. Kit externo em `rigkit/` + `tools/rigkit/`. |
+| `rig`, `client.rig` | **Custom Rig Framework** (Etapa 4.12). Famílias de rig = manifesto `assets/<ns>/rigs/<id>.rig.json` (`RigDefinition`); entidade → família = `rigs/entities/<entidade>.json` (`RigBinding`); catálogo `CustomRigRegistry.GLOBAL` preenchido por `Rigs.bootstrap()` (os dois lados). Clips por família e requisitos de participante em `FinisherDef.rigs()` (`finisher.FinisherRigs`); elegibilidade única `finisher.FinisherEligibility` (+ `FinisherTestMechanic.check`). Partes (ocultar/expor) só por `RigVisuals` (attachment sem save, pacote `network.RigNetworking`); sockets em pose de repouso `RigSockets`. Cliente: `RigGeoModel`/`RigGeoRenderer` genéricos. Base de mob `entity.rig.CustomRigMob`; fixtures `entity.dev.RigMannequinEntity` (`dev_rig_mannequin_a/b`); morango `entity.fruit.StrawberryEntity` (4.13.1) sobre a base de frutas `entity.fruit.FruitMob` (4.13.3: IA neutra, música, spawn; `FruitCommands` = `/respectcraft fruit`; som no cliente `client.fruit.FruitMusicClient`). Comando `/respectcraft rig`. Kit externo em `rigkit/` + `tools/rigkit/`. |
 | `scenekit/`, `tools/scenekit` | **Finisher Scene Authoring Kit** (Etapa 4.13.2, ferramenta externa, nada roda no jogo): projeto conjunto do Blockbench com ATTACKER (jogador, `ATK_`) e VICTIM (CustomRig ou jogador, `VIC_`) no palco do Finisher Engine (`compose_scene.py`), separação em um clip por participante + relatório de eventos (`split_scene.py`), templates/exemplos gerados por `make_templates.py` (protegido por hash). Contrato em `scenekit/CONTRACT.md`. Cena de teste `rig.Rigs.AUTHORING_DEMO` (`respectcraft:dev/authoring_demo`, fixture: só manequim B, `/respectcraft rig demo <alvo> authoring`). |
 | `selftest` | `SelfTest` (+ `RigSelfTest`): regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
 | `biome`, `npc` | Só `LEIA-ME.md`: sem código (biomas são dados desde a 4.9). |
@@ -145,9 +146,22 @@ sistema em que vai mexer; veja o fim deste arquivo).
   `entity.rig.CustomRigMob`, a mesma dos manequins) é o primeiro mob de gameplay da família, feito **fora** do
   repositório: `geo/entity/strawberry.geo.json`, `textures/entity/strawberry.png` e o binding
   `rigs/entities/strawberry.json` são os arquivos do artista **sem regeneração** (fonte em
-  `model_sources/rig/strawberry/`, com `strawberry_visual_states.md`); não os passe pelo `make_assets.py`. Papel:
-  **vítima** (Takedown pela animação compartilhada; nunca executor); comportamento e atributos provisórios (passeia,
-  foge ferido, sem ataque); ovo, **sem spawn natural**, sem drop/XP. Expressões são partes do binding: trocar de
+  `model_sources/rig/strawberry/`, com `strawberry_visual_states.md`); não os passe pelo `make_assets.py`. No binding só
+  `animation_file` + `clip_overrides` foram acrescentados (4.13.3, pedido do dono). Papel: **vítima** (nunca executor).
+  **Etapa 4.13.3:** NPC neutro (`FruitMob`: passeia, olha, revida quem o fere com 2 de dano, larga o alvo perdido; golpes
+  desligados durante uma cena), 12 HP, 3–5 XP, sem drops; spawn natural **só** em `minecraft:plains` e
+  `minecraft:savanna` (biome modifier `neoforge/biome_modifier/strawberry_spawns.json`, peso 5, grupo 1–2, CREATURE);
+  nascidos pelo mundo somem longe dos jogadores, ovo/`/summon` ficam persistentes. Cinco finalizações exclusivas
+  (`FruitFinishers`: `strawberry_crusher`, `fruit_punch`, `ground_smasher`, `shut_up`, `strawberry_blender`); clips do
+  jogador em `animations/player/respectcraft_authored_scenes.animation.json` e do morango em
+  `animations/entity/strawberry.animation.json`, gerados **só** por `tools/scenekit/strawberry_finishers.py --install`
+  a partir de `model_sources/rig/strawberry/finishers/` (conferido no CI com `--check`; não edite os clips à mão).
+  Música `respectcraft:entity.strawberry.music` (OGG mono de `model_sources/sounds/strawberry_music.mp3`), tocada só no
+  cliente por `FruitMusicClient` (loop preso à entidade, uma instância por fruta, limite/volume/desligar em
+  `respectcraft-fruits-client.toml`); o servidor só liga o corte seco (`FruitMob.setMusicSilenced`, dado sincronizado,
+  nunca salvo) no `Finishers.EVENT_SILENCE` da cena e o devolve no cancelamento/fruta viva. Fruta nova = subclasse de
+  `FruitMob` + binding + som + pool, sem sistema paralelo. **Reprodução entre frutas** é decisão futura (roadmap): não
+  implemente. Expressões são partes do binding: trocar de
   expressão = esconder `face_normal` + mostrar um olho, `brows_panic` e uma boca (exclusões e estados no
   `strawberry_visual_states.md`, conferidos no `RigSelfTest`); no meio de uma cena de destruição troque por
   `hide/show` explícitos — `rig:reset` devolve **todas** as partes (casca, folhas) ao padrão. `shell` cobre cabeça e
@@ -164,6 +178,17 @@ sistema em que vai mexer; veja o fim deste arquivo).
   (`respectcraft_dev_scenes`/`respectcraft_authored_scenes`), nunca para a biblioteca de combate; `--install` recusa
   arquivos de outros geradores, fontes e arquivos editados fora do kit. Não regenere o binding/geo/png do morango:
   dar um clip ao morango (`animation_file` + `clip_overrides`) é decisão do dono.
+- **Política de seleção de finalizações (Etapa 4.13.3, permanente):** `finisher.FinisherSelection` (regra pura, usada
+  por `Finishers.pickFor`), separada da compatibilidade técnica (`FinisherTargeting`/`FinisherEligibility`). **PLAYER:** só
+  comuns (`FinisherTargeting.Category.GENERIC`) com desbloqueio; consentimento/PvP/times como antes; o futuro seletor
+  Random/Preset/Manual (roadmap 4) escolhe dentro delas — não implemente o seletor sem pedido. **BOSS:** só a exclusiva
+  do chefe, nunca fallback. **MOB/NPC:** o servidor sorteia a cena completa; tipo com pool próprio
+  (`FinisherTargeting.npcExclusive(tipos)`) usa só ele, sem desbloqueio pessoal; sem pool, as comuns compatíveis com mob;
+  nada elegível = recusa antes de mexer no mundo. Exclusivas de NPC nunca contra jogador, chefe ou outro tipo e nunca no
+  loadout de PvP (`FinisherSelection.pvpLoadoutAllowed`). Cena só PvE pode ter `FinisherDef.victim() == null` (sem clip
+  PvP falso; só exclusiva de NPC) e eventos da vítima entidade em `entityVictimEvents` (quedas, `EVENT_SILENCE`),
+  disparados pelo relógio da sessão. Suco/sementes/lascas de fruta saem do `FinisherFx` (partículas vanilla com a cor de
+  `FruitMob.juice()`), sem framework de fluidos paralelo.
 - **Câmera cinematográfica** segue o estado de animação sincronizado e restaura a perspectiva em qualquer saída.
 - **Regra permanente de chefes (Etapa 4.10.1):** chefes podem ser derrotados normalmente (dano comum, armas,
   habilidades; nunca imunes à morte), mas **só a finalização exclusiva designada para aquele chefe pode executá-lo pelo
@@ -292,6 +317,7 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 | ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
 | itens, blocos (`twisted_*`), block entities `twisted_sign`/`twisted_hanging_sign`, `respectcraft:agua_viva`, `respectcraft:agua_viva_filhote` | registries |
 | entidades `respectcraft:dev_rig_mannequin_a`, `respectcraft:dev_rig_mannequin_b` (fixtures da 4.12), `respectcraft:strawberry` + item `respectcraft:strawberry_spawn_egg` e os nomes das partes do binding do morango (4.13.1), família `respectcraft:fruit_humanoid_v1` (nomes dos bones e animações `animation.fruit_humanoid_v1.*` fazem parte do contrato v1) | registries / manifestos (Etapa 4.12); o attachment `respectcraft:rig_visual` não é salvo |
+| finalizações `respectcraft:strawberry_crusher`, `fruit_punch`, `ground_smasher`, `shut_up`, `strawberry_blender`; som `respectcraft:entity.strawberry.music` | catálogo/estado de animação e `sounds.json` (Etapa 4.13.3) |
 | tipo de dano `respectcraft:finisher_execution` (mensagens `death.attack.respectcraft.finisher_execution*`), tag de entidade `respectcraft:bosses` | dados (Etapa 4.10.1) |
 | dimensão `respectcraft:inverted_realm`, bioma `respectcraft:twisted_wilds`, `WoodType`/`BlockSetType` e `Boat.Type` `respectcraft:twisted` (enum `RESPECTCRAFT_TWISTED`) | pasta do mundo, chunks e NBT de barcos (Etapa 4.9) |
 
@@ -327,6 +353,7 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 python3 tools/fx/check_shaders.py        # shaders fx montados como a Rimulib + glslangValidator (roda no CI)
 python3 tools/rigkit/test_rigkit.py      # validador de rigs, template e gerador em dia (roda no CI)
 python3 tools/rigkit/validate_rig.py --repo  # famílias e bindings do repositório
+python3 tools/scenekit/strawberry_finishers.py --check  # clips das 5 cenas do morango == separação da fonte (CI)
 python3 tools/scenekit/test_scenekit.py     # kit de autoria de cenas: composição, separação, proteção (roda no CI)
 python3 tools/scenekit/make_templates.py --check  # templates, exemplos e clips da cena de teste em dia
 bash tools/scenekit/blockbench/check_scene.sh # templates no Blockbench web real (job do CI; precisa de github.com)
@@ -382,6 +409,7 @@ bash tools/scenekit/blockbench/check_scene.sh # templates no Blockbench web real
   (`HANDOFF_STAGE4_11_FINISHER_CONSOLIDATION_BOSSES.md`); Custom Rig Framework, família `fruit_humanoid_v1`, kit
   Blockbench, validador e manequins → 4.12 (`HANDOFF_STAGE4_12_CUSTOM_RIG_FRAMEWORK.md`); integração de assets
   externos e morango → 4.13.1 (`HANDOFF_STAGE4_13_1_STRAWBERRY.md`); autoria conjunta de finalizações (kit de cenas,
-  templates, separação) → 4.13.2 (`HANDOFF_STAGE4_13_2_FINISHER_SCENE_KIT.md`).
+  templates, separação) → 4.13.2 (`HANDOFF_STAGE4_13_2_FINISHER_SCENE_KIT.md`); morango de gameplay (spawn, IA, XP,
+  música), política de seleção e finalizações do morango → 4.13.3 (`HANDOFF_STAGE4_13_3_STRAWBERRY_GAMEPLAY.md`).
 - **Roadmap** (funcionalidades futuras, só registro — não implemente sem pedido): [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

@@ -81,8 +81,20 @@ comportamento, áudio ligado à entidade, partes destacáveis, destruição visu
 sincronização, integração com Animation Manager, Finisher Engine e Calamidade. A família "fruta" é só **uma
 implementação registrada** no Custom Rig Framework e serve de validação prática dele. Pronto desde a 4.12: o contrato
 `respectcraft:fruit_humanoid_v1` (esqueleto, sockets, partes `shell`/`core`, animações compartilhadas de referência)
-e o kit de produção. Etapa 4.13.1: morango `respectcraft:strawberry` (assets do artista, vítima, sem spawn natural);
-nenhuma animação própria, outra fruta ou finalização exclusiva existe ainda.
+e o kit de produção. Etapa 4.13.1: morango `respectcraft:strawberry` (assets do artista, vítima). **Etapa 4.13.3:**
+o morango é NPC de gameplay completo — spawn natural (plains/savanna), IA neutra com retaliação, XP, música própria
+em loop (base reutilizável `entity.fruit.FruitMob` + `client.fruit.FruitMusicClient`, corte seco no impacto decisivo) e
+cinco finalizações exclusivas (pool próprio). Próximos (não implementar sem pedido):
+
+- animações próprias de locomoção, ataque e personalidade das frutas (produzidas externamente pelo dono);
+- banana, melancia e abacaxi (estendem `FruitMob`: binding, atributos, som e pool próprios);
+- **reprodução entre frutas (decisão de design do dono, 4.13.3):** as frutas humanoides poderão se reproduzir no futuro,
+  inclusive entre espécies diferentes da família (morango × morango, morango × banana, banana × melancia, abacaxi ×
+  morango...). Espécie resultante, condições, crescimento, filhotes e híbridos ficam para uma etapa futura — nada de
+  reprodução, filhotes, híbridos ou infraestrutura especulativa antes disso;
+- **Universal Fluid & Destruction FX Framework** no Calamidade_Awakening (suco, sementes e fragmentos hoje são
+  partículas vanilla pelo `FinisherFx`);
+- destruição avançada e partes destacáveis com física (hoje as partes `extra_*` só aparecem/somem, ainda presas).
 
 ## 4. Finisher Selection & Loadout
 
@@ -92,6 +104,12 @@ descrição, raridade, requisitos, compatibilidade com o alvo, bloqueadas × des
 entidades/rigs (`FinisherTargeting`). O servidor revalida a elegibilidade na confirmação; abrir o seletor não pausa o
 servidor nem dá invulnerabilidade. Reutiliza o menu holográfico (`HoloMenu`/`HoloWorldInput`) e o catálogo
 `Finishers`.
+
+**Política permanente de seleção (Etapa 4.13.3, `finisher.FinisherSelection`):** PLAYER = só finalizações comuns, com
+desbloqueio (o seletor Random/Preset/Manual escolhe dentro delas; exclusivas de NPC nunca entram no loadout); BOSS = só
+a exclusiva do chefe, nunca fallback; MOB/NPC = o servidor sorteia uma cena completa — pool próprio do tipo
+(`FinisherTargeting.npcExclusive`, sem desbloqueio pessoal) ou, sem pool, as comuns compatíveis com mob; nada elegível =
+recusa antes de mexer no mundo.
 
 ## 5. Unlock & Progression Framework
 
