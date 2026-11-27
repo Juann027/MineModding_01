@@ -291,6 +291,9 @@ def compose(spec, base_dir=".", textures="atlas"):
         raise SceneError(f"spec must have format {FORMAT} v{FORMAT_VERSION}")
     if textures not in ("atlas", "multi"):
         raise SceneError("textures must be atlas or multi")
+    if textures == "multi":
+        print("WARN  --textures multi: the GeckoLib format has no per-texture UV size (Blockbench 5.2.2): every texture"
+              " is read at the project resolution, so the victim's UVs look wrong in the editor. Use the atlas.")
     name = spec["name"]
     duration = int(spec["duration_ticks"])
     if duration <= 0:
@@ -609,7 +612,8 @@ def parse_timeline(timeline, manifest, length):
         if isinstance(text, list):
             text = "\n".join(text)
         for raw in str(text).replace("\r", "").split("\n"):
-            line = raw.strip()
+            # o "Export Animations" do plugin termina cada linha com ";" (conferido no Blockbench 5.2.2)
+            line = raw.strip().rstrip(";").strip()
             if not line or line.startswith("//"):
                 continue
             where = f"timeline @{t}s '{line}'"

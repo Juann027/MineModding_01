@@ -37,9 +37,11 @@ for stem, example, demo in JOBS:
           f"{name}: {probe['groups']} bones e {probe['cubes']} cubos carregados")
     tex_ok = [(t["w"], t["h"]) for t in probe["textures"]] == [(t["width"], t["height"]) for t in model["textures"]]
     if len(model["textures"]) > 1:
-        tex_ok &= probe["perTextureUv"] and [(t["uvw"], t["uvh"]) for t in probe["textures"]] == \
-            [(t["uv_width"], t["uv_height"]) for t in model["textures"]]
-    check(tex_ok, f"{name}: texturas com o tamanho e o UV esperados ({len(model['textures'])} textura(s))")
+        # variante --textures multi: so diagnostico. O formato GeckoLib nao tem UV por textura; e por isso que os
+        # templates usam o atlas. Se um dia o plugin passar a ter, esta linha avisa.
+        print(f"     multi-textura: UV por textura no formato = {probe['perTextureUv']}"
+              f" ({'possivel' if probe['perTextureUv'] else 'nao suportado: atlas obrigatorio'})")
+    check(tex_ok, f"{name}: texturas com o tamanho esperado ({len(model['textures'])} textura(s))")
     check(not probe["errors"] and all(p["frames"] > 0 for p in probe["played"]),
           f"{name}: {len(probe['played'])} animacao(oes) tocadas sem erro {probe['errors'][:3]}")
     off, exp = probe["stage"]["offset"], manifest["stage"]["victim_anchor_px"]

@@ -39,8 +39,9 @@ Bones, hierarquia, pivôs, rotações, visibilidade, cubos (from/to/origin/rota�
 modelos de origem só são lidos.
 
 **Texturas:** padrão = **atlas** só do projeto de autoria (as texturas empilhadas 1 px = 1 UV, UVs por face e box UV
-deslocados para a região de cada uma). Alternativa `--textures multi`: as texturas originais intactas com UV por
-textura (depende do formato aceitar UV por textura; o CI confere no Blockbench real). Texturas do jogo continuam as
+deslocados para a região de cada uma). **O atlas é obrigatório:** no Blockbench 5.2.2 o formato GeckoLib não tem UV
+por textura (conferido no Blockbench real pelo CI), então `--textures multi` (texturas originais separadas) só serve
+de diagnóstico: o editor lê todas na resolução do projeto e as UVs da vítima ficam erradas. Texturas do jogo continuam as
 originais: nada da cena é exportado como textura.
 
 ## Timeline (aba *Effects* → canal *timeline*)
@@ -63,7 +64,7 @@ Uma linha = um evento, **sempre com dono**. Vários eventos no mesmo instante = 
 Regras: o mesmo `hit`/`fall`/`sound`/instrução em dois donos no mesmo tick é `ERROR` (dispararia duas vezes); `rig:`/
 `calamidade:` em jogador é `ERROR` (jogador usa `hit`/`fall` e o `FinisherFxDef`); keyframe fora do tick (20 fps) é
 `ERROR`; keyframes nos canais *sound*/*particle* do Blockbench são `ERROR` (não têm dono: escreva a linha na timeline).
-Linhas começando com `//` são comentários. Em `rig:` use troca explícita (`hide`/`show`) no meio da cena: `rig:reset`
+Linhas começando com `//` são comentários; o `;` que o plugin acrescenta ao fim de cada linha no export é aceito. Em `rig:` use troca explícita (`hide`/`show`) no meio da cena: `rig:reset`
 devolve **todas** as partes ao padrão. A sessão restaura as partes no fim, no cancelamento e no golpe recusado.
 
 Nada é API nova: são os eventos que o Finisher Engine já entende. Eventos de jogador viram linhas Java prontas no

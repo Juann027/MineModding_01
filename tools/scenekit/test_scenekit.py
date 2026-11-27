@@ -275,6 +275,10 @@ def test_split_errors():
         "fora do tick": lambda a: a["timeline"].update({"0.52": "@attacker hit 1"}),
         "duracao diferente": lambda a: a.update({"animation_length": 2.5}),
     }
+    ex = copy.deepcopy(export)
+    ex["animations"][name]["timeline"]["0.7"] = ["@attacker hit 2;", "@scene camera 75,3.0,1.2,1.0,0.95,-2;"]
+    rep = S.split(manifest, ex, name)[2]
+    check(not errors(rep), "timeline como o plugin exporta (lista, linhas com ';' no fim) aceita")
     for what, mut in cases.items():
         check(bool(run(mut)), f"ERROR: {what}")
     ex = copy.deepcopy(export)

@@ -12,7 +12,7 @@ participante**. Nada novo roda no jogo além de uma cena de teste (fixture). Ver
 | `tools/scenekit/compose_scene.py` | spec → `<cena>.bbmodel` + `<cena>.scene.json` (manifesto com mapa explícito de bones) |
 | `tools/scenekit/split_scene.py` | manifesto + export do plugin (ou `--bbmodel`) → clips por papel, `export_meta.json`, `events.txt`, `validation.txt`; `--install` com proteção (`installed_manifest.json`) |
 | `tools/scenekit/make_templates.py` | gera templates, demo técnica, exemplos e os clips da cena de teste; protegido por hash (`generated_manifest.json`, como `make_assets.py`/`export.py`) |
-| `tools/scenekit/test_scenekit.py` | 46 verificações (CI) |
+| `tools/scenekit/test_scenekit.py` | 47 verificações (CI) |
 | `tools/scenekit/blockbench/` | `check_scene.sh` + `probe_scene.js` + `verify_probe.py`: Blockbench web real (código oficial + plugin GeckoLib, Chromium) — job `scenekit-blockbench` do CI |
 | `tools/scenekit/package_kit.py` | ZIP portátil `respectcraft-scenekit-v1.zip` (artefato `respectcraft-scenekit` do CI) |
 | `scenekit/` | `README.md` (guia do Blockbench Web), `CONTRACT.md`, `CLAUDE_CHROME.md` (Claude normal + `/blockbench-web-geckolib-v2`), `scenes/` (specs, templates, manifestos), `examples/` |
@@ -31,7 +31,7 @@ Cada um com `scene.<cena>` (vazia, só a calibração) e `scene.<cena>_demo` (co
   16/`render_scale`. Diferença = keyframe constante em `STAGE_VICTIM_SCALE` (16/15 para o morango), calibração que o
   split reconhece e descarta. Distância: spec > binding > família > automática (morango 1,15; manequim B 1,6).
 - **Texturas:** atlas só no projeto de autoria (1 px = 1 UV, UVs por face e box UV deslocados; testado pixel a pixel).
-  `--textures multi` mantém as originais (o job do Blockbench real abre essa variante e confere UV por textura).
+  Obrigatório: o formato GeckoLib não tem UV por textura (Blockbench real). `--textures multi` fica só como diagnóstico.
 - **Eventos com dono** numa linha da timeline (`@attacker hit 2`, `@victim rig:hide:shell`, `@scene camera ...`,
   `@scene execute`...): só o que o engine já entende; `rig:`/`calamidade:` vão para o timeline do clip do mob, o resto
   vira linha Java do registro. Duplicata em dois donos, evento sem dono, `execute` fora do fim, parte inexistente,
@@ -59,9 +59,13 @@ Cada um com `scene.<cena>` (vazia, só a calibração) e `scene.<cena>_demo` (co
   viu soco e polpa exposta; terminou `SUCCESS (killed)`; segunda cena cancelada com `/stopitstopnow` no meio →
   `CANCELLED (player request)`, casca de volta (`Rig parts ...: {}`), jogador em pé.
   Evidência: `docs/evidencias/stage4_13_2/two_clients_authoring_demo.png`.
-- **Blockbench real:** não acessível nesta sessão (github.com bloqueado); roda no job `scenekit-blockbench` do CI
-  (abertura, plugin, texturas, bones/cubos, reprodução sem erro, palco, distâncias de contato, save, export do plugin
-  separado = exemplo). Resultado e capturas no artefato `scenekit-blockbench`.
+- **Blockbench real 5.2.2 + plugin GeckoLib** (job `scenekit-blockbench` do CI; daqui o github.com estava bloqueado):
+  os três projetos abrem como GeckoLib Animated Model (105/73/74 bones, 246/45/47 cubos), tocam sem erro, a vítima
+  fica exatamente na âncora (−19,63 px; manequim B −27,31 px), o save preserva bones/cubos/texturas/animações e o
+  *Export Animations* separado bate com os exemplos (0 diferença). Contatos medidos no editor: golpe 3,2 px e agarrão
+  6,4 px (morango e manequim), 11,2 px no manequim B. Achados aplicados: o export acrescenta `;` a cada linha da
+  timeline (o parser aceita) e o formato GeckoLib **não tem UV por textura** (atlas obrigatório; `multi` só
+  diagnóstico). O campo `respectcraft_scene` da raiz não sobrevive ao save do Blockbench: a fonte é o `.scene.json`.
 
 ## Limitações
 
