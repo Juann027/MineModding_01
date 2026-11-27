@@ -18,12 +18,15 @@ import net.minecraft.resources.ResourceLocation;
  * {@code tools/rigkit/validate_rig.py} e pelo {@code SelfTest}.
  */
 public final class Rigs {
-    /** Familia humanoide de referencia para as futuras frutas antropomorficas (so contrato; nenhuma fruta existe). */
+    /** Familia humanoide de referencia para as futuras frutas antropomorficas (o morango e a primeira fruta, Etapa 4.13.1). */
     public static final ResourceLocation FRUIT_HUMANOID_V1_ID = RespectCraft.id("fruit_humanoid_v1");
 
     /** Fixtures tecnicas (manequins): sem spawn natural, sem ovo, sem drop, sem progressao. */
     public static final ResourceLocation MANNEQUIN_A_ID = RespectCraft.id("dev_rig_mannequin_a");
     public static final ResourceLocation MANNEQUIN_B_ID = RespectCraft.id("dev_rig_mannequin_b");
+
+    /** Etapa 4.13.1: primeira entidade de gameplay da familia (assets externos, binding oficial do artista). */
+    public static final ResourceLocation STRAWBERRY_ID = RespectCraft.id("strawberry");
 
     public static RigDefinition FRUIT_HUMANOID_V1;
 
@@ -44,6 +47,7 @@ public final class Rigs {
         FRUIT_HUMANOID_V1 = register(FRUIT_HUMANOID_V1_ID);
         bind(MANNEQUIN_A_ID);
         bind(MANNEQUIN_B_ID);
+        bind(STRAWBERRY_ID);
         FinisherDef takedown = Finishers.TAKEDOWN;
         PEEL_DEMO = new FinisherDef(RespectCraft.id("dev/rig_peel_demo"), takedown.attacker(), takedown.victim(), takedown.camera(),
                 null, 1, false, List.of(), takedown.fx().orElse(null), FinisherTargeting.REGULAR,

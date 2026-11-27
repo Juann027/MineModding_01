@@ -48,6 +48,15 @@ public final class ModEntities {
             () -> EntityType.Builder.<RigMannequinEntity>of(RigMannequinEntity::new, MobCategory.MISC)
                     .sized(0.9F, 1.6F).clientTrackingRange(8).build("dev_rig_mannequin_b"));
 
+    /**
+     * Etapa 4.13.1: morango (familia {@code respectcraft:fruit_humanoid_v1}), vitima de finalizacoes. CREATURE, mas
+     * SEM spawn natural (nenhum bioma o lista): ovo, {@code /summon}. Caixa ~ geometria (14 x 34 px).
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.respectcraft.entity.fruit.StrawberryEntity>> STRAWBERRY = ENTITY_TYPES.register(
+            "strawberry",
+            () -> EntityType.Builder.<com.respectcraft.entity.fruit.StrawberryEntity>of(com.respectcraft.entity.fruit.StrawberryEntity::new, MobCategory.CREATURE)
+                    .sized(0.8F, 2.1F).eyeHeight(1.75F).clientTrackingRange(10).build("strawberry"));
+
     private ModEntities() {
     }
 
@@ -56,6 +65,7 @@ public final class ModEntities {
         event.put(AGUA_VIVA_FILHOTE.get(), AguaVivaEntity.createHatchlingAttributes().build());
         event.put(DEV_RIG_MANNEQUIN_A.get(), RigMannequinEntity.createAttributes().build());
         event.put(DEV_RIG_MANNEQUIN_B.get(), RigMannequinEntity.createAttributes().build());
+        event.put(STRAWBERRY.get(), com.respectcraft.entity.fruit.StrawberryEntity.createAttributes().build());
     }
 
     /** Agua-vivas surgem no ar livre do bioma twisted_wilds (lista "ambient" do bioma). */

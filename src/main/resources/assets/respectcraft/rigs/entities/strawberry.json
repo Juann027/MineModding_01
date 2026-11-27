@@ -1,0 +1,432 @@
+{
+  "format": "respectcraft:rig_binding",
+  "format_version": 1,
+  "entity": "respectcraft:strawberry",
+  "rig": "respectcraft:fruit_humanoid_v1",
+  "contract_version": 1,
+  "geo": "respectcraft:geo/entity/strawberry.geo.json",
+  "texture": "respectcraft:textures/entity/strawberry.png",
+  "proportion": [
+    1,
+    1,
+    1
+  ],
+  "render_scale": 1,
+  "extra_bones": [
+    {
+      "name": "expr_mouth_open",
+      "parent": "head",
+      "pivot": [
+        0,
+        25,
+        -4.4
+      ]
+    },
+    {
+      "name": "extra_earring_right",
+      "parent": "head",
+      "pivot": [
+        5.2,
+        25.6,
+        0
+      ]
+    },
+    {
+      "name": "extra_earring_left",
+      "parent": "head",
+      "pivot": [
+        -5.2,
+        25.6,
+        0
+      ]
+    },
+    {
+      "name": "extra_leaf_crown",
+      "parent": "head",
+      "pivot": [
+        0,
+        31,
+        0
+      ]
+    },
+    {
+      "name": "extra_stem",
+      "parent": "head",
+      "pivot": [
+        0,
+        31.9,
+        0
+      ]
+    },
+    {
+      "name": "extra_top",
+      "parent": "torso",
+      "pivot": [
+        0,
+        19,
+        0
+      ]
+    },
+    {
+      "name": "extra_leaf_01",
+      "parent": "head",
+      "pivot": [
+        -4.764,
+        31,
+        -3.722
+      ]
+    },
+    {
+      "name": "extra_leaf_02",
+      "parent": "head",
+      "pivot": [
+        -2.112,
+        31.3,
+        -4.33
+      ]
+    },
+    {
+      "name": "extra_leaf_03",
+      "parent": "head",
+      "pivot": [
+        0,
+        31.15,
+        -4.3
+      ]
+    },
+    {
+      "name": "extra_leaf_04",
+      "parent": "head",
+      "pivot": [
+        2.112,
+        31.3,
+        -4.33
+      ]
+    },
+    {
+      "name": "extra_leaf_05",
+      "parent": "head",
+      "pivot": [
+        4.764,
+        31,
+        -3.722
+      ]
+    },
+    {
+      "name": "extra_leaf_06",
+      "parent": "head",
+      "pivot": [
+        -4.707,
+        31,
+        -1
+      ]
+    },
+    {
+      "name": "extra_leaf_07",
+      "parent": "head",
+      "pivot": [
+        -4.707,
+        30.9,
+        1
+      ]
+    },
+    {
+      "name": "extra_leaf_08",
+      "parent": "head",
+      "pivot": [
+        4.707,
+        31,
+        -1
+      ]
+    },
+    {
+      "name": "extra_leaf_09",
+      "parent": "head",
+      "pivot": [
+        4.707,
+        30.9,
+        1
+      ]
+    },
+    {
+      "name": "extra_leaf_10",
+      "parent": "head",
+      "pivot": [
+        -4.764,
+        31,
+        3.722
+      ]
+    },
+    {
+      "name": "extra_leaf_11",
+      "parent": "head",
+      "pivot": [
+        -2.112,
+        31.2,
+        4.33
+      ]
+    },
+    {
+      "name": "extra_leaf_12",
+      "parent": "head",
+      "pivot": [
+        0,
+        31,
+        4.3
+      ]
+    },
+    {
+      "name": "extra_leaf_13",
+      "parent": "head",
+      "pivot": [
+        2.112,
+        31.2,
+        4.33
+      ]
+    },
+    {
+      "name": "extra_leaf_14",
+      "parent": "head",
+      "pivot": [
+        4.764,
+        31,
+        3.722
+      ]
+    },
+    {
+      "name": "extra_leaf_15",
+      "parent": "head",
+      "pivot": [
+        0,
+        31.8,
+        -3.1
+      ]
+    },
+    {
+      "name": "extra_leaf_16",
+      "parent": "head",
+      "pivot": [
+        3.34,
+        31.8,
+        -1.928
+      ]
+    },
+    {
+      "name": "extra_leaf_17",
+      "parent": "head",
+      "pivot": [
+        -3.34,
+        31.8,
+        -1.928
+      ]
+    },
+    {
+      "name": "extra_leaf_18",
+      "parent": "head",
+      "pivot": [
+        3.34,
+        31.8,
+        1.928
+      ]
+    },
+    {
+      "name": "extra_leaf_19",
+      "parent": "head",
+      "pivot": [
+        -3.34,
+        31.8,
+        1.928
+      ]
+    },
+    {
+      "name": "extra_leaf_20",
+      "parent": "head",
+      "pivot": [
+        0,
+        31.8,
+        3.1
+      ]
+    },
+    {
+      "name": "expr_eyes_wide",
+      "parent": "head",
+      "pivot": [
+        0,
+        26.8,
+        -4.9
+      ]
+    },
+    {
+      "name": "expr_eyes_closed",
+      "parent": "head",
+      "pivot": [
+        0,
+        26.5,
+        -4.9
+      ]
+    },
+    {
+      "name": "expr_brows_panic",
+      "parent": "head",
+      "pivot": [
+        0,
+        28.8,
+        -4.9
+      ]
+    },
+    {
+      "name": "expr_mouth_scream",
+      "parent": "head",
+      "pivot": [
+        0,
+        24.5,
+        -4.4
+      ]
+    },
+    {
+      "name": "extra_damage_head",
+      "parent": "head",
+      "pivot": [
+        0,
+        27.5,
+        0
+      ]
+    },
+    {
+      "name": "extra_damage_torso",
+      "parent": "torso",
+      "pivot": [
+        0,
+        17,
+        0
+      ]
+    }
+  ],
+  "capabilities": [
+    "respectcraft:detachable_parts",
+    "respectcraft:inner_core"
+  ],
+  "parts": [
+    {
+      "name": "face_normal",
+      "bones": [
+        "brow_right",
+        "brow_left",
+        "eye_right",
+        "eye_left",
+        "mouth"
+      ],
+      "default_visible": true,
+      "detachable": false
+    },
+    {
+      "name": "eyes_wide",
+      "bones": [
+        "expr_eyes_wide"
+      ],
+      "default_visible": false,
+      "detachable": false
+    },
+    {
+      "name": "eyes_closed",
+      "bones": [
+        "expr_eyes_closed"
+      ],
+      "default_visible": false,
+      "detachable": false
+    },
+    {
+      "name": "brows_panic",
+      "bones": [
+        "expr_brows_panic"
+      ],
+      "default_visible": false,
+      "detachable": false
+    },
+    {
+      "name": "mouth_open",
+      "bones": [
+        "expr_mouth_open"
+      ],
+      "default_visible": false,
+      "detachable": false
+    },
+    {
+      "name": "mouth_scream",
+      "bones": [
+        "expr_mouth_scream"
+      ],
+      "default_visible": false,
+      "detachable": false
+    },
+    {
+      "name": "damage_head",
+      "bones": [
+        "extra_damage_head"
+      ],
+      "default_visible": false,
+      "detachable": false
+    },
+    {
+      "name": "damage_torso",
+      "bones": [
+        "extra_damage_torso"
+      ],
+      "default_visible": false,
+      "detachable": false
+    },
+    {
+      "name": "leaves",
+      "bones": [
+        "extra_leaf_01",
+        "extra_leaf_02",
+        "extra_leaf_03",
+        "extra_leaf_04",
+        "extra_leaf_05",
+        "extra_leaf_06",
+        "extra_leaf_07",
+        "extra_leaf_08",
+        "extra_leaf_09",
+        "extra_leaf_10",
+        "extra_leaf_11",
+        "extra_leaf_12",
+        "extra_leaf_13",
+        "extra_leaf_14",
+        "extra_leaf_15",
+        "extra_leaf_16",
+        "extra_leaf_17",
+        "extra_leaf_18",
+        "extra_leaf_19",
+        "extra_leaf_20",
+        "extra_leaf_crown"
+      ],
+      "default_visible": true,
+      "detachable": true
+    },
+    {
+      "name": "stem",
+      "bones": [
+        "extra_stem"
+      ],
+      "default_visible": true,
+      "detachable": true
+    },
+    {
+      "name": "top",
+      "bones": [
+        "extra_top"
+      ],
+      "default_visible": true,
+      "detachable": true
+    },
+    {
+      "name": "earrings",
+      "bones": [
+        "extra_earring_right",
+        "extra_earring_left"
+      ],
+      "default_visible": true,
+      "detachable": true
+    }
+  ]
+}

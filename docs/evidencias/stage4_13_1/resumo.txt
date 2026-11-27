@@ -1,0 +1,39 @@
+Etapa 4.13.1 — morango, evidências com clientes reais (Xvfb, llvmpipe; servidor dedicado de desenvolvimento, Ana executa, Beto observa)
+
+[15:57:32] Rig of respectcraft:strawberry: respectcraft:fruit_humanoid_v1 v1 | proportion (1.00, 1.00, 1.00) scale 1.0 | capabilities [respectcraft:humanoid_limbs, respectcraft:hands, respectcraft:facial_bones, respectcraft:inner_core, respectcraft:detachable_parts] | extra bones [expr_mouth_open, extra_earring_right, extra_earring_left, extra_leaf_crown, extra_stem, extra_top, extra_leaf_01, extr
+ Parts: shell=visible(detachable) core=hidden face_normal=visible eyes_wide=hidden eyes_closed=hidden brows_panic=hidden mouth_open=hidden mouth_scream=hidden damage_head=hidden damage_torso=hidden leaves=visible(detachable) stem=visible(detachable) top=visible(detachable) earrings=visible(detachable)
+[15:58:00] Finisher respectcraft:takedown by minecraft:player on respectcraft:strawberry (Strawberry): SUCCESS (killed)
+[15:58:14] Rig parts of respectcraft:strawberry: {face_normal=false}
+[15:58:14] Rig parts of respectcraft:strawberry: {eyes_wide=true, face_normal=false}
+[15:58:15] Rig parts of respectcraft:strawberry: {eyes_wide=true, brows_panic=true, face_normal=false}
+[15:58:16] Rig parts of respectcraft:strawberry: {mouth_scream=true, eyes_wide=true, face_normal=false, brows_panic=true}
+[15:58:18] Rig parts of respectcraft:strawberry: {mouth_scream=true, eyes_wide=true, face_normal=false, damage_head=true, brows_panic=true}
+[15:58:19] Rig parts of respectcraft:strawberry: {damage_torso=true, face_normal=false, mouth_scream=true, brows_panic=true, eyes_wide=true, damage_head=true}
+[15:58:21] Rig parts of respectcraft:strawberry: {damage_torso=true, face_normal=false, shell=false, brows_panic=true, mouth_scream=true, eyes_wide=true, damage_head=true}
+[15:58:22] Rig parts of respectcraft:strawberry: {face_normal=false, core=true, eyes_wide=true, damage_head=true, shell=false, brows_panic=true, damage_torso=true, mouth_scream=true}
+[15:58:22] Rig parts of respectcraft:strawberry: {core=true, brows_panic=true, eyes_wide=true, damage_head=true, damage_torso=true, shell=false, mouth_scream=true, leaves=false, face_normal=false}
+[15:58:23] Rig parts of respectcraft:strawberry: {core=true, shell=false, mouth_scream=true, eyes_wide=true, face_normal=false, damage_head=true, brows_panic=true, damage_torso=true, leaves=false, stem=false}
+[15:58:26] Rig parts of respectcraft:strawberry: {}
+[15:58:42] Rig demo respectcraft:dev/rig_peel_demo started on respectcraft:strawberry.
+[15:58:43] Rig parts of respectcraft:strawberry: {face_normal=false}
+[15:58:44] Rig parts of respectcraft:strawberry: {core=true, shell=false, face_normal=false, eyes_wide=true}
+[15:58:44] Rig parts of respectcraft:strawberry: {shell=false, eyes_wide=true, face_normal=false, brows_panic=true, core=true}
+[15:58:45] Rig parts of respectcraft:strawberry: {shell=false, face_normal=false, core=true, mouth_scream=true, brows_panic=true, eyes_wide=true}
+[15:58:45] Finisher respectcraft:dev/rig_peel_demo by minecraft:player on respectcraft:strawberry (Strawberry): SUCCESS (killed)
+[15:59:05] Rig demo respectcraft:dev/rig_peel_demo started on respectcraft:strawberry.
+[15:59:05] Rig parts of respectcraft:strawberry: {face_normal=false}
+[15:59:05] Rig parts of respectcraft:strawberry: {eyes_wide=true, face_normal=false}
+[15:59:05] Rig parts of respectcraft:strawberry: {eyes_wide=true, brows_panic=true, face_normal=false}
+[15:59:05] Rig parts of respectcraft:strawberry: {mouth_scream=true, eyes_wide=true, face_normal=false, brows_panic=true}
+[15:59:05] Rig parts of respectcraft:strawberry: {mouth_scream=true, eyes_wide=true, face_normal=false, damage_torso=true, brows_panic=true}
+[15:59:05] Rig parts of respectcraft:strawberry: {damage_torso=true, face_normal=false, stem=false, mouth_scream=true, brows_panic=true, eyes_wide=true}
+[15:59:05] Rig parts of respectcraft:strawberry: {leaves=false, face_normal=false, stem=false, brows_panic=true, mouth_scream=true, eyes_wide=true, damage_torso=true}
+[15:59:06] Rig of respectcraft:strawberry: respectcraft:fruit_humanoid_v1 v1 | proportion (1.00, 1.00, 1.00) scale 1.0 | capabilities [respectcraft:humanoid_limbs, respectcraft:hands, respectcraft:facial_bones, respectcraft:inner_core, respectcraft:detachable_parts] | extra bones [expr_mouth_open, extra_earring_right, extra_earring_left, extra_leaf_crown, extra_stem, extra_top, extra_leaf_01, extr
+ Parts: shell=hidden(detachable) core=visible face_normal=hidden eyes_wide=visible eyes_closed=hidden brows_panic=visible mouth_open=hidden mouth_scream=visible damage_head=hidden damage_torso=visible leaves=hidden(detachable) stem=hidden(detachable) top=visible(detachable) earrings=visible(detachable)
+[15:59:07] Finisher respectcraft:dev/rig_peel_demo by minecraft:player on respectcraft:strawberry: CANCELLED (player request)
+[15:59:09] Rig of respectcraft:strawberry: respectcraft:fruit_humanoid_v1 v1 | proportion (1.00, 1.00, 1.00) scale 1.0 | capabilities [respectcraft:humanoid_limbs, respectcraft:hands, respectcraft:facial_bones, respectcraft:inner_core, respectcraft:detachable_parts] | extra bones [expr_mouth_open, extra_earring_right, extra_earring_left, extra_leaf_crown, extra_stem, extra_top, extra_leaf_01, extr
+ Parts: shell=visible(detachable) core=hidden face_normal=visible eyes_wide=hidden eyes_closed=hidden brows_panic=hidden mouth_open=hidden mouth_scream=hidden damage_head=hidden damage_torso=hidden leaves=visible(detachable) stem=visible(detachable) top=visible(detachable) earrings=visible(detachable)
+[15:59:20] Strawberry has the following entity data: [0.5d, -60.0d, 4.5d]
+[15:59:26] Strawberry has the following entity data: [0.5d, -60.0d, 4.5d]
+[15:59:26] Strawberry has the following entity data: 11.0f
+[15:59:34] Strawberry has the following entity data: [6.366633969779415d, -60.0d, 0.6380556115695455d]

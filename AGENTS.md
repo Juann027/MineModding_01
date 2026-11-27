@@ -70,3 +70,5 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   `CustomRigRegistry`, `RigVisuals` para partes, `RigSockets`), `FinisherRigs`/`FinisherEligibility` no Finisher Engine,
   renderer genérico `client.rig`, fixtures `dev_rig_mannequin_a/b`, comando `/respectcraft rig`. Kit externo em
   `rigkit/` (template `.bbmodel`, contrato, prompt) e ferramentas em `tools/rigkit/` (gerador, validador, testes, ZIP).
+- **Morango (Etapa 4.13.1):** `respectcraft:strawberry`, primeiro mob da família feito com assets externos (arquivos
+  do artista sem regeneração; fonte em `model_sources/rig/strawberry/`). Vítima de finalizações, sem spawn natural.
