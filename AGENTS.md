@@ -72,3 +72,6 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   `rigkit/` (template `.bbmodel`, contrato, prompt) e ferramentas em `tools/rigkit/` (gerador, validador, testes, ZIP).
 - **Morango (Etapa 4.13.1):** `respectcraft:strawberry`, primeiro mob da família feito com assets externos (arquivos
   do artista sem regeneração; fonte em `model_sources/rig/strawberry/`). Vítima de finalizações, sem spawn natural.
+- **Finisher Scene Authoring Kit (Etapa 4.13.2):** `scenekit/` (templates conjuntos jogador × CustomRig/PvP, contrato,
+  guias) e `tools/scenekit/` (`compose_scene.py`, `split_scene.py`, gerador protegido, testes, ZIP). Ferramenta externa:
+  nada roda no jogo; a cena de teste `respectcraft:dev/authoring_demo` (manequim B) usa os clips separados.

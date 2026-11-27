@@ -5,7 +5,7 @@ nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador co
 finalizações cinematográficas que **executam** o alvo de verdade (Etapa 4.10.1; efeitos visuais pelo motor
 **Calamidade_Awakening**, Etapa 4.10), contador de derrotas, infraestrutura de chefes personalizados (Etapa 4.11),
 avisos holográficos automáticos e caça a recompensa entre jogadores (Etapa 4.11), o Custom Rig Framework com o kit
-Blockbench (Etapa 4.12) e
+Blockbench (Etapa 4.12), o Finisher Scene Authoring Kit (Etapa 4.13.2) e
 (Etapa 4.9, MVP) a dimensão **Inverted Realm**
 (céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
 
@@ -60,6 +60,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `notice`, `client.holo.HoloToasts` | **Avisos holográficos automáticos** (Etapa 4.11). `HoloNotices` é o **único** caminho de um aviso (audiência, `HoloNoticeEvent` cancelável, pacote, farol); dados `HoloNotice` (`NoticeKind`, `NoticeSeverity`), regras puras `NoticeRules` (no `SelfTest`); faróis no Calamidade em `NoticeFx` (único dono). Fontes de hoje: chefe que aparece, chefe derrotado, portal do Nether aceso, chegada ao Inverted Realm, caça a recompensa; API pronta para chefes/portais/eventos futuros (`bossAppeared`, `portalOpened`, `worldEvent`). Cliente: `network.NoticeClientCache` (fila + histórico), cartões na tela `HoloToasts`, seção Alerts `client.holo.NoticesView`. Comando `/respectcraft notice`. |
 | `bounty` | **Caça a recompensa** contra jogadores (Etapa 4.11). `BountyService` é o único dono do quadro `BountyBoard` (SavedData do Overworld); contrato `Bounty`; regras puras `BountyRules` (no `SelfTest`); aba Bounty Hunt `client.holo.BountyView` + cache `network.BountyClientCache`; pacotes em `network.HoloNetworking`; comando `/respectcraft bounty`. |
 | `rig`, `client.rig` | **Custom Rig Framework** (Etapa 4.12). Famílias de rig = manifesto `assets/<ns>/rigs/<id>.rig.json` (`RigDefinition`); entidade → família = `rigs/entities/<entidade>.json` (`RigBinding`); catálogo `CustomRigRegistry.GLOBAL` preenchido por `Rigs.bootstrap()` (os dois lados). Clips por família e requisitos de participante em `FinisherDef.rigs()` (`finisher.FinisherRigs`); elegibilidade única `finisher.FinisherEligibility` (+ `FinisherTestMechanic.check`). Partes (ocultar/expor) só por `RigVisuals` (attachment sem save, pacote `network.RigNetworking`); sockets em pose de repouso `RigSockets`. Cliente: `RigGeoModel`/`RigGeoRenderer` genéricos. Base de mob `entity.rig.CustomRigMob`; fixtures `entity.dev.RigMannequinEntity` (`dev_rig_mannequin_a/b`); morango `entity.fruit.StrawberryEntity` (4.13.1). Comando `/respectcraft rig`. Kit externo em `rigkit/` + `tools/rigkit/`. |
+| `scenekit/`, `tools/scenekit` | **Finisher Scene Authoring Kit** (Etapa 4.13.2, ferramenta externa, nada roda no jogo): projeto conjunto do Blockbench com ATTACKER (jogador, `ATK_`) e VICTIM (CustomRig ou jogador, `VIC_`) no palco do Finisher Engine (`compose_scene.py`), separação em um clip por participante + relatório de eventos (`split_scene.py`), templates/exemplos gerados por `make_templates.py` (protegido por hash). Contrato em `scenekit/CONTRACT.md`. Cena de teste `rig.Rigs.AUTHORING_DEMO` (`respectcraft:dev/authoring_demo`, fixture: só manequim B, `/respectcraft rig demo <alvo> authoring`). |
 | `selftest` | `SelfTest` (+ `RigSelfTest`): regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
 | `biome`, `npc` | Só `LEIA-ME.md`: sem código (biomas são dados desde a 4.9). |
 
@@ -151,6 +152,18 @@ sistema em que vai mexer; veja o fim deste arquivo).
   `strawberry_visual_states.md`, conferidos no `RigSelfTest`); no meio de uma cena de destruição troque por
   `hide/show` explícitos — `rig:reset` devolve **todas** as partes (casca, folhas) ao padrão. `shell` cobre cabeça e
   torso juntos (descascar só um exige parte nova no contrato da família; não duplique bones em partes do binding).
+- **Finisher Scene Authoring Kit (Etapa 4.13.2):** projeto conjunto só para autoria; a geometria conjunta nunca vai
+  para o jogo e os modelos de origem só são lidos. Palco = referencial do executor (jogador: 1 bloco = 17,0667 px pelo
+  15/16 do `PlayerRenderer`; CustomRig: 16/`render_scale`), distância como `FinisherParticipants.stageDistance`;
+  `STAGE_*` são grupos de palco (`export: false`; `STAGE_VICTIM_SCALE` tem um keyframe constante de calibração) e
+  animá-los é `ERROR` (a sessão não move entidades). O split preserva os keyframes do *Export Animations* do plugin
+  (sem segunda conversão de eixos; `--bbmodel` só para lineares/easing, o resto vira `ERROR`), nunca descarta nada em
+  silêncio e exige dono em cada linha da timeline (`@attacker`/`@victim`/`@scene`; eventos = os que o engine já
+  entende: `hit`, `fall`, `shake`, `fov`, `sound`, `camera`, `execute` só no fim, `rig:`/`calamidade:` só em CustomRig).
+  Eventos de jogador viram linhas Java no relatório (não são keyframes). Clips de jogador vão para arquivos próprios
+  (`respectcraft_dev_scenes`/`respectcraft_authored_scenes`), nunca para a biblioteca de combate; `--install` recusa
+  arquivos de outros geradores, fontes e arquivos editados fora do kit. Não regenere o binding/geo/png do morango:
+  dar um clip ao morango (`animation_file` + `clip_overrides`) é decisão do dono.
 - **Câmera cinematográfica** segue o estado de animação sincronizado e restaura a perspectiva em qualquer saída.
 - **Regra permanente de chefes (Etapa 4.10.1):** chefes podem ser derrotados normalmente (dano comum, armas,
   habilidades; nunca imunes à morte), mas **só a finalização exclusiva designada para aquele chefe pode executá-lo pelo
@@ -314,12 +327,16 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 python3 tools/fx/check_shaders.py        # shaders fx montados como a Rimulib + glslangValidator (roda no CI)
 python3 tools/rigkit/test_rigkit.py      # validador de rigs, template e gerador em dia (roda no CI)
 python3 tools/rigkit/validate_rig.py --repo  # famílias e bindings do repositório
+python3 tools/scenekit/test_scenekit.py     # kit de autoria de cenas: composição, separação, proteção (roda no CI)
+python3 tools/scenekit/make_templates.py --check  # templates, exemplos e clips da cena de teste em dia
+bash tools/scenekit/blockbench/check_scene.sh # templates no Blockbench web real (job do CI; precisa de github.com)
 ./gradlew runClient                      # cliente de desenvolvimento
 ./gradlew runServer                      # servidor dedicado (aceita comandos no console)
 ```
 
 - Não há JUnit. Regra pura nova entra no `selftest.SelfTest` (sai como `RespectCraft self-test: OK` no smoke test).
-- O CI (`.github/workflows/build.yml`) roda `bbsync.py`, `./gradlew build` e o teste de fumaça.
+- O CI (`.github/workflows/build.yml`) roda `bbsync.py`, os kits de rigs e de cenas, `./gradlew build`, o teste de
+  fumaça e (job `scenekit-blockbench`) os templates no Blockbench real; publica os ZIPs dos dois kits.
 - Teste com clientes reais (`tools/visual-test/helpers.sh`, Xvfb) só quando a mudança afeta render, telas ou
   sincronização multiplayer; um cenário representativo basta. Não repita a validação de etapas anteriores nem rode
   clientes para mudanças só de documentação.
@@ -364,6 +381,7 @@ python3 tools/rigkit/validate_rig.py --repo  # famílias e bindings do repositó
   (contador só com `SUCCESS`, `/kill` na cena) e registro de chefes personalizados → 4.11
   (`HANDOFF_STAGE4_11_FINISHER_CONSOLIDATION_BOSSES.md`); Custom Rig Framework, família `fruit_humanoid_v1`, kit
   Blockbench, validador e manequins → 4.12 (`HANDOFF_STAGE4_12_CUSTOM_RIG_FRAMEWORK.md`); integração de assets
-  externos e morango → 4.13.1 (`HANDOFF_STAGE4_13_1_STRAWBERRY.md`).
+  externos e morango → 4.13.1 (`HANDOFF_STAGE4_13_1_STRAWBERRY.md`); autoria conjunta de finalizações (kit de cenas,
+  templates, separação) → 4.13.2 (`HANDOFF_STAGE4_13_2_FINISHER_SCENE_KIT.md`).
 - **Roadmap** (funcionalidades futuras, só registro — não implemente sem pedido): [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.
