@@ -14,7 +14,8 @@ import net.minecraft.resources.ResourceLocation;
  *
  * @param id            id estavel
  * @param attacker      animacao do executor quando ele e jogador (rig do jogador)
- * @param victim        animacao da vitima quando ela e jogador (rig do jogador)
+ * @param victim        animacao da vitima quando ela e jogador (rig do jogador); null (Etapa 4.13.3) = cena so PvE,
+ *                      sem clip de jogador vitima: a regra de alvos tem de recusar jogadores ({@code npcExclusive})
  * @param camera        trilha de camera dos participantes
  * @param requiresSkill habilidade que libera a finalizacao (null = todos tem)
  * @param weight        chance relativa quando o executor tem mais de uma
@@ -27,16 +28,27 @@ import net.minecraft.resources.ResourceLocation;
  *                      jogadores e mobs, nunca chefes) ou exclusiva de um chefe ({@link FinisherTargeting#exclusiveTo})
  * @param rigs          clips por familia de rig e requisitos de participante (Etapa 4.12; {@link FinisherRigs#NONE} = como
  *                      antes). A duracao dos clips de familia e conferida no registro das familias ({@code rig.Rigs}).
+ * @param entityVictimEvents eventos do lado da vitima quando ela NAO e jogador (Etapa 4.13.3): quedas
+ *                      ({@code Finishers.EVENT_FALL}) e o corte da musica da fruta ({@code Finishers.EVENT_SILENCE}),
+ *                      disparados pelo relogio da sessao. Vazio = como antes (mob vitima nao cai).
  */
 public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
                           CameraTrack camera, ResourceLocation requiresSkill, int weight, boolean recoveryInScene,
                           List<EntityFinisherClip> entityClips, FinisherFxDef fxDef, FinisherTargeting targeting,
-                          FinisherRigs rigs) {
+                          FinisherRigs rigs, List<PlayerAnimationDef.TimedEvent> entityVictimEvents) {
     public FinisherDef {
         entityClips = List.copyOf(entityClips);
+        entityVictimEvents = entityVictimEvents == null ? List.of() : entityVictimEvents.stream()
+                .sorted(java.util.Comparator.comparingInt(PlayerAnimationDef.TimedEvent::tick)).toList();
         if (targeting == null) targeting = FinisherTargeting.REGULAR;
         if (rigs == null) rigs = FinisherRigs.NONE;
-        int scene = Math.max(attacker.durationTicks(), victim.durationTicks());
+        if (victim == null && targeting.category() != FinisherTargeting.Category.NPC_EXCLUSIVE) {
+            throw new IllegalArgumentException(id + ": only an NPC-exclusive finisher may omit the player victim clip");
+        }
+        int scene = victim == null ? attacker.durationTicks() : Math.max(attacker.durationTicks(), victim.durationTicks());
+        for (PlayerAnimationDef.TimedEvent e : entityVictimEvents) {
+            if (e.tick() < 0 || e.tick() >= scene) throw new IllegalArgumentException(id + ": victim event outside the scene at " + e.tick());
+        }
         Set<String> seen = new HashSet<>();
         for (EntityFinisherClip clip : entityClips) {
             if (clip.durationTicks() != scene) {
@@ -47,6 +59,13 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
                 throw new IllegalArgumentException("Clip repetido para " + clip.entityType() + " (" + clip.role() + ") em " + id);
             }
         }
+    }
+
+    public FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
+                       CameraTrack camera, ResourceLocation requiresSkill, int weight, boolean recoveryInScene,
+                       List<EntityFinisherClip> entityClips, FinisherFxDef fxDef, FinisherTargeting targeting,
+                       FinisherRigs rigs) {
+        this(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting, rigs, List.of());
     }
 
     public FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, PlayerAnimationDef victim,
@@ -78,9 +97,16 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
         this(id, attacker, victim, camera, requiresSkill, weight, false);
     }
 
-    public int durationTicks() { return Math.max(attacker.durationTicks(), victim.durationTicks()); }
+    public int durationTicks() {
+        return victim == null ? attacker.durationTicks() : Math.max(attacker.durationTicks(), victim.durationTicks());
+    }
 
-    /** Animacao de jogador do papel. */
+    /** Eventos do lado da vitima: os do clip de jogador, ou (cena so PvE) os da vitima entidade. */
+    public List<PlayerAnimationDef.TimedEvent> victimSideEvents() {
+        return victim != null ? victim.events() : entityVictimEvents;
+    }
+
+    /** Animacao de jogador do papel (null: cena sem clip de jogador vitima). */
     public PlayerAnimationDef playerClip(FinisherRole role) { return role == FinisherRole.ATTACKER ? attacker : victim; }
 
     /** Clip do rig proprio da entidade neste papel, se a finalizacao tiver um. */
@@ -95,7 +121,7 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
     public FinisherDef withEntityClip(EntityFinisherClip clip) {
         List<EntityFinisherClip> clips = new ArrayList<>(entityClips);
         clips.add(clip);
-        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, clips, fxDef, targeting, rigs);
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, clips, fxDef, targeting, rigs, entityVictimEvents);
     }
 
     /** Efeitos visuais do Calamidade, se a finalizacao tiver. */
@@ -103,7 +129,7 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
 
     /** Copia com estes efeitos (null = sem efeitos; use antes de {@link Finishers#register}). */
     public FinisherDef withFx(FinisherFxDef fx) {
-        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fx, targeting, rigs);
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fx, targeting, rigs, entityVictimEvents);
     }
 
     /**
@@ -111,23 +137,23 @@ public record FinisherDef(ResourceLocation id, PlayerAnimationDef attacker, Play
      * deve ser registrada quando o chefe, a animacao e a regra de desbloqueio existirem (nada de exclusiva provisoria).
      */
     public FinisherDef withTargeting(FinisherTargeting targeting) {
-        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting, rigs);
+        return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting, rigs, entityVictimEvents);
     }
 
     /** Copia com outro id (fixtures e testes: a copia nunca entra no catalogo por acidente com o id do original). */
     public FinisherDef withId(ResourceLocation newId) {
-        return new FinisherDef(newId, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting, rigs);
+        return new FinisherDef(newId, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting, rigs, entityVictimEvents);
     }
 
     /** Copia com mais um clip de familia de rig (Etapa 4.12; use antes de {@link Finishers#register}). */
     public FinisherDef withRigClip(FinisherRigs.Clip clip) {
         return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting,
-                rigs.withClip(clip));
+                rigs.withClip(clip), entityVictimEvents);
     }
 
     /** Copia com mais um requisito de participante (Etapa 4.12). */
     public FinisherDef withRigRequirement(FinisherRigs.Requirement requirement) {
         return new FinisherDef(id, attacker, victim, camera, requiresSkill, weight, recoveryInScene, entityClips, fxDef, targeting,
-                rigs.withRequirement(requirement));
+                rigs.withRequirement(requirement), entityVictimEvents);
     }
 }

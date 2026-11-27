@@ -144,6 +144,7 @@ public final class FinisherParticipants {
                                      ResourceLocation entityType, boolean geckoRig, Predicate<ResourceLocation> hasTag) {
         if (kind == Kind.PLAYER) {
             PlayerAnimationDef clip = def.playerClip(role);
+            if (clip == null) return Resolution.fail(def.id() + " has no player clip for the " + role.name().toLowerCase(java.util.Locale.ROOT));
             if (PlayerAnimations.get(clip.id()) != clip) {
                 return Resolution.fail("player clip " + clip.id() + " of " + def.id() + " is not registered");
             }

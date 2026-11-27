@@ -98,7 +98,7 @@ public final class FinisherExecution {
         if (attacker instanceof ServerPlayer player && NeoForge.EVENT_BUS.post(new AttackEntityEvent(player, victim)).isCanceled()) {
             return new Result(Outcome.FAILED, "attack was blocked by server protection");
         }
-        boolean bossCredit = kind == FinisherParticipants.Kind.BOSS && !finisher.targeting().regular()
+        boolean bossCredit = kind == FinisherParticipants.Kind.BOSS && finisher.targeting().category() == FinisherTargeting.Category.BOSS_EXCLUSIVE
                 && attacker instanceof ServerPlayer;
         boolean[] confirmed = new boolean[1];
         boolean applied = false;

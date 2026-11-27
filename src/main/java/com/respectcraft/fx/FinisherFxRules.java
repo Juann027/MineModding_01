@@ -100,7 +100,7 @@ public final class FinisherFxRules {
                 out.add(new Cue(e.tick(), CueKind.HIT, clampStrength(parseInt(e.data(), 1)), 0, "hit_" + hits++));
             }
         }
-        for (PlayerAnimationDef.TimedEvent e : sorted(def.victim().events())) {
+        for (PlayerAnimationDef.TimedEvent e : sorted(def.victimSideEvents())) {
             if (e.type().equals(Finishers.EVENT_FALL)) {
                 double[] fall = parseFall(e.data());
                 out.add(new Cue(e.tick(), CueKind.FALL, (int) fall[0], fall[1], "fall_" + falls++));
