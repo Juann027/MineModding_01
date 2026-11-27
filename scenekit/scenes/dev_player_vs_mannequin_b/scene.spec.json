@@ -1,0 +1,44 @@
+{
+  "format": "respectcraft:finisher_scene",
+  "format_version": 1,
+  "name": "dev_player_vs_mannequin_b",
+  "description": "DEV FIXTURE: in-game check of the kit (split clips installed for the dev scene respectcraft:dev/authoring_demo, /respectcraft rig demo <mannequin_b> authoring). Short, wide mannequin with its own stage distance (1.6).",
+  "animation": "scene.authoring_demo",
+  "animations": [
+    "scene.authoring_demo"
+  ],
+  "duration_ticks": 60,
+  "attacker": {
+    "kind": "player",
+    "prefix": "ATK_",
+    "bbmodel": "../../../model_sources/player/respectcraft_animated_player.bbmodel",
+    "hitbox_width": 0.6,
+    "export": {
+      "file": "respectcraft:animations/player/respectcraft_dev_scenes.animation.json",
+      "animation_prefix": "animation.respectcraft.player.dev."
+    }
+  },
+  "victim": {
+    "kind": "custom_rig",
+    "prefix": "VIC_",
+    "bbmodel": "../../../model_sources/rig/dev_rig_mannequin_b.bbmodel",
+    "entity": "respectcraft:dev_rig_mannequin_b",
+    "rig_id": "respectcraft:fruit_humanoid_v1",
+    "rig": "../../../src/main/resources/assets/respectcraft/rigs/fruit_humanoid_v1.rig.json",
+    "binding": "../../../src/main/resources/assets/respectcraft/rigs/entities/dev_rig_mannequin_b.json",
+    "geo": "respectcraft:geo/entity/dev_rig_mannequin_b.geo.json",
+    "hitbox_width": 0.9,
+    "export": {
+      "file": "respectcraft:animations/entity/dev_rig_mannequin_b.animation.json",
+      "animation_prefix": "animation.dev_rig_mannequin_b.dev."
+    }
+  },
+  "contacts": [
+    {
+      "event": "hit",
+      "attacker_bone": "RightHandAttachment",
+      "victim_bone": "socket_impact_point",
+      "max_px": 12
+    }
+  ]
+}

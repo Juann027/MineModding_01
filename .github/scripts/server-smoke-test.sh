@@ -101,6 +101,10 @@ grep -q 'respectcraft:takedown VICTIM: FAMILY main/animation.fruit_humanoid_v1.f
   || fail "os dois manequins não compartilham a animação da família"
 grep -q 'respectcraft:dev/rig_peel_demo VICTIM: REFUSED (victim: minecraft:zombie has no custom rig' "$log" \
   || fail "cena de rig não recusou o zumbi"
+# Finisher Scene Authoring Kit: clip da vitima separado do projeto conjunto, so no manequim B (override do binding).
+grep -q 'respectcraft:dev/authoring_demo VICTIM: BINDING main/animation.dev_rig_mannequin_b.dev.authoring_demo_victim' "$log" \
+  || fail "cena do kit de autoria não resolveu o clip do manequim B"
+grep -q 'respectcraft:dev/authoring_demo VICTIM: REFUSED' "$log" || fail "cena do kit de autoria não recusou quem não tem o clip"
 grep -q 'respectcraft:takedown VICTIM: HOLD hold 60t' "$log" || fail "zumbi não ficou parado no Takedown (retrocompatibilidade)"
 grep -q 'Rig parts of respectcraft:dev_rig_mannequin_b: {shell=false}' "$log" || fail "parte do manequim B não foi escondida"
 grep -q 'Rig parts of respectcraft:dev_rig_mannequin_b: {}' "$log" || fail "partes do manequim B não voltaram ao padrão"

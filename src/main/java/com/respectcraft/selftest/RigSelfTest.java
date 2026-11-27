@@ -256,6 +256,15 @@ final class RigSelfTest {
         check(f, events.size() == 2 && events.stream().allMatch(i -> i.tick() == 22)
                 && events.stream().map(GeoFxKeyframes.Instruction::text).toList().containsAll(List.of("rig:hide:shell", "rig:show:core")),
                 "eventos de parte lidos do timeline da animacao compartilhada (tick 22)");
+        // Finisher Scene Authoring Kit: clip da vitima separado do projeto conjunto (arquivo proprio do manequim B)
+        var authored = CustomRigRegistry.GLOBAL.override(b, Rigs.AUTHORING_DEMO.id(), com.respectcraft.finisher.FinisherRole.VICTIM);
+        var authoredEvents = authored.map(o -> RigVisuals.partEvents(CustomRigRegistry.GLOBAL.animationFile(b, o.animation()),
+                o.animation())).orElse(List.of());
+        check(f, authored.map(o -> o.ticks() == Rigs.AUTHORING_DEMO.durationTicks()).orElse(false)
+                && Rigs.AUTHORING_DEMO.attacker().durationTicks() == Rigs.AUTHORING_DEMO.durationTicks()
+                && CustomRigRegistry.GLOBAL.triggerables(b).contains(authored.get().animation())
+                && authoredEvents.size() == 2 && authoredEvents.stream().allMatch(i -> i.tick() == 22),
+                "cena do kit de autoria: override do manequim B com a duracao da cena e partes no tick 22");
     }
 
     // ---- Etapa 4.13.1: morango (assets externos, binding oficial do artista) ----

@@ -1,0 +1,490 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "scene.player_vs_fruit_mannequin_demo": {
+      "animation_length": 3,
+      "bones": {
+        "STAGE_VICTIM_SCALE": {
+          "scale": {
+            "0": {
+              "vector": [
+                1.066667,
+                1.066667,
+                1.066667
+              ]
+            }
+          }
+        },
+        "ATK_Root": {
+          "position": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.7": {
+              "vector": [
+                0,
+                0,
+                -2
+              ]
+            },
+            "1.6": {
+              "vector": [
+                0,
+                0,
+                -1
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "ATK_Body": {
+          "rotation": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.45": {
+              "vector": [
+                0,
+                18,
+                0
+              ]
+            },
+            "0.7": {
+              "vector": [
+                8,
+                -22,
+                0
+              ]
+            },
+            "1.6": {
+              "vector": [
+                6,
+                10,
+                0
+              ]
+            },
+            "2.4": {
+              "vector": [
+                6,
+                10,
+                0
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "ATK_Head": {
+          "rotation": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.7": {
+              "vector": [
+                6,
+                16,
+                0
+              ]
+            },
+            "1.6": {
+              "vector": [
+                8,
+                -6,
+                0
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "ATK_RightArm": {
+          "rotation": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.45": {
+              "vector": [
+                -50,
+                10,
+                22
+              ]
+            },
+            "0.7": {
+              "vector": [
+                -92,
+                -4,
+                0
+              ]
+            },
+            "1": {
+              "vector": [
+                -70,
+                0,
+                6
+              ]
+            },
+            "1.6": {
+              "vector": [
+                -20,
+                0,
+                8
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "ATK_LeftArm": {
+          "rotation": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.7": {
+              "vector": [
+                -30,
+                0,
+                -10
+              ]
+            },
+            "1.6": {
+              "vector": [
+                -84,
+                18,
+                0
+              ]
+            },
+            "2.4": {
+              "vector": [
+                -84,
+                18,
+                0
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "ATK_RightLeg": {
+          "rotation": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.7": {
+              "vector": [
+                18,
+                0,
+                4
+              ]
+            },
+            "1.6": {
+              "vector": [
+                6,
+                0,
+                2
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "ATK_LeftLeg": {
+          "rotation": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.7": {
+              "vector": [
+                -14,
+                0,
+                -3
+              ]
+            },
+            "1.6": {
+              "vector": [
+                -6,
+                0,
+                -2
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "VIC_root": {
+          "position": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.6": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.75": {
+              "vector": [
+                0,
+                0,
+                1.5
+              ]
+            },
+            "1.6": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "VIC_torso": {
+          "rotation": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.6": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.75": {
+              "vector": [
+                16,
+                0,
+                0
+              ]
+            },
+            "1.2": {
+              "vector": [
+                4,
+                0,
+                0
+              ]
+            },
+            "1.6": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "2.4": {
+              "vector": [
+                8,
+                0,
+                6
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "VIC_head": {
+          "rotation": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.6": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.75": {
+              "vector": [
+                20,
+                0,
+                0
+              ]
+            },
+            "1.3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "2.4": {
+              "vector": [
+                6,
+                -14,
+                0
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "VIC_right_arm": {
+          "rotation": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.75": {
+              "vector": [
+                30,
+                0,
+                20
+              ]
+            },
+            "1.6": {
+              "vector": [
+                10,
+                0,
+                8
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "VIC_left_arm": {
+          "rotation": {
+            "0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.75": {
+              "vector": [
+                30,
+                0,
+                -20
+              ]
+            },
+            "1.6": {
+              "vector": [
+                10,
+                0,
+                -8
+              ]
+            },
+            "3": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        }
+      },
+      "timeline": {
+        "0": "@scene camera 150,4.6,1.7,1.1,1.0,0\n@attacker sound respectcraft:finisher.whoosh",
+        "0.7": "@attacker hit 2\n@attacker shake 0.5,8\n@scene camera 75,3.0,1.2,1.0,0.95,-2\n@attacker note contact RightHandAttachment -> victim socket_impact_point",
+        "0.75": "@victim note reaction recoil (root offset returns to zero at 1.6 s)",
+        "1.6": "@attacker note grab LeftHandAttachment -> victim socket_grab_point\n@scene camera 40,2.6,0.9,0.6,0.85,-5",
+        "3": "@scene camera 20,4.2,2.3,0.4,1.0,0\n@scene execute",
+        "1.1": "@victim rig:hide:shell;rig:show:core\n@victim note pulp shell hidden, core exposed (restored by the session at the end)"
+      }
+    }
+  }
+}

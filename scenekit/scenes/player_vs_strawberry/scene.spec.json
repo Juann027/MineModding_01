@@ -1,0 +1,38 @@
+{
+  "format": "respectcraft:finisher_scene",
+  "format_version": 1,
+  "name": "respectcraft_player_vs_strawberry_template",
+  "description": "Player (ATTACKER) x Strawberry (VICTIM, respectcraft:strawberry, Stage 4.13.1 artist model). Authoring only: never export the geometry of this project.",
+  "animation": "scene.player_vs_strawberry",
+  "animations": ["scene.player_vs_strawberry", "scene.player_vs_strawberry_demo"],
+  "duration_ticks": 60,
+  "attacker": {
+    "kind": "player",
+    "prefix": "ATK_",
+    "bbmodel": "../../../model_sources/player/respectcraft_animated_player.bbmodel",
+    "hitbox_width": 0.6,
+    "export": {
+      "file": "respectcraft:animations/player/respectcraft_authored_scenes.animation.json",
+      "animation_prefix": "animation.respectcraft.player.scene."
+    }
+  },
+  "victim": {
+    "kind": "custom_rig",
+    "prefix": "VIC_",
+    "bbmodel": "../../../model_sources/rig/strawberry/strawberry.bbmodel",
+    "entity": "respectcraft:strawberry",
+    "rig_id": "respectcraft:fruit_humanoid_v1",
+    "rig": "../../../src/main/resources/assets/respectcraft/rigs/fruit_humanoid_v1.rig.json",
+    "binding": "../../../src/main/resources/assets/respectcraft/rigs/entities/strawberry.json",
+    "geo": "respectcraft:geo/entity/strawberry.geo.json",
+    "hitbox_width": 0.8,
+    "export": {
+      "file": "respectcraft:animations/entity/strawberry.animation.json",
+      "animation_prefix": "animation.strawberry.scene."
+    }
+  },
+  "contacts": [
+    {"event": "hit", "attacker_bone": "RightHandAttachment", "victim_bone": "socket_impact_point", "max_px": 10},
+    {"event": "grab", "attacker_bone": "LeftHandAttachment", "victim_bone": "socket_grab_point", "max_px": 10}
+  ]
+}

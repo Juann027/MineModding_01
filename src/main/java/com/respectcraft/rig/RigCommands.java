@@ -28,7 +28,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * {@code /respectcraft rig} (Etapa 4.12, permissao 2): diagnostico do Custom Rig Framework. So leitura, exceto
  * {@code part} (estado visual temporario), {@code fixtures} (invoca os dois manequins de teste) e {@code demo} (inicia
- * a cena de teste das partes pelas mesmas regras do {@code /respectcraft admin finisher}).
+ * uma cena de teste — {@code peel} (partes, padrao) ou {@code authoring} (clips do Finisher Scene Authoring Kit) — pelas
+ * mesmas regras do {@code /respectcraft admin finisher}).
  */
 public final class RigCommands {
     private RigCommands() {}
@@ -46,7 +47,10 @@ public final class RigCommands {
                                 .then(Commands.literal("hide").executes(c -> part(c, StringArgumentType.getString(c, "part"), false)))
                                 .then(Commands.literal("show").executes(c -> part(c, StringArgumentType.getString(c, "part"), true))))))
                 .then(Commands.literal("fixtures").executes(RigCommands::fixtures))
-                .then(Commands.literal("demo").then(Commands.argument("target", EntityArgument.entity()).executes(RigCommands::demo)));
+                .then(Commands.literal("demo").then(Commands.argument("target", EntityArgument.entity())
+                        .executes(c -> demo(c, Rigs.PEEL_DEMO))
+                        .then(Commands.literal("peel").executes(c -> demo(c, Rigs.PEEL_DEMO)))
+                        .then(Commands.literal("authoring").executes(c -> demo(c, Rigs.AUTHORING_DEMO)))));
     }
 
     private static void reply(CommandContext<CommandSourceStack> c, String text) {
@@ -182,16 +186,16 @@ public final class RigCommands {
         player.serverLevel().addFreshEntity(e);
     }
 
-    private static int demo(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+    private static int demo(CommandContext<CommandSourceStack> c, FinisherDef scene) throws CommandSyntaxException {
         ServerPlayer player = c.getSource().getPlayerOrException();
         Optional<LivingEntity> target = living(c, "target");
         if (target.isEmpty()) return 0;
-        var result = FinisherTestMechanic.forceStart(player, target.get(), Rigs.PEEL_DEMO);
+        var result = FinisherTestMechanic.forceStart(player, target.get(), scene);
         if (!result.started()) {
             c.getSource().sendFailure(Component.literal(result.message()));
             return 0;
         }
-        reply(c, "Rig demo " + Rigs.PEEL_DEMO.id() + " started on " + FinisherParticipants.typeId(target.get()) + ".");
+        reply(c, "Rig demo " + scene.id() + " started on " + FinisherParticipants.typeId(target.get()) + ".");
         return 1;
     }
 

@@ -1,0 +1,468 @@
+{
+  "format": "respectcraft:finisher_scene_manifest",
+  "format_version": 1,
+  "name": "respectcraft_player_vs_fruit_mannequin_template",
+  "description": "Player (ATTACKER) x reference mannequin of the fruit_humanoid_v1 family (VICTIM, proportion 1). Reusable starting point for any fruit of the family: replace the victim with your fruit's .bbmodel in compose_scene.py.",
+  "duration_ticks": 60,
+  "animation": "scene.player_vs_fruit_mannequin",
+  "textures": "atlas",
+  "stage": {
+    "distance_blocks": 1.15,
+    "lateral_blocks": 0,
+    "yaw_offset": 0,
+    "source": "auto",
+    "reference": "attacker px (1 block = 17.066667 px)",
+    "victim_anchor_px": [
+      0,
+      0,
+      -19.626667
+    ],
+    "victim_yaw": 180,
+    "victim_scale": 1.066667,
+    "groups": {
+      "STAGE_ATTACKER": "c0b4f2f9-52c0-e397-8da1-817a08519716",
+      "STAGE_VICTIM": "482cf21e-6ba7-a691-b2ba-b17351588e4c",
+      "STAGE_VICTIM_SCALE": "a0486ae3-f729-32b7-fd3e-bf482a13544a"
+    }
+  },
+  "participants": {
+    "attacker": {
+      "kind": "player",
+      "prefix": "ATK_",
+      "source_bbmodel": "../../../model_sources/player/respectcraft_animated_player.bbmodel",
+      "source_sha256": "315650a2af118c73af66da6316990882399119b2ca0340ecce403ec28ec541c7",
+      "entity": "minecraft:player",
+      "rig": null,
+      "geo": null,
+      "render_scale": 1.0,
+      "px_per_block": 17.066667,
+      "root_bones": [
+        "Root"
+      ],
+      "bone_count": 36,
+      "element_count": 21,
+      "texture_count": 1,
+      "export": {
+        "file": "respectcraft:animations/player/respectcraft_authored_scenes.animation.json",
+        "animation_prefix": "animation.respectcraft.player.scene."
+      }
+    },
+    "victim": {
+      "kind": "custom_rig",
+      "prefix": "VIC_",
+      "source_bbmodel": "../../../rigkit/fruit_humanoid_v1/fruit_humanoid_v1_template.bbmodel",
+      "source_sha256": "1b763a6845d54d769927de4797c078aa661c0f6c510e5de97874ffb5e899dbdc",
+      "entity": "respectcraft:your_fruit",
+      "rig": "respectcraft:fruit_humanoid_v1",
+      "geo": null,
+      "render_scale": 1.0,
+      "px_per_block": 16,
+      "root_bones": [
+        "root"
+      ],
+      "bone_count": 34,
+      "element_count": 24,
+      "texture_count": 1,
+      "export": {
+        "file": "respectcraft:animations/entity/your_fruit.animation.json",
+        "animation_prefix": "animation.your_fruit.scene."
+      }
+    }
+  },
+  "bones": {
+    "ATK_Root": {
+      "role": "attacker",
+      "bone": "Root"
+    },
+    "ATK_CenterOfMass": {
+      "role": "attacker",
+      "bone": "CenterOfMass"
+    },
+    "ATK_Waist": {
+      "role": "attacker",
+      "bone": "Waist"
+    },
+    "ATK_Body": {
+      "role": "attacker",
+      "bone": "Body"
+    },
+    "ATK_BodyLayer": {
+      "role": "attacker",
+      "bone": "BodyLayer"
+    },
+    "ATK_Neck": {
+      "role": "attacker",
+      "bone": "Neck"
+    },
+    "ATK_Head": {
+      "role": "attacker",
+      "bone": "Head"
+    },
+    "ATK_HatLayer": {
+      "role": "attacker",
+      "bone": "HatLayer"
+    },
+    "ATK_HairAttachment": {
+      "role": "attacker",
+      "bone": "HairAttachment"
+    },
+    "ATK_HairPlaceholder": {
+      "role": "attacker",
+      "bone": "HairPlaceholder"
+    },
+    "ATK_HeadAccessoryAttachment": {
+      "role": "attacker",
+      "bone": "HeadAccessoryAttachment"
+    },
+    "ATK_BodyAccessoryAttachment": {
+      "role": "attacker",
+      "bone": "BodyAccessoryAttachment"
+    },
+    "ATK_FemaleBust": {
+      "role": "attacker",
+      "bone": "FemaleBust"
+    },
+    "ATK_FemaleBustLayer": {
+      "role": "attacker",
+      "bone": "FemaleBustLayer"
+    },
+    "ATK_RightClavicle": {
+      "role": "attacker",
+      "bone": "RightClavicle"
+    },
+    "ATK_RightArm": {
+      "role": "attacker",
+      "bone": "RightArm"
+    },
+    "ATK_RightArmClassic": {
+      "role": "attacker",
+      "bone": "RightArmClassic"
+    },
+    "ATK_RightArmSlim": {
+      "role": "attacker",
+      "bone": "RightArmSlim"
+    },
+    "ATK_RightArmLayer": {
+      "role": "attacker",
+      "bone": "RightArmLayer"
+    },
+    "ATK_RightArmLayerClassic": {
+      "role": "attacker",
+      "bone": "RightArmLayerClassic"
+    },
+    "ATK_RightArmLayerSlim": {
+      "role": "attacker",
+      "bone": "RightArmLayerSlim"
+    },
+    "ATK_RightHandAttachment": {
+      "role": "attacker",
+      "bone": "RightHandAttachment"
+    },
+    "ATK_LeftClavicle": {
+      "role": "attacker",
+      "bone": "LeftClavicle"
+    },
+    "ATK_LeftArm": {
+      "role": "attacker",
+      "bone": "LeftArm"
+    },
+    "ATK_LeftArmClassic": {
+      "role": "attacker",
+      "bone": "LeftArmClassic"
+    },
+    "ATK_LeftArmSlim": {
+      "role": "attacker",
+      "bone": "LeftArmSlim"
+    },
+    "ATK_LeftArmLayer": {
+      "role": "attacker",
+      "bone": "LeftArmLayer"
+    },
+    "ATK_LeftArmLayerClassic": {
+      "role": "attacker",
+      "bone": "LeftArmLayerClassic"
+    },
+    "ATK_LeftArmLayerSlim": {
+      "role": "attacker",
+      "bone": "LeftArmLayerSlim"
+    },
+    "ATK_LeftHandAttachment": {
+      "role": "attacker",
+      "bone": "LeftHandAttachment"
+    },
+    "ATK_RightHip": {
+      "role": "attacker",
+      "bone": "RightHip"
+    },
+    "ATK_RightLeg": {
+      "role": "attacker",
+      "bone": "RightLeg"
+    },
+    "ATK_RightLegLayer": {
+      "role": "attacker",
+      "bone": "RightLegLayer"
+    },
+    "ATK_LeftHip": {
+      "role": "attacker",
+      "bone": "LeftHip"
+    },
+    "ATK_LeftLeg": {
+      "role": "attacker",
+      "bone": "LeftLeg"
+    },
+    "ATK_LeftLegLayer": {
+      "role": "attacker",
+      "bone": "LeftLegLayer"
+    },
+    "VIC_root": {
+      "role": "victim",
+      "bone": "root"
+    },
+    "VIC_pelvis": {
+      "role": "victim",
+      "bone": "pelvis"
+    },
+    "VIC_torso": {
+      "role": "victim",
+      "bone": "torso"
+    },
+    "VIC_head": {
+      "role": "victim",
+      "bone": "head"
+    },
+    "VIC_face": {
+      "role": "victim",
+      "bone": "face"
+    },
+    "VIC_brow_right": {
+      "role": "victim",
+      "bone": "brow_right"
+    },
+    "VIC_brow_left": {
+      "role": "victim",
+      "bone": "brow_left"
+    },
+    "VIC_eye_right": {
+      "role": "victim",
+      "bone": "eye_right"
+    },
+    "VIC_eye_left": {
+      "role": "victim",
+      "bone": "eye_left"
+    },
+    "VIC_mouth": {
+      "role": "victim",
+      "bone": "mouth"
+    },
+    "VIC_head_shell": {
+      "role": "victim",
+      "bone": "head_shell"
+    },
+    "VIC_torso_shell": {
+      "role": "victim",
+      "bone": "torso_shell"
+    },
+    "VIC_torso_core": {
+      "role": "victim",
+      "bone": "torso_core"
+    },
+    "VIC_right_arm": {
+      "role": "victim",
+      "bone": "right_arm"
+    },
+    "VIC_right_forearm": {
+      "role": "victim",
+      "bone": "right_forearm"
+    },
+    "VIC_right_hand": {
+      "role": "victim",
+      "bone": "right_hand"
+    },
+    "VIC_left_arm": {
+      "role": "victim",
+      "bone": "left_arm"
+    },
+    "VIC_left_forearm": {
+      "role": "victim",
+      "bone": "left_forearm"
+    },
+    "VIC_left_hand": {
+      "role": "victim",
+      "bone": "left_hand"
+    },
+    "VIC_right_thigh": {
+      "role": "victim",
+      "bone": "right_thigh"
+    },
+    "VIC_right_shin": {
+      "role": "victim",
+      "bone": "right_shin"
+    },
+    "VIC_right_foot": {
+      "role": "victim",
+      "bone": "right_foot"
+    },
+    "VIC_left_thigh": {
+      "role": "victim",
+      "bone": "left_thigh"
+    },
+    "VIC_left_shin": {
+      "role": "victim",
+      "bone": "left_shin"
+    },
+    "VIC_left_foot": {
+      "role": "victim",
+      "bone": "left_foot"
+    },
+    "VIC_socket_head": {
+      "role": "victim",
+      "bone": "socket_head"
+    },
+    "VIC_socket_chest": {
+      "role": "victim",
+      "bone": "socket_chest"
+    },
+    "VIC_socket_right_hand": {
+      "role": "victim",
+      "bone": "socket_right_hand"
+    },
+    "VIC_socket_left_hand": {
+      "role": "victim",
+      "bone": "socket_left_hand"
+    },
+    "VIC_socket_grab_point": {
+      "role": "victim",
+      "bone": "socket_grab_point"
+    },
+    "VIC_socket_impact_point": {
+      "role": "victim",
+      "bone": "socket_impact_point"
+    },
+    "VIC_socket_ground_contact": {
+      "role": "victim",
+      "bone": "socket_ground_contact"
+    },
+    "VIC_socket_vfx_core": {
+      "role": "victim",
+      "bone": "socket_vfx_core"
+    },
+    "VIC_socket_weapon_right": {
+      "role": "victim",
+      "bone": "socket_weapon_right"
+    }
+  },
+  "contacts": [
+    {
+      "event": "hit",
+      "attacker_bone": "RightHandAttachment",
+      "victim_bone": "socket_impact_point",
+      "max_px": 10
+    },
+    {
+      "event": "grab",
+      "attacker_bone": "LeftHandAttachment",
+      "victim_bone": "socket_grab_point",
+      "max_px": 10
+    }
+  ],
+  "victim_parts": [
+    {
+      "name": "shell",
+      "default_visible": true,
+      "groups": [
+        "VIC_torso_shell",
+        "VIC_head_shell"
+      ]
+    },
+    {
+      "name": "core",
+      "default_visible": false,
+      "groups": [
+        "VIC_torso_core"
+      ]
+    }
+  ],
+  "victim_sockets": [
+    {
+      "name": "head",
+      "bone": "VIC_head",
+      "offset": [
+        0,
+        4,
+        0
+      ]
+    },
+    {
+      "name": "chest",
+      "bone": "VIC_torso",
+      "offset": [
+        0,
+        6,
+        -2.5
+      ]
+    },
+    {
+      "name": "right_hand",
+      "bone": "VIC_right_hand",
+      "offset": [
+        0,
+        -2,
+        0
+      ]
+    },
+    {
+      "name": "left_hand",
+      "bone": "VIC_left_hand",
+      "offset": [
+        0,
+        -2,
+        0
+      ]
+    },
+    {
+      "name": "grab_point",
+      "bone": "VIC_torso",
+      "offset": [
+        0,
+        8,
+        -2
+      ]
+    },
+    {
+      "name": "impact_point",
+      "bone": "VIC_torso",
+      "offset": [
+        0,
+        5,
+        -3
+      ]
+    },
+    {
+      "name": "ground_contact",
+      "bone": "VIC_root",
+      "offset": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "vfx_core",
+      "bone": "VIC_torso",
+      "offset": [
+        0,
+        4,
+        0
+      ]
+    },
+    {
+      "name": "weapon_right",
+      "bone": "VIC_right_hand",
+      "offset": [
+        0,
+        -3,
+        -1
+      ]
+    }
+  ]
+}

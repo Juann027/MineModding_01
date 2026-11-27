@@ -49,7 +49,7 @@ Feito: `rigkit/` (README com guia de produção no Blockbench Web e de integraç
 Template aberto e testado no Blockbench Web pelo dono; primeiro modelo artístico integrado na Etapa 4.13.1
 (morango). Próximo: `strawberry.animation.json` + `.bbmodel` atualizado, produzidos externamente pelo dono.
 
-### 2.1 Ferramenta de autoria de finishers (PlayerRig + CustomRig) — **só registro, não implementar ainda**
+### 2.1 Ferramenta de autoria de finishers (PlayerRig + CustomRig) — **feito na Etapa 4.13.2 (Finisher Scene Authoring Kit)**
 
 Uma **cena de referência do Blockbench** com o rig do jogador (`respectcraft_player_combat`) e um modelo de família
 (CustomRig, ex.: morango) lado a lado, na distância/alinhamento de palco da finalização, para animar os dois
@@ -60,6 +60,12 @@ proteção por hash e o `bbsync.flip`) e o do mob para o `<entidade>.animation.j
 `clip_overrides`/`FinisherRigs.Clip` correspondente — conferidos pelo `validate_rig.py` e pelo `bbsync.py`. Estende
 o que existe (`respectcraft_combo_scene.bbmodel`, `tools/player_anim`, `tools/rigkit`); não cria engine nem formato
 novo, e o jogo continua tocando um clip por participante pelo Finisher Engine.
+
+Feito (4.13.2): `scenekit/` (templates jogador × morango e jogador × manequim da família, contrato, guias do
+Blockbench Web e do Claude no Chrome, exemplos) e `tools/scenekit/` (`compose_scene.py`, `split_scene.py`,
+`make_templates.py` protegido por hash, testes, conferência no Blockbench real no CI, ZIP). Os clips de jogador vão
+para um arquivo próprio (a biblioteca de combate continua do `export.py`). Próximo: a primeira finalização definitiva
+feita com o kit (pedido do dono), com o `clip_overrides` do morango.
 
 ## 3. AI Fruit Love Island Mobs
 

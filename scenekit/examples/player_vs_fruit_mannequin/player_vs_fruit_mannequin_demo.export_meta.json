@@ -1,0 +1,175 @@
+{
+  "format": "respectcraft:finisher_scene_export",
+  "format_version": 1,
+  "scene": "respectcraft_player_vs_fruit_mannequin_template",
+  "scene_animation": "scene.player_vs_fruit_mannequin_demo",
+  "duration_ticks": 60,
+  "duration_seconds": 3,
+  "stage": {
+    "distance_blocks": 1.15,
+    "lateral_blocks": 0,
+    "yaw_offset": 0,
+    "source": "auto",
+    "reference": "attacker px (1 block = 17.066667 px)",
+    "victim_anchor_px": [
+      0,
+      0,
+      -19.626667
+    ],
+    "victim_yaw": 180,
+    "victim_scale": 1.066667,
+    "groups": {
+      "STAGE_ATTACKER": "c0b4f2f9-52c0-e397-8da1-817a08519716",
+      "STAGE_VICTIM": "482cf21e-6ba7-a691-b2ba-b17351588e4c",
+      "STAGE_VICTIM_SCALE": "a0486ae3-f729-32b7-fd3e-bf482a13544a"
+    }
+  },
+  "participants": {
+    "attacker": {
+      "kind": "player",
+      "entity": "minecraft:player",
+      "rig": null,
+      "file": "respectcraft:animations/player/respectcraft_authored_scenes.animation.json",
+      "animation": "animation.respectcraft.player.scene.player_vs_fruit_mannequin_demo_attacker",
+      "ticks": 60
+    },
+    "victim": {
+      "kind": "custom_rig",
+      "entity": "respectcraft:your_fruit",
+      "rig": "respectcraft:fruit_humanoid_v1",
+      "file": "respectcraft:animations/entity/your_fruit.animation.json",
+      "animation": "animation.your_fruit.scene.player_vs_fruit_mannequin_demo_victim",
+      "ticks": 60
+    }
+  },
+  "events": [
+    {
+      "tick": 0,
+      "time": "0",
+      "owner": "scene",
+      "kind": "camera",
+      "data": "150,4.6,1.7,1.1,1.0,0",
+      "runtime": "CameraTrack.Key"
+    },
+    {
+      "tick": 0,
+      "time": "0",
+      "owner": "attacker",
+      "kind": "sound",
+      "data": "respectcraft:finisher.whoosh",
+      "runtime": "PlayerAnimations.EVENT_SOUND"
+    },
+    {
+      "tick": 14,
+      "time": "0.7",
+      "owner": "attacker",
+      "kind": "hit",
+      "data": "2",
+      "runtime": "Finishers.EVENT_HIT"
+    },
+    {
+      "tick": 14,
+      "time": "0.7",
+      "owner": "attacker",
+      "kind": "shake",
+      "data": "0.5,8",
+      "runtime": "PlayerAnimations.EVENT_CAMERA_SHAKE"
+    },
+    {
+      "tick": 14,
+      "time": "0.7",
+      "owner": "scene",
+      "kind": "camera",
+      "data": "75,3.0,1.2,1.0,0.95,-2",
+      "runtime": "CameraTrack.Key"
+    },
+    {
+      "tick": 14,
+      "time": "0.7",
+      "owner": "attacker",
+      "kind": "note",
+      "data": "contact RightHandAttachment -> victim socket_impact_point",
+      "runtime": "documentation only"
+    },
+    {
+      "tick": 15,
+      "time": "0.75",
+      "owner": "victim",
+      "kind": "note",
+      "data": "reaction recoil (root offset returns to zero at 1.6 s)",
+      "runtime": "documentation only"
+    },
+    {
+      "tick": 22,
+      "time": "1.1",
+      "owner": "victim",
+      "kind": "instruction",
+      "data": "rig:hide:shell",
+      "runtime": "keyframe timeline (rig)"
+    },
+    {
+      "tick": 22,
+      "time": "1.1",
+      "owner": "victim",
+      "kind": "instruction",
+      "data": "rig:show:core",
+      "runtime": "keyframe timeline (rig)"
+    },
+    {
+      "tick": 22,
+      "time": "1.1",
+      "owner": "victim",
+      "kind": "note",
+      "data": "pulp shell hidden, core exposed (restored by the session at the end)",
+      "runtime": "documentation only"
+    },
+    {
+      "tick": 32,
+      "time": "1.6",
+      "owner": "attacker",
+      "kind": "note",
+      "data": "grab LeftHandAttachment -> victim socket_grab_point",
+      "runtime": "documentation only"
+    },
+    {
+      "tick": 32,
+      "time": "1.6",
+      "owner": "scene",
+      "kind": "camera",
+      "data": "40,2.6,0.9,0.6,0.85,-5",
+      "runtime": "CameraTrack.Key"
+    },
+    {
+      "tick": 60,
+      "time": "3",
+      "owner": "scene",
+      "kind": "camera",
+      "data": "20,4.2,2.3,0.4,1.0,0",
+      "runtime": "CameraTrack.Key"
+    },
+    {
+      "tick": 60,
+      "time": "3",
+      "owner": "scene",
+      "kind": "execute",
+      "data": "",
+      "runtime": "FinisherExecution (scene end)"
+    }
+  ],
+  "java": {
+    "attacker": [
+      ".event(0, PlayerAnimations.EVENT_SOUND, \"respectcraft:finisher.whoosh\")",
+      ".event(14, Finishers.EVENT_HIT, \"2\")",
+      ".event(14, PlayerAnimations.EVENT_CAMERA_SHAKE, \"0.5,8\")"
+    ],
+    "victim": [],
+    "camera": [
+      "new CameraTrack.Key(0, 150, 4.6, 1.7, 1.1, 1.0, 0)",
+      "new CameraTrack.Key(14, 75, 3.0, 1.2, 1.0, 0.95, -2)",
+      "new CameraTrack.Key(32, 40, 2.6, 0.9, 0.6, 0.85, -5)",
+      "new CameraTrack.Key(60, 20, 4.2, 2.3, 0.4, 1.0, 0)"
+    ]
+  },
+  "errors": 0,
+  "warnings": 0
+}
