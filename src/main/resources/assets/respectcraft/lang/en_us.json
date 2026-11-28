@@ -485,5 +485,6 @@
   "notice.respectcraft.bounty.still_on_you.body": "%s bounty(ies) are open on you.",
   "death.attack.respectcraft.finisher_execution": "%1$s was executed by %2$s",
   "death.attack.respectcraft.finisher_execution.item": "%1$s was executed by %2$s using %3$s",
-  "death.attack.respectcraft.finisher_execution.player": "%1$s was executed by %2$s"
+  "death.attack.respectcraft.finisher_execution.player": "%1$s was executed by %2$s",
+  "subtitles.respectcraft.entity.strawberry.music": "Strawberry hums its song"
 }

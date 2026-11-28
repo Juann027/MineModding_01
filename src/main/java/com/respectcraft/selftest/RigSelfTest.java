@@ -75,6 +75,7 @@ final class RigSelfTest {
         sockets(f, rig);
         parts(f);
         strawberry(f);
+        strawberryPool(f);
     }
 
     private static void registry(List<String> f, RigDefinition rig) {
@@ -146,6 +147,7 @@ final class RigSelfTest {
         check(f, res(takedown, FinisherRole.VICTIM, ZOMBIE).source() == Source.HOLD
                 && res(takedown, FinisherRole.VICTIM, null).source() == Source.PLAYER, "zumbi parado e jogador com o clip de sempre");
         for (FinisherDef def : Finishers.all()) {
+            if (!def.targeting().regular()) continue; // pools de NPC (4.13.3) exigem o proprio tipo: strawberryPool
             check(f, res(def, FinisherRole.VICTIM, ZOMBIE).valid() && res(def, FinisherRole.ATTACKER, null).valid(),
                     "retrocompatibilidade: " + def.id() + " continua valido para zumbi e jogador");
         }
@@ -355,5 +357,95 @@ final class RigSelfTest {
         // Sockets sem override: pivo do contrato + deslocamento (proporcao 1).
         check(f, bind.sockets().isEmpty() && RigSockets.local(reg, bind, "impact_point").map(v -> near(v, new Vec3(0, 18, -3))).orElse(false),
                 "morango: sockets do contrato sem override");
+    }
+
+    // ---- Etapa 4.13.3: pool proprio do morango (cinco finalizacoes) e politica de selecao ----
+    private static void strawberryPool(List<String> f) {
+        var reg = CustomRigRegistry.GLOBAL;
+        var bind = reg.binding(Rigs.STRAWBERRY_ID).orElseThrow();
+        var parts = reg.parts(bind);
+        var pool = com.respectcraft.finisher.FruitFinishers.STRAWBERRY_POOL;
+        var playerP = new FinisherEligibility.Participant(Kind.PLAYER, FinisherRigs.Requirement.PLAYER_TYPE, false, NO_TAGS);
+        var sP = new FinisherEligibility.Participant(Kind.MOB, Rigs.STRAWBERRY_ID, true, NO_TAGS);
+        int[] ticks = {120, 140, 120, 80, 160};
+        check(f, pool.size() == 5 && Finishers.all().containsAll(pool), "morango: cinco finalizacoes no catalogo de gameplay");
+        for (int i = 0; i < pool.size(); i++) {
+            FinisherDef def = pool.get(i);
+            check(f, def.durationTicks() == ticks[i] && def.requiresSkill() == null && def.weight() == 1 && def.victim() == null,
+                    "morango: " + def.id() + " duracao, sem desbloqueio, peso 1, sem clip PvP falso");
+            check(f, def.targeting().category() == FinisherTargeting.Category.NPC_EXCLUSIVE
+                    && !com.respectcraft.finisher.FinisherSelection.pvpLoadoutAllowed(def), "morango: " + def.id() + " fora do loadout PvP");
+            var v = FinisherEligibility.evaluate(reg, def, playerP, sP);
+            check(f, v.eligible() && v.victim().source() == Source.BINDING
+                    && ("animation.strawberry.scene." + def.id().getPath() + "_victim").equals(anim(v.victim())),
+                    "morango: " + def.id() + " elegivel com o clip do binding");
+            var a = new FinisherEligibility.Participant(Kind.MOB, A, true, NO_TAGS);
+            var bm = new FinisherEligibility.Participant(Kind.MOB, B, true, NO_TAGS);
+            var z = new FinisherEligibility.Participant(Kind.MOB, ZOMBIE, false, NO_TAGS);
+            var boss = new FinisherEligibility.Participant(Kind.BOSS, Rigs.STRAWBERRY_ID, true, NO_TAGS);
+            check(f, !FinisherEligibility.evaluate(reg, def, playerP, playerP).eligible()
+                    && !FinisherEligibility.evaluate(reg, def, playerP, a).eligible()
+                    && !FinisherEligibility.evaluate(reg, def, playerP, bm).eligible()
+                    && !FinisherEligibility.evaluate(reg, def, playerP, z).eligible()
+                    && !FinisherEligibility.evaluate(reg, def, playerP, boss).eligible()
+                    && !FinisherEligibility.evaluate(reg, def, sP, playerP).eligible(),
+                    "morango: " + def.id() + " recusada contra jogador, manequins, zumbi e chefe; morango nunca executa");
+            visualTimeline(f, parts, def, reg.animationFile(bind, anim(v.victim())), anim(v.victim()));
+        }
+        // Sorteio: so o pool contra o morango (todas aparecem); nunca contra jogador/outros mobs/chefe.
+        var random = com.respectcraft.profile.BirthRoulette.newRandom();
+        java.util.Set<FinisherDef> seen = new java.util.HashSet<>();
+        boolean onlyPool = true, leak = false;
+        for (int i = 0; i < 400; i++) {
+            FinisherDef p = Finishers.pickFor(Finishers.all(), Kind.MOB, Rigs.STRAWBERRY_ID, s -> false, random,
+                    d -> FinisherEligibility.evaluate(reg, d, playerP, sP).eligible()).orElse(null);
+            if (p == null || !pool.contains(p)) onlyPool = false; else seen.add(p);
+            for (var other : List.of(Finishers.pickFor(Finishers.all(), Kind.PLAYER, null, s -> true, random),
+                    Finishers.pickFor(Finishers.all(), Kind.MOB, ZOMBIE, s -> true, random),
+                    Finishers.pickFor(Finishers.all(), Kind.MOB, A, s -> true, random),
+                    Finishers.pickFor(Finishers.all(), Kind.BOSS, Rigs.STRAWBERRY_ID, s -> true, random))) {
+                if (other.isPresent() && pool.contains(other.get())) leak = true;
+            }
+        }
+        check(f, onlyPool && seen.size() == 5, "morango: sorteio so do pool proprio, as cinco aparecem (" + seen.size() + ")");
+        check(f, !leak, "morango: pool nunca sorteado contra jogador, zumbi, manequim ou chefe");
+        check(f, Finishers.pickFor(Finishers.all(), Kind.MOB, A, s -> false, random).filter(d -> d.targeting().regular()).isPresent(),
+                "selecao: mob sem pool usa as comuns compativeis");
+        check(f, Rigs.devFinishers().stream().noneMatch(Finishers.all()::contains), "selecao: cenas de teste fora do catalogo de gameplay");
+        // Pool de NPC substitui as comuns; politica pura com catalogo de teste.
+        var npcOnly = FinisherTargeting.npcExclusive(ZOMBIE);
+        check(f, npcOnly.check(Kind.MOB, ZOMBIE).eligible() && !npcOnly.check(Kind.MOB, A).eligible()
+                && !npcOnly.check(Kind.PLAYER, null).eligible() && npcOnly.check(Kind.BOSS, ZOMBIE) == FinisherTargeting.Verdict.BOSS_REQUIRES_EXCLUSIVE,
+                "selecao: exclusiva de NPC so para o tipo dela");
+        check(f, throwsAny(IllegalArgumentException.class, () -> new FinisherDef(RespectCraft.id("selftest/pve_generic"),
+                        Finishers.TAKEDOWN.attacker(), null, Finishers.TAKEDOWN.camera(), null, 1)),
+                "selecao: so exclusiva de NPC pode omitir o clip de jogador vitima");
+    }
+
+    /**
+     * Timeline de partes da vitima tick a tick (instrucoes do mesmo tick juntas): rosto coerente (sem expressoes
+     * sobrepostas), placas de rachadura nunca sem a casca (nada flutuando) e o corte da musica no estouro da polpa.
+     */
+    private static void visualTimeline(List<String> f, List<RigDefinition.Part> parts, FinisherDef def, ResourceLocation file, String animation) {
+        var events = RigVisuals.partEvents(file, animation);
+        Map<String, Boolean> state = Map.of();
+        boolean face = true, cracks = true;
+        int burst = -1;
+        for (int i = 0; i < events.size(); ) {
+            int tick = events.get(i).tick();
+            StringBuilder line = new StringBuilder();
+            while (i < events.size() && events.get(i).tick() == tick) line.append(events.get(i++).text()).append(';');
+            boolean hadShell = shown(parts, state, "shell");
+            state = play(parts, state, line.toString());
+            if (hadShell && !shown(parts, state, "shell")) burst = tick;
+            face &= faceCoherent(parts, state);
+            if (!shown(parts, state, "shell")) cracks &= !shown(parts, state, "damage_head") && !shown(parts, state, "damage_torso");
+        }
+        int silence = def.entityVictimEvents().stream().filter(e -> e.type().equals(Finishers.EVENT_SILENCE))
+                .mapToInt(e -> e.tick()).min().orElse(-100);
+        check(f, !events.isEmpty() && face, "morango: " + def.id() + " expressoes sem sobreposicao em todos os ticks");
+        check(f, cracks && !shown(parts, state, "shell") && shown(parts, state, "core"),
+                "morango: " + def.id() + " rachaduras somem com a casca; polpa exposta no fim");
+        check(f, burst >= 0 && Math.abs(silence - burst) <= 1, "morango: " + def.id() + " musica corta no estouro (" + silence + " x " + burst + ")");
     }
 }

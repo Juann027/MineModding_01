@@ -6,6 +6,7 @@
   "contract_version": 1,
   "geo": "respectcraft:geo/entity/strawberry.geo.json",
   "texture": "respectcraft:textures/entity/strawberry.png",
+  "animation_file": "respectcraft:animations/entity/strawberry.animation.json",
   "proportion": [
     1,
     1,
@@ -427,6 +428,38 @@
       ],
       "default_visible": true,
       "detachable": true
+    }
+  ],
+  "clip_overrides": [
+    {
+      "finisher": "respectcraft:strawberry_crusher",
+      "role": "victim",
+      "animation": "animation.strawberry.scene.strawberry_crusher_victim",
+      "ticks": 120
+    },
+    {
+      "finisher": "respectcraft:fruit_punch",
+      "role": "victim",
+      "animation": "animation.strawberry.scene.fruit_punch_victim",
+      "ticks": 140
+    },
+    {
+      "finisher": "respectcraft:ground_smasher",
+      "role": "victim",
+      "animation": "animation.strawberry.scene.ground_smasher_victim",
+      "ticks": 120
+    },
+    {
+      "finisher": "respectcraft:shut_up",
+      "role": "victim",
+      "animation": "animation.strawberry.scene.shut_up_victim",
+      "ticks": 80
+    },
+    {
+      "finisher": "respectcraft:strawberry_blender",
+      "role": "victim",
+      "animation": "animation.strawberry.scene.strawberry_blender_victim",
+      "ticks": 160
     }
   ]
 }

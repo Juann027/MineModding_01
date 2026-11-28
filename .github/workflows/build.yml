@@ -37,6 +37,7 @@ jobs:
         run: |
           python3 tools/scenekit/test_scenekit.py
           python3 tools/scenekit/make_templates.py --check
+          python3 tools/scenekit/strawberry_finishers.py --check
           python3 tools/scenekit/package_kit.py
 
       - name: Build with Gradle

@@ -530,9 +530,10 @@ public final class SelfTest {
         check(f, Finishers.all().size() >= 2, "finalizações: catálogo");
         for (FinisherDef def : Finishers.all()) {
             check(f, PlayerAnimations.get(def.attacker().id()) == def.attacker(), "finalizações: animação do executor não registrada " + def.id());
-            check(f, PlayerAnimations.get(def.victim().id()) == def.victim(), "finalizações: animação da vítima não registrada " + def.id());
+            check(f, def.victim() == null || PlayerAnimations.get(def.victim().id()) == def.victim(), "finalizações: animação da vítima não registrada " + def.id());
             check(f, def.attacker().blend() == PlayerAnimationDef.Blend.FULL_BODY, "finalizações: executor deve ser FULL_BODY");
-            check(f, Finishers.byAnimation(def.victim().id()) == def, "finalizações: byAnimation");
+            check(f, Finishers.byAnimation(def.attacker().id()) == def
+                    && (def.victim() == null || Finishers.byAnimation(def.victim().id()) == def), "finalizações: byAnimation");
             check(f, def.attacker().events().stream().anyMatch(e -> e.type().equals(Finishers.EVENT_HIT)), "finalizações: sem impacto " + def.id());
             CameraTrack.Sample start = def.camera().sample(-5);
             CameraTrack.Sample end = def.camera().sample(10_000);
@@ -821,6 +822,7 @@ public final class SelfTest {
             net.minecraft.resources.ResourceLocation testMob = com.respectcraft.RespectCraft.id("test_rig_mob");
             // Finalizacoes atuais: jogador toca o mesmo clip de antes; mob sem clip fica parado; nenhuma tem clip de mob.
             for (FinisherDef def : Finishers.all()) {
+                if (!def.targeting().regular()) continue; // Etapa 4.13.3: pools de NPC conferidos no RigSelfTest
                 var a = com.respectcraft.finisher.FinisherParticipants.resolve(def, ATT, P, null, false);
                 var v = com.respectcraft.finisher.FinisherParticipants.resolve(def, VIC, P, null, false);
                 check(f, a.valid() && a.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.PlayerClip pa
@@ -1097,9 +1099,10 @@ public final class SelfTest {
                 "execução: exclusiva não executa mob nem jogador");
         check(f, throwsNpe(() -> com.respectcraft.finisher.FinisherTargeting.exclusiveTo(null)), "execução: exclusiva sem chefe é recusada");
 
-        // Catalogo de producao: tudo comum; Wither e Dragao do Fim recusados; nenhuma exclusiva registrada.
+        // Catalogo de producao: comuns + pools de NPC (Etapa 4.13.3); Wither e Dragao recusados; nenhuma exclusiva de chefe.
         for (FinisherDef def : Finishers.all()) {
-            check(f, def.targeting().regular(), "execução: " + def.id() + " é comum");
+            check(f, def.targeting().category() != com.respectcraft.finisher.FinisherTargeting.Category.BOSS_EXCLUSIVE,
+                    "execução: " + def.id() + " não é exclusiva de chefe");
             check(f, !def.targeting().check(B, wither).eligible() && !def.targeting().check(B, dragon).eligible(),
                     "execução: " + def.id() + " recusada contra Wither e Dragão do Fim");
         }
