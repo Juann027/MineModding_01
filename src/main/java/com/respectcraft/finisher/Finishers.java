@@ -105,6 +105,12 @@ public final class Finishers {
      */
     public static final ResourceLocation EVENT_FALL = RespectCraft.id("finisher_fall");
 
+    /**
+     * Etapa 4.13.3: impacto decisivo de uma cena contra fruta: a musica da fruta para seco (sem fade) e o silencio vai
+     * ate o fim da cena. So em {@code FinisherDef.entityVictimEvents}; sem data.
+     */
+    public static final ResourceLocation EVENT_SILENCE = RespectCraft.id("finisher_silence");
+
     public static final ResourceLocation COMBO_ID = RespectCraft.id("combo");
 
     /**
@@ -166,7 +172,7 @@ public final class Finishers {
     /** Finalizacao da qual esta animacao faz parte (executor ou vitima), ou null. */
     public static FinisherDef byAnimation(ResourceLocation animation) {
         for (FinisherDef def : REGISTRY.values()) {
-            if (def.attacker().id().equals(animation) || def.victim().id().equals(animation)) return def;
+            if (def.attacker().id().equals(animation) || (def.victim() != null && def.victim().id().equals(animation))) return def;
         }
         return null;
     }
@@ -201,16 +207,10 @@ public final class Finishers {
     public static Optional<FinisherDef> pickFor(Collection<FinisherDef> catalog, FinisherParticipants.Kind victimKind,
                                                 ResourceLocation victimType, Predicate<ResourceLocation> hasSkill,
                                                 RandomGenerator random, Predicate<FinisherDef> supported) {
-        List<FinisherDef> options = new ArrayList<>();
+        // Etapa 4.13.3: a politica por categoria de vitima (PLAYER/BOSS/MOB) mora em FinisherSelection.
+        List<FinisherDef> options = FinisherSelection.candidates(catalog, victimKind, victimType, hasSkill, supported);
         int total = 0;
-        for (FinisherDef def : catalog) {
-            if (!def.targeting().check(victimKind, victimType).eligible()) continue;
-            if (!supported.test(def)) continue;
-            if (def.requiresSkill() == null || hasSkill.test(def.requiresSkill())) {
-                options.add(def);
-                total += def.weight();
-            }
-        }
+        for (FinisherDef def : options) total += def.weight();
         if (options.isEmpty()) return Optional.empty();
         int roll = random.nextInt(Math.max(1, total));
         for (FinisherDef def : options) {
@@ -220,5 +220,6 @@ public final class Finishers {
         return Optional.of(options.get(0));
     }
 
-    public static void bootstrap() {}
+    /** Inicia o catalogo (comuns acima + pools de NPC, Etapa 4.13.3). Chamado no construtor do mod. */
+    public static void bootstrap() { FruitFinishers.bootstrap(); }
 }

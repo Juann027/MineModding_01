@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "category": "journey",
+  "sort": 30,
+  "title": {"translate": "quest.respectcraft.journey.beyond_the_unknown.title"},
+  "description": {"translate": "quest.respectcraft.journey.beyond_the_unknown.description"},
+  "hint": {"translate": "quest.respectcraft.journey.beyond_the_unknown.hint"},
+  "discover": {
+    "type": "all",
+    "conditions": [
+      {"type": "quest", "quest": "respectcraft:journey/a_journey_begins", "states": ["claimed"]},
+      {"type": "any", "conditions": [
+        {"type": "advancement", "advancement": "minecraft:story/mine_stone"},
+        {"type": "advancement", "advancement": "minecraft:story/enter_the_nether"}
+      ]},
+      {"type": "not", "condition": {"type": "in_dimension", "dimension": "respectcraft:inverted_realm"}}
+    ]
+  },
+  "requirements_text": [
+    {"translate": "quest.respectcraft.journey.beyond_the_unknown.requirement"}
+  ],
+  "accept": "manual",
+  "claim": "manual",
+  "objectives": [
+    {"id": "enter_realm", "type": "enter_dimension", "target": "respectcraft:inverted_realm"},
+    {"id": "jellyfish", "type": "kill", "target": "respectcraft:agua_viva_filhote", "count": 1}
+  ],
+  "rewards": [
+    {"type": "experience", "amount": 100},
+    {"type": "skill", "id": "respectcraft:combate/punhos_de_aco"}
+  ],
+  "notices": {
+    "discover": "portal_available",
+    "complete": "mysterious"
+  }
+}

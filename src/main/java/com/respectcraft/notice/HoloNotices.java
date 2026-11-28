@@ -152,6 +152,27 @@ public final class HoloNotices {
                 Component.translatable("notice.respectcraft.realm.body")).dedupe("realm_enter"));
     }
 
+    /**
+     * Etapa 4.14.1: janela cinematografica privada para um jogador (sem cartao; o aviso tambem entra no historico da
+     * secao Alerts). {@code millis} 0 = duracao padrao do jogador; minimo 0,5 s.
+     */
+    public static int cinematic(ServerPlayer player, NoticeKind kind, NoticeStyle style, Component title, Component subtitle,
+                                Component body, int millis) {
+        HoloNotice n = HoloNotice.cinematic(kind, style, title, body).subtitle(subtitle).duration(millis);
+        return toPlayer(player, n);
+    }
+
+    /** Diagnostico ({@code /respectcraft notice cinematic}): uma janela de exemplo do estilo. */
+    public static int testCinematic(Collection<ServerPlayer> players, NoticeStyle style, int millis) {
+        HoloNotice n = HoloNotice.cinematic(NoticeKind.SYSTEM, style,
+                        Component.translatable("notice.respectcraft.test.cinematic_title"),
+                        Component.translatable("notice.respectcraft.test.cinematic_body"))
+                .subtitle(Component.translatable(style.translationKey())).duration(millis);
+        int sent = send(players, n, null, null);
+        RespectCraft.LOGGER.info("RespectCraft cinematic notice {} ({} ms) sent to {} players", style.id(), millis, sent);
+        return sent;
+    }
+
     /** Diagnostico ({@code /respectcraft notice test}): um aviso de exemplo da categoria. */
     public static int test(Collection<ServerPlayer> players, NoticeKind kind, ServerLevel level, BlockPos pos) {
         HoloNotice n = HoloNotice.of(kind, Component.translatable("notice.respectcraft.test.title", Component.translatable(kind.translationKey())),

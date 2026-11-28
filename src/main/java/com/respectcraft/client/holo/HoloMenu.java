@@ -133,7 +133,7 @@ final class HoloMenu {
         this.section = initial == null ? Section.OVERVIEW : initial;
         this.carousel = section.ordinal();
         this.views = new HoloView[]{new OverviewView(this), new CharacterView(this), new BodyView(this),
-                new SpecialityView(this), new SkillsView(this), new NoticesView(this), new BountyView(this)};
+                new SpecialityView(this), new SkillsView(this), new NoticesView(this), new BountyView(this), new QuestsView(this)};
         for (Section s : Section.values()) {
             plates[s.ordinal()] = new HoloPanel("plate_" + s.id, true);
             chips[s.ordinal()] = new HoloPanel("chip_" + s.id, true);
@@ -170,13 +170,13 @@ final class HoloMenu {
         headerW = Math.min(plateW + 80F, layoutW - 20F);
         chipH = small ? 16F : 18F;
         chipsY = oy + effH - chipH - (small ? 7F : 16F);
-        // Etapa 4.11: sete secoes; a fileira pode passar um pouco da placa e o chip estreito vira so icone (HoloNav).
+        // Etapa 4.11: sete secoes (4.14.3: oito); a fileira pode passar um pouco da placa e o chip estreito vira so icone (HoloNav).
         chipW = Math.min(74F, (Math.min(layoutW - 30F, plateW + 130F)) / Section.values().length - 5F);
         plateTop = headerY + headerH + (small ? 8F : 12F);
         plateMaxH = chipsY - (small ? 8F : 14F) - plateTop;
         dockAvailable = layoutW >= 420F && effH >= 220F;
         floorY = layoutH + 10F;
-        float mw = Math.min(236F, layoutW - 40F), mh = Math.min(196F, effH - 24F);
+        float mw = Math.min(246F, layoutW - 40F), mh = Math.min(232F, effH - 24F);
         modal.rect((layoutW - mw) / 2F, (layoutH - mh) / 2F, mw, mh);
         for (HoloPanel p : plates) p.h = 0F; // fitHeight escolhe a altura no proximo quadro, sem animar
     }

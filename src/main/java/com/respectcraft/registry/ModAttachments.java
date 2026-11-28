@@ -51,5 +51,19 @@ public final class ModAttachments {
             ATTACHMENT_TYPES.register("rig_visual",
                     () -> AttachmentType.builder(com.respectcraft.rig.RigVisuals.State::new).build());
 
+    /**
+     * Etapa 4.14.2: missoes do jogador (Quest Engine). Salvo e copiado na morte; ids desconhecidos ficam guardados.
+     * Id estavel.
+     */
+    public static final Supplier<AttachmentType<com.respectcraft.quest.QuestLog>> QUESTS =
+            ATTACHMENT_TYPES.register("quests",
+                    () -> AttachmentType.builder(() -> com.respectcraft.quest.QuestLog.EMPTY)
+                            .serialize(com.respectcraft.quest.QuestLog.CODEC).copyOnDeath().build());
+
+    /** Etapa 4.14.2: limite de pedidos de missao por segundo. Sem serializador: nunca salvo. */
+    public static final Supplier<AttachmentType<com.respectcraft.quest.QuestService.Limiter>> QUEST_REQUESTS =
+            ATTACHMENT_TYPES.register("quest_requests",
+                    () -> AttachmentType.builder(com.respectcraft.quest.QuestService.Limiter::new).build());
+
     private ModAttachments() {}
 }

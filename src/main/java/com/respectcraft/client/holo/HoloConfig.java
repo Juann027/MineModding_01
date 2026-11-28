@@ -20,12 +20,28 @@ public final class HoloConfig {
     public static final ModConfigSpec.DoubleValue DISMISS_DISTANCE;
     public static final ModConfigSpec.BooleanValue NOTICE_TOASTS;
     public static final ModConfigSpec.BooleanValue NOTICE_SOUNDS;
+    // Etapa 4.14.1: Notification HUD V2 (janela cinematografica) e Etapa 4.14.3: rastreador de missoes.
+    public static final ModConfigSpec.BooleanValue CINEMATIC;
+    public static final ModConfigSpec.DoubleValue CINEMATIC_SCALE;
+    public static final ModConfigSpec.DoubleValue CINEMATIC_X;
+    public static final ModConfigSpec.DoubleValue CINEMATIC_Y;
+    public static final ModConfigSpec.DoubleValue CINEMATIC_OPACITY;
+    public static final ModConfigSpec.DoubleValue NOTICE_VOLUME;
+    public static final ModConfigSpec.DoubleValue CINEMATIC_SECONDS;
+    public static final ModConfigSpec.DoubleValue CINEMATIC_ANIM;
+    public static final ModConfigSpec.DoubleValue CINEMATIC_FX;
+    public static final ModConfigSpec.BooleanValue TRACKER;
+    public static final ModConfigSpec.DoubleValue TRACKER_SCALE;
+    public static final ModConfigSpec.DoubleValue TRACKER_X;
+    public static final ModConfigSpec.DoubleValue TRACKER_Y;
+    public static final ModConfigSpec.DoubleValue TRACKER_OPACITY;
 
     /** Etapa 4.8.4-A: holograma no mundo (padrao) ou a tela da 4.8.1 (reserva temporaria de desenvolvimento). */
     public enum Mode { WORLD, SCREEN }
 
     public static final float MIN_SCALE = 0.8F, MAX_SCALE = 1.25F;
     public static final float MIN_OPACITY = 0.5F;
+    public static final float MIN_CINEMATIC_SCALE = 0.6F, MAX_CINEMATIC_SCALE = 1.5F;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -52,6 +68,26 @@ public final class HoloConfig {
         NOTICE_TOASTS = b.comment("Show holographic notice cards on the game screen (they always stay in the Alerts section).")
                 .define("noticeToasts", true);
         NOTICE_SOUNDS = b.comment("Play a sound when a holographic notice card appears.").define("noticeSounds", true);
+        // Etapa 4.14.1
+        CINEMATIC = b.comment("Show cinematic system windows (quest discovered, completed, warnings...) in front of your view.",
+                "Turned off, they show up as normal cards instead. Nothing in the game depends on this.").define("cinematicNotices", true);
+        CINEMATIC_SCALE = b.comment("Size of the cinematic window.").defineInRange("cinematicScale", 1.0, MIN_CINEMATIC_SCALE, MAX_CINEMATIC_SCALE);
+        CINEMATIC_X = b.comment("Horizontal position of the cinematic window (0 = left, 0.5 = center, 1 = right).").defineInRange("cinematicX", 0.5, 0.0, 1.0);
+        CINEMATIC_Y = b.comment("Vertical position of the cinematic window (0 = top, 1 = bottom).").defineInRange("cinematicY", 0.3, 0.0, 1.0);
+        CINEMATIC_OPACITY = b.comment("Opacity of the cinematic window glass (text stays opaque).").defineInRange("cinematicOpacity", 0.88, MIN_OPACITY, 1.0);
+        NOTICE_VOLUME = b.comment("Volume of notice sounds (cards and cinematic windows). 0 = silent.").defineInRange("noticeVolume", 0.8, 0.0, 1.0);
+        CINEMATIC_SECONDS = b.comment("Default duration of a cinematic window in seconds (a notice may ask for its own).")
+                .defineInRange("cinematicSeconds", 4.0, 1.0, 10.0);
+        CINEMATIC_ANIM = b.comment("Intensity of the cinematic window's opening and closing animation (0 = simple fade).")
+                .defineInRange("cinematicAnimation", 1.0, 0.0, 1.0);
+        CINEMATIC_FX = b.comment("Intensity of the cinematic window's glow, scan lines and flicker (0 = none).")
+                .defineInRange("cinematicEffects", 1.0, 0.0, 1.0);
+        // Etapa 4.14.3
+        TRACKER = b.comment("Show the quest tracker (the quests you chose to track) on the game screen.").define("questTracker", true);
+        TRACKER_SCALE = b.comment("Size of the quest tracker.").defineInRange("trackerScale", 1.0, MIN_CINEMATIC_SCALE, MAX_CINEMATIC_SCALE);
+        TRACKER_X = b.comment("Horizontal position of the quest tracker (0 = left, 1 = right).").defineInRange("trackerX", 1.0, 0.0, 1.0);
+        TRACKER_Y = b.comment("Vertical position of the quest tracker (0 = top, 1 = bottom).").defineInRange("trackerY", 0.38, 0.0, 1.0);
+        TRACKER_OPACITY = b.comment("Opacity of the quest tracker glass.").defineInRange("trackerOpacity", 0.75, 0.3, 1.0);
         b.pop();
         SPEC = b.build();
     }
@@ -72,6 +108,38 @@ public final class HoloConfig {
 
     public static boolean noticeToasts() { return !SPEC.isLoaded() || NOTICE_TOASTS.get(); }
     public static boolean noticeSounds() { return !SPEC.isLoaded() || NOTICE_SOUNDS.get(); }
+
+    // Etapa 4.14.1 / 4.14.3
+    public static boolean cinematic() { return !SPEC.isLoaded() || CINEMATIC.get(); }
+    public static float cinematicScale() { return d(CINEMATIC_SCALE, 1F); }
+    public static float cinematicX() { return d(CINEMATIC_X, 0.5F); }
+    public static float cinematicY() { return d(CINEMATIC_Y, 0.3F); }
+    public static float cinematicOpacity() { return d(CINEMATIC_OPACITY, 0.88F); }
+    public static float noticeVolume() { return noticeSounds() ? d(NOTICE_VOLUME, 0.8F) : 0F; }
+    public static float rawNoticeVolume() { return d(NOTICE_VOLUME, 0.8F); }
+    public static float cinematicSeconds() { return d(CINEMATIC_SECONDS, 4F); }
+    /** Animacao efetiva da janela (0 com movimento reduzido). */
+    public static float cinematicAnim() { return reducedMotion() ? 0F : d(CINEMATIC_ANIM, 1F); }
+    public static float rawCinematicAnim() { return d(CINEMATIC_ANIM, 1F); }
+    /** Efeitos efetivos da janela (0 no alto contraste; metade com movimento reduzido: brilho sim, tremor nao). */
+    public static float cinematicFx() {
+        if (highContrast()) return 0F;
+        float v = d(CINEMATIC_FX, 1F);
+        return reducedMotion() ? v * 0.5F : v;
+    }
+    public static float rawCinematicFx() { return d(CINEMATIC_FX, 1F); }
+    public static boolean tracker() { return !SPEC.isLoaded() || TRACKER.get(); }
+    public static float trackerScale() { return d(TRACKER_SCALE, 1F); }
+    public static float trackerX() { return d(TRACKER_X, 1F); }
+    public static float trackerY() { return d(TRACKER_Y, 0.38F); }
+    public static float trackerOpacity() { return d(TRACKER_OPACITY, 0.75F); }
+
+    private static float d(ModConfigSpec.DoubleValue v, float fallback) {
+        return SPEC.isLoaded() ? (float) (double) v.get() : fallback;
+    }
+
+    static void setDouble(ModConfigSpec.DoubleValue value, float v) { set(value, Math.round(v * 20F) / 20.0); }
+    static void toggle(ModConfigSpec.BooleanValue value) { if (SPEC.isLoaded()) value.set(!value.get()); }
 
     public static boolean worldMode() { return !SPEC.isLoaded() || MODE.get() == Mode.WORLD; }
     public static float worldDistance() { return SPEC.isLoaded() ? (float) (double) WORLD_DISTANCE.get() : 2F; }

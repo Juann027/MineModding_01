@@ -46,7 +46,7 @@ public final class HoloToasts {
             HoloNotice n = e.notice;
             if (e.shownMillis < 0) {
                 e.shownMillis = now;
-                sound(n.severity());
+                sound(n.severity(), now);
             }
             float age = (now - e.shownMillis) / 1000F;
             float seconds = n.severity().seconds();
@@ -68,7 +68,7 @@ public final class HoloToasts {
 
     private static void draw(GuiGraphics g, Font font, HoloNotice n, List<String> body, float x, float y, int w, int h,
                              float vis, float age, float seconds, float time) {
-        int col = n.kind().color();
+        int col = n.style() != com.respectcraft.notice.NoticeStyle.SYSTEM_INFO ? n.style().color() : n.kind().color();
         boolean hc = HoloConfig.highContrast();
         float a = vis * (hc ? 1F : HoloConfig.opacity());
         int ix = Math.round(x), iy = Math.round(y);
@@ -100,7 +100,7 @@ public final class HoloToasts {
         }
         Ui.glow(g, ix + 11, iy + 11, 11, Ui.alpha(col, 0.45F * vis));
         int textA = Math.max(4, Math.round(255 * vis)) << 24;
-        String glyph = n.kind().glyph();
+        String glyph = n.style() != com.respectcraft.notice.NoticeStyle.SYSTEM_INFO ? n.style().glyph() : n.kind().glyph();
         g.drawString(font, glyph, ix + 11 - font.width(glyph) / 2, iy + 7, (col & 0xFFFFFF) | textA, true);
         String title = Ui.fit(font, n.title().getString(), w - 26);
         g.drawString(font, title, ix + 21, iy + 4, (HoloStyle.text(hc) & 0xFFFFFF) | textA, true);
@@ -131,12 +131,14 @@ public final class HoloToasts {
         return kind + " · " + NoticesView.distance(dx, dz);
     }
 
-    private static void sound(NoticeSeverity s) {
-        if (!HoloConfig.noticeSounds()) return;
+    /** Etapa 4.14.1: volume da config e sem rajada (um som a cada {@code NoticeRules.SOUND_GAP_MILLIS}). */
+    private static void sound(NoticeSeverity s, long now) {
+        float vol = HoloConfig.noticeVolume();
+        if (vol <= 0F || !NoticeClientCache.claimSound(now)) return;
         switch (s) {
-            case CRITICAL -> Ui.playUi(ModSounds.FINISHER_STING.get(), 1.25F, 0.55F);
-            case ALERT -> Ui.playUi(ModSounds.UI_HOVER.get(), 0.8F, 0.8F);
-            case INFO -> Ui.playUi(ModSounds.UI_HOVER.get(), 1.3F, 0.45F);
+            case CRITICAL -> Ui.playUi(ModSounds.FINISHER_STING.get(), 1.25F, 0.55F * vol);
+            case ALERT -> Ui.playUi(ModSounds.UI_HOVER.get(), 0.8F, 0.8F * vol);
+            case INFO -> Ui.playUi(ModSounds.UI_HOVER.get(), 1.3F, 0.45F * vol);
         }
     }
 }

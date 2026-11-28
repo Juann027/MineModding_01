@@ -168,7 +168,7 @@ abstract class BaixarVerificado extends DefaultTask {
 def baixarCalamidade = tasks.register('baixarCalamidade', BaixarVerificado) {
     group = 'build setup'
     description = 'Baixa o Calamidade_Awakening (release do GitHub) para libs/ e confere o SHA-256.'
-    url = providers.gradleProperty('calamidade.url').orElse(
+    url = providers.gradleProperty('calamidade.url').orElse(providers.gradleProperty('calamidade_url')).orElse(
             "https://github.com/Juann027/Calamidade_Awakening-Mod-1.21.1/releases/download/v${calamidade_version}/calamidade_awakening-${calamidade_version}.jar")
     sha256 = calamidade_sha256
     destino = layout.projectDirectory.file("libs/calamidade_awakening-${calamidade_version}.jar")
