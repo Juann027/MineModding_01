@@ -66,6 +66,7 @@ public final class SelfTest {
             finisherFx(f);
             holoGeometry(f);
             notices(f);
+            noticesV2(f);
             bounties(f);
             RigSelfTest.run(f);
         } catch (RuntimeException e) {
@@ -1010,6 +1011,62 @@ public final class SelfTest {
         check(f, back.kind() == notice.kind() && back.severity() == notice.severity() && back.title().equals(notice.title())
                 && back.body().equals(notice.body()) && back.location().equals(notice.location())
                 && back.dedupeKey().equals("portal:1"), "avisos: pacote ida e volta");
+    }
+
+    /**
+     * Etapa 4.14.1 (Notification HUD V2): fila com limite e prioridade, grupo que substitui, interrupcao controlada,
+     * duracao minima de 0,5 s, entrada/saida proporcionais, som sem rajada e o pacote com os campos novos.
+     */
+    private static void noticesV2(List<String> f) {
+        record Item(String name, int priority, String group) {}
+        var q = new com.respectcraft.notice.NoticeQueue<Item>(3, Item::priority, Item::group);
+        q.offer(new Item("low", 0, ""));
+        q.offer(new Item("high", 5, ""));
+        q.offer(new Item("mid", 2, ""));
+        check(f, q.snapshot().stream().map(Item::name).toList().equals(List.of("high", "mid", "low")), "avisos v2: fila por prioridade");
+        check(f, q.offer(new Item("low2", 0, "")) == com.respectcraft.notice.NoticeQueue.Offer.DROPPED && q.size() == 3,
+                "avisos v2: fila cheia descarta o menos prioritario");
+        check(f, q.offer(new Item("warn", 4, "")) == com.respectcraft.notice.NoticeQueue.Offer.REPLACED_LOWER
+                && q.snapshot().stream().map(Item::name).toList().equals(List.of("high", "warn", "mid")), "avisos v2: mais prioritario toma o lugar");
+        var g = new com.respectcraft.notice.NoticeQueue<Item>(6, Item::priority, Item::group);
+        g.offer(new Item("obj 1/5", 0, "quest:a"));
+        g.offer(new Item("other", 0, ""));
+        check(f, g.offer(new Item("obj 2/5", 0, "quest:a")) == com.respectcraft.notice.NoticeQueue.Offer.MERGED && g.size() == 2
+                && g.snapshot().get(1).name().equals("obj 2/5"), "avisos v2: mesmo grupo substitui (sem acumular)");
+        check(f, g.poll().name().equals("other") && g.poll().name().equals("obj 2/5") && g.poll() == null, "avisos v2: FIFO na mesma prioridade");
+        check(f, com.respectcraft.notice.NoticeRules.shouldInterrupt(0, 5, 1F) && !com.respectcraft.notice.NoticeRules.shouldInterrupt(3, 4, 1F)
+                && !com.respectcraft.notice.NoticeRules.shouldInterrupt(0, 5, 0.1F), "avisos v2: interrupcao so por bem mais prioritario e depois de aparecer");
+        check(f, com.respectcraft.notice.NoticeRules.cinematicMillis(100, 4F) == 500 && com.respectcraft.notice.NoticeRules.cinematicMillis(0, 4F) == 4000
+                && com.respectcraft.notice.NoticeRules.cinematicMillis(99_000, 4F) == com.respectcraft.notice.NoticeRules.MAX_CINEMATIC_MILLIS,
+                "avisos v2: duracao (0,5 s minimo, padrao do jogador, teto)");
+        check(f, com.respectcraft.notice.NoticeRules.cinematicVisibility(0.25F, 0.5F, 1F) == 1F
+                && com.respectcraft.notice.NoticeRules.cinematicVisibility(0F, 0.5F, 1F) == 0F
+                && com.respectcraft.notice.NoticeRules.cinematicVisibility(0.6F, 0.5F, 1F) == 0F
+                && com.respectcraft.notice.NoticeRules.cinematicIn(0.5F, 1F) <= 0.5F / 3F + 1e-6F, "avisos v2: janela de 0,5 s abre e fecha inteira");
+        check(f, com.respectcraft.notice.NoticeRules.cinematicIn(4F, 0F) < com.respectcraft.notice.NoticeRules.cinematicIn(4F, 1F),
+                "avisos v2: menos animacao = entrada mais curta");
+        check(f, com.respectcraft.notice.NoticeRules.soundAllowed(0L, 10L) && !com.respectcraft.notice.NoticeRules.soundAllowed(1_000L, 1_100L)
+                && com.respectcraft.notice.NoticeRules.soundAllowed(1_000L, 1_000L + com.respectcraft.notice.NoticeRules.SOUND_GAP_MILLIS),
+                "avisos v2: som sem rajada");
+        for (com.respectcraft.notice.NoticeStyle st : com.respectcraft.notice.NoticeStyle.values()) {
+            check(f, com.respectcraft.notice.NoticeStyle.byId(st.id()) == st && com.respectcraft.notice.NoticeStyle.byOrdinal(st.ordinal()) == st,
+                    "avisos v2: id do estilo " + st.id());
+        }
+        var n = com.respectcraft.notice.HoloNotice.cinematic(com.respectcraft.notice.NoticeKind.QUEST,
+                        com.respectcraft.notice.NoticeStyle.SECRET_DISCOVERED, net.minecraft.network.chat.Component.literal("t"),
+                        net.minecraft.network.chat.Component.literal("b"))
+                .subtitle(net.minecraft.network.chat.Component.literal("s")).duration(500).group("quest:x")
+                .modifiers(List.of("glitch", "", "haunted", "a", "b", "c"));
+        check(f, n.modifiers().size() == com.respectcraft.notice.HoloNotice.MAX_MODIFIERS && n.showsCinematic() && !n.showsCard()
+                && n.priority() == com.respectcraft.notice.NoticeStyle.SECRET_DISCOVERED.priority(), "avisos v2: apresentacao e modificadores limitados");
+        var buf = new net.minecraft.network.RegistryFriendlyByteBuf(Unpooled.buffer(),
+                net.minecraft.core.RegistryAccess.fromRegistryOfRegistries(net.minecraft.core.registries.BuiltInRegistries.REGISTRY));
+        com.respectcraft.notice.HoloNotice.STREAM_CODEC.encode(buf, n);
+        var back = com.respectcraft.notice.HoloNotice.STREAM_CODEC.decode(buf);
+        check(f, back.equals(n), "avisos v2: pacote ida e volta com estilo, subtitulo, duracao, grupo e modificadores");
+        var plain = com.respectcraft.notice.HoloNotice.of(com.respectcraft.notice.NoticeKind.BOUNTY,
+                net.minecraft.network.chat.Component.literal("t"), net.minecraft.network.chat.Component.literal("b"));
+        check(f, plain.showsCard() && !plain.showsCinematic() && plain.durationMillis() == 0, "avisos v2: aviso antigo continua cartao");
     }
 
     /** Etapa 4.11: regras da caca a recompensa e o Codec do contrato. */

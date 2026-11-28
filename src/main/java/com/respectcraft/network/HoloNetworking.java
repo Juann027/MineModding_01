@@ -94,7 +94,8 @@ public final class HoloNetworking {
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("1");
+        // "2": Etapa 4.14.1 (aviso com apresentacao, estilo, subtitulo, duracao, grupo e modificadores).
+        var registrar = event.registrar("2");
         registrar.playToClient(NoticePayload.TYPE, NoticePayload.STREAM_CODEC,
                 (payload, context) -> NoticeClientCache.receive(payload.notice()));
         registrar.playToClient(BountyBoardSync.TYPE, BountyBoardSync.STREAM_CODEC,

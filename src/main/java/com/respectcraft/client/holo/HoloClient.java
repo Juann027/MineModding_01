@@ -43,10 +43,14 @@ public final class HoloClient {
             // Etapa 4.11: cartoes dos avisos holograficos automaticos.
             event.registerAbove(VanillaGuiLayers.CHAT, RespectCraft.id("holo_notices"),
                     (graphics, deltaTracker) -> HoloToasts.render(graphics));
+            // Etapa 4.14.1: janela cinematografica por cima de tudo do mod.
+            event.registerAbove(RespectCraft.id("holo_notices"), RespectCraft.id("holo_cinematic"),
+                    (graphics, deltaTracker) -> HoloCinematic.render(graphics));
         });
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
             com.respectcraft.network.NoticeClientCache.clear();
             com.respectcraft.network.BountyClientCache.clear();
+            HoloPhenomena.clear();
         });
     }
 }

@@ -176,7 +176,7 @@ final class HoloMenu {
         plateMaxH = chipsY - (small ? 8F : 14F) - plateTop;
         dockAvailable = layoutW >= 420F && effH >= 220F;
         floorY = layoutH + 10F;
-        float mw = Math.min(236F, layoutW - 40F), mh = Math.min(196F, effH - 24F);
+        float mw = Math.min(246F, layoutW - 40F), mh = Math.min(232F, effH - 24F);
         modal.rect((layoutW - mw) / 2F, (layoutH - mh) / 2F, mw, mh);
         for (HoloPanel p : plates) p.h = 0F; // fitHeight escolhe a altura no proximo quadro, sem animar
     }
