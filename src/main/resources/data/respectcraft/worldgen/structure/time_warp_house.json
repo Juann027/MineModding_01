@@ -1,0 +1,8 @@
+{
+  "type": "respectcraft:time_warp_dwelling",
+  "biomes": "#respectcraft:time_warp_land",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "none",
+  "settlement": false
+}
