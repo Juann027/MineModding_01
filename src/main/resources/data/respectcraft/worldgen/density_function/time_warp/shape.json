@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:cache_2d",
+  "argument": {
+    "type": "minecraft:clamp",
+    "min": 0.0,
+    "max": 1.0,
+    "input": {
+      "type": "minecraft:mul",
+      "argument1": 2.5,
+      "argument2": {"type": "minecraft:add", "argument1": "respectcraft:time_warp/island_value", "argument2": -0.245}
+    }
+  }
+}

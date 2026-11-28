@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:cache_2d",
+  "argument": {
+    "type": "minecraft:add",
+    "argument1": -0.39,
+    "argument2": {
+      "type": "minecraft:add",
+      "argument1": {"type": "minecraft:mul", "argument1": 0.62, "argument2": "respectcraft:time_warp/shape"},
+      "argument2": {
+        "type": "minecraft:mul",
+        "argument1": "respectcraft:time_warp/shape",
+        "argument2": {
+          "type": "minecraft:mul",
+          "argument1": 0.09,
+          "argument2": {"type": "minecraft:noise", "noise": "respectcraft:time_warp_hills", "xz_scale": 1.0, "y_scale": 0.0}
+        }
+      }
+    }
+  }
+}

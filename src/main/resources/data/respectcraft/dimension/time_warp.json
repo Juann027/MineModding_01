@@ -1,0 +1,20 @@
+{
+  "type": "respectcraft:time_warp",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "respectcraft:time_warp",
+    "biome_source": {
+      "type": "minecraft:multi_noise",
+      "biomes": [
+        {
+          "biome": "respectcraft:time_warp_ocean",
+          "parameters": {"temperature": 0.0, "humidity": 0.0, "continentalness": [-2.0, 0.445], "erosion": 0.0, "weirdness": 0.0, "depth": 0.0, "offset": 0.0}
+        },
+        {
+          "biome": "respectcraft:time_warp_island",
+          "parameters": {"temperature": 0.0, "humidity": 0.0, "continentalness": [0.445, 2.0], "erosion": 0.0, "weirdness": 0.0, "depth": 0.0, "offset": 0.0}
+        }
+      ]
+    }
+  }
+}
