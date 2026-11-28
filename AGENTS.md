@@ -56,6 +56,11 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   roleta são janelas holográficas do mesmo arco (`CreatorView`, `RouletteView`); no modo mundo as telas antigas nunca
   abrem. Lógica sem desenho única: `AppearanceDraft`, `RouletteSession`/`ui.RouletteMachine`. A árvore de habilidades é a seção Skills.
   Os antigos `CharacterHubScreen`/`SkillTreeScreen` não existem mais.
+- **Time Warp (Etapa 4.15):** dimensão `respectcraft:time_warp` separada do Inverted Realm (mundo/biomas/estruturas em
+  dados; `dimension.timewarp` no código). Viagem pelo relógio (segurar usar 3 s) com escala só por
+  `DimensionType.getTeleportationScale` (coordinate_scale 3,33), exposição em `persistentData["respectcraft_time_warp"]`,
+  avisos só por `HoloNotices`, peças de estrutura com seed próprio e sem acesso a `Level` na geração. Detalhes no
+  `CLAUDE.md` e em `docs/handoffs/HANDOFF_STAGE4_15_TIME_WARP.md`.
 - **Inverted Realm (Etapa 4.9, MVP):** dimensão/bioma/features em dados (`data/respectcraft/dimension*`, `worldgen/`),
   código só em `dimension` (`/respectcraft realm enter|leave|check`) e `client.dimension` (céu). Sem portal. Madeira
   Retorcida em `block.wood` (`ModBlocks` + `ModItems`); agua-vivas passivas (`AguaVivaEntity`), sem combate inventado.

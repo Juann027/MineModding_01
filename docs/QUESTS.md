@@ -74,7 +74,7 @@ Limites: profundidade 6, 24 nós. `requires` aceita só condições de estado.
 | `kill` | entidade, `#tag` ou `*` | Toda morte confirmada causada pelo jogador. |
 | `finisher` | vítima (opcional) | Também `finisher` (id) e `victim_kind`. Só SUCCESS; a morte da execução não conta aqui duas vezes. |
 | `boss_defeat` | chefe (opcional) | `BossDefeatEvent` com crédito. |
-| `advancement` | conquista | Retroativo: já obtida conta ao aceitar/no login. |
+| `advancement` | conquista | Retroativo: já obtida conta ao aceitar/no login. Vale também para conquistas **sem display** (ocultas, ex.: `respectcraft:time_warp/*`, Etapa 4.15), entregues pelo `AdvancementProgressEvent`. |
 | `enter_dimension` | dimensão | Retroativo se já estiver nela ao aceitar. |
 | `complete_quest` | missão | Retroativo se já concluída. |
 
@@ -150,3 +150,10 @@ Desafio com tempo, falha na morte e cadeia composta:
 `/respectcraft quest list | info <quest> | player <player> | diagnose <player> <quest> | discover <player> <quest> |
 reset <player> <quest>` (permissão 2). `diagnose` mostra cada nó da condição com o resultado agora. Janela de teste:
 `/respectcraft notice cinematic <estilo> [segundos] [jogadores]`.
+
+## Exemplo da Etapa 4.15 (Time Warp)
+
+`data/respectcraft/quest/secret/echoes_of_an_old_world.json`: secreta, descoberta ao estar no Time Warp, aceite e
+resgate automáticos, três objetivos `advancement` com textos vagos (achar terra, achar onde alguém morou, voltar). As
+conquistas ocultas `respectcraft:time_warp/explored_settlement` e `lingered` (exposição crítica) ficam prontas para
+missões futuras sem aparecer no menu.

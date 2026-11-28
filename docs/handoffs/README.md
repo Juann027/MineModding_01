@@ -80,3 +80,4 @@ Não há handoff da Etapa 4.3 neste repositório.
 - Autoria conjunta de finalizações no Blockbench (jogador + vítima no mesmo projeto, separação dos clips, timeline com dono, templates) → 4.13.2 (`HANDOFF_STAGE4_13_2_FINISHER_SCENE_KIT.md`).
 - Política de seleção por categoria de vítima, pools de NPC, finalizações do morango, spawn/IA/XP/música das frutas → 4.13.3 (`HANDOFF_STAGE4_13_3_STRAWBERRY_GAMEPLAY.md`).
 - Missões (Quest Engine, formato JSON, recompensas e garantias), Notification HUD V2 (janela cinematográfica, fila, config) e rastreador → 4.14 (`HANDOFF_STAGE4_14_QUEST_ENGINE.md`, formato em `docs/QUESTS.md`).
+- Dimensão Time Warp (worldgen oceânico, casas e assentamentos, neblina, viagem pelo relógio 3,33:1, exposição, atmosfera, quest secreta, `/respectcraft warp`) → 4.15 (`HANDOFF_STAGE4_15_TIME_WARP.md`).

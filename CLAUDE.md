@@ -7,9 +7,10 @@ finalizações cinematográficas que **executam** o alvo de verdade (Etapa 4.10.
 avisos holográficos automáticos e caça a recompensa entre jogadores (Etapa 4.11), o Custom Rig Framework com o kit
 Blockbench (Etapa 4.12), o Finisher Scene Authoring Kit (Etapa 4.13.2), o morango de gameplay com cinco
 finalizações exclusivas e música própria (Etapa 4.13.3), o **Quest Engine** com a Notification HUD V2 e a seção Quests
-(Etapa 4.14) e
+(Etapa 4.14),
 (Etapa 4.9, MVP) a dimensão **Inverted Realm**
-(céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
+(céu roxo, Madeira Retorcida, agua-vivas) e (Etapa 4.15) a dimensão **Time Warp** (oceano antigo sob neblina densa,
+ilhas raras com casas abandonadas, viagem pelo relógio em escala 3,33:1, exposição e atmosfera). Versão atual: `0.5.7` (`gradle.properties`).
 
 **Nome: RespectCraft**, público e interno (Etapa 4.7.1): mod id `respectcraft`, pacote `com.respectcraft`, classes
 `RespectCraft*`, namespace de recursos `respectcraft`, comando `/respectcraft`, configs `respectcraft-*-server.toml` e
@@ -57,6 +58,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `network` | Payloads (`GameplayNetworking`, `TestGameNetworking`) e caches de cliente. |
 | `entity`, `client.render`, `command` | Mobs **agua-vivas** (`AguaVivaEntity`, Etapa 4.9) e renderers. O Leão do Fim foi removido na Etapa 4.9.1 (não o reintroduza). `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim`, `test` e `realm`). |
 | `dimension`, `client.dimension` | **Inverted Realm** (Etapa 4.9, MVP): dimensão, bioma e features são **dados** (`data/respectcraft/dimension*`, `worldgen/...`); `InvertedRealm` (chave, viagem de teste, chão seguro) e `InvertedRealmCommands` (`/respectcraft realm`); céu/neblina/luz em `client.dimension.InvertedRealmEffects`. |
+| `dimension.timewarp`, `client.dimension` | **Time Warp** (Etapa 4.15), independente do Inverted Realm. Dimensão, biomas (`time_warp_ocean`, `time_warp_island`), ruído (`worldgen/noise/time_warp_*`, `density_function/time_warp/*`), estruturas e loot são **dados**. Código: `TimeWarp` (chaves, estado salvo, viagem segura, regras da dimensão), `TimeWarpTravel` (relógio, recuperação sem relógio), `TimeWarpExposure` (exposição, estágios, acontecimentos, avisos), regras puras `TimeWarpRules` (no `SelfTest`), `TimeWarpConfig` (`respectcraft-timewarp-server.toml`), estrutura `TimeWarpStructure` + peças `TimeWarpPiece`/`TimeWarpPathPiece` (registro `TimeWarpStructures`), `/respectcraft warp` (`TimeWarpCommands`). Rede `network.TimeWarpNetworking`; cliente `client.dimension.TimeWarpEffects` (céu/nuvens/luz) e `TimeWarpClient` (neblina, pistas de som, silêncio, `respectcraft-timewarp-client.toml`). |
 | `block.wood`, `registry.ModBlocks` | **Madeira Retorcida** (Etapa 4.9, do pacote "O Avesso — Fase 2, Etapa A"): blocos em `ModBlocks`, itens em `ModItems`, placas/bancada em `TwistedFurniture`, barco por `enumextensions.json`; placas no cliente em `client.render.TwistedWoodRenderers`. |
 | `boss` | **Chefes personalizados** (Etapa 4.11): `Bosses` (registro em código, **vazio**), `BossProfile` (tipo, exclusivas, condições), `BossCondition` (`HealthBelow`, `RequiresSkill`, `RequiresProgress`), `BossExecutionCheckEvent` (só recusa). Avaliado em `FinisherTestMechanic.eligibility` antes da cena. |
 | `notice`, `client.holo.HoloToasts` | **Avisos holográficos automáticos** (Etapa 4.11). `HoloNotices` é o **único** caminho de um aviso (audiência, `HoloNoticeEvent` cancelável, pacote, farol); dados `HoloNotice` (`NoticeKind`, `NoticeSeverity`), regras puras `NoticeRules` (no `SelfTest`); faróis no Calamidade em `NoticeFx` (único dono). Fontes de hoje: chefe que aparece, chefe derrotado, portal do Nether aceso, chegada ao Inverted Realm, caça a recompensa; API pronta para chefes/portais/eventos futuros (`bossAppeared`, `portalOpened`, `worldEvent`). Cliente: `network.NoticeClientCache` (fila + histórico), cartões na tela `HoloToasts`, seção Alerts `client.holo.NoticesView`. Comando `/respectcraft notice`. |
@@ -289,7 +291,8 @@ sistema em que vai mexer; veja o fim deste arquivo).
   recompensa nunca executa comando. Missão oculta nunca vai ao cliente (pista `hint` sem id). Ids de missão = caminho
   do arquivo (estáveis); ids sem definição ficam no registro; objetivos alterados migram sem apagar. Missão/objetivo/
   condição/recompensa novos = **dados** ou um tipo registrado, nunca subclasse de missão. Não implemente portais,
-  invasões, Time Warp nem progressão compartilhada sem pedido (roadmap 13–16).
+  invasões nem progressão compartilhada sem pedido (roadmap 13–16; o Time Warp veio na 4.15). Conquista sem display
+  conta pelo `AdvancementProgressEvent` (o NeoForge 21.1 só dispara `AdvancementEarnEvent` com display).
 - **Caça a recompensa (Etapa 4.11):** servidor autoritativo em `BountyService`. Recompensa = a pilha inteira da mão
   principal de quem paga, guardada no quadro (sem moeda/economia); paga ao caçador que **aceitou** o contrato quando ele
   mata o alvo (inclusive pela execução real de uma finalização jogador × jogador, `SUCCESS`; totem/`FAILED` e
@@ -308,6 +311,30 @@ sistema em que vai mexer; veja o fim deste arquivo).
 - **Mobs:** recursos `geo/entity/<nome>.geo.json`, `animations/entity/<nome>.animation.json`,
   `textures/entity/<nome>.png`; GeckoLib só anima, dano/alvo/IA no servidor. Registre em `ModEntities` + atributos,
   renderer em `client.render` registrado em `RespectCraftClient`.
+- **Time Warp (Etapa 4.15):** `respectcraft:time_warp` (tipo, gerador e `noise_settings` com o mesmo id), dimensão
+  **separada** do Inverted Realm (não reaproveite blocos, céu, geometria nem a viagem dele). Mundo oceânico (≈94,5–95,7%
+  de água nas seeds medidas; mar até y 63, `sea_level` 64), ilhas 2D raras (sem ilhas flutuantes), blocos vanilla de
+  aparência antiga (grama/folhas com cor própria do bioma, areia, cascalho, pedregulho, carvalho); **sem** texturas
+  trocadas (limitação documentada). Mobs não nascem (solidão). Estruturas `respectcraft:time_warp_house` (casa de
+  madeira/pedregulho/abrigo de terra, às vezes plantação e doca) e `respectcraft:time_warp_settlement` (área comum, 3–6
+  casas, obra inacabada, caminhos, plantações, docas) — tipo `respectcraft:time_warp_dwelling`, peças
+  `time_warp_building`/`time_warp_path` (ids nos chunks; tipos novos de construção só no **fim** de `TimeWarpPiece.Kind`).
+  Peças usam o `seed` próprio (iguais em todos os chunks); **nunca** acesse `Level` na geração (ex.: placa por codec, não
+  `setText`). Sem aldeões/NPCs/entidades. **Viagem:** segurar usar com um relógio na mão principal (`chargeSeconds`) no
+  Overworld ↔ Time Warp; fator **só** por `DimensionType.getTeleportationScale` (coordinate_scale 3,33) aplicado uma vez
+  em `TimeWarp.enter/exit`; saída na posição escalada (nunca volta ao ponto de entrada); borda com margem; chegada em
+  terra num raio pequeno, senão na superfície do mar (cabeça fora d'água + respiração aquática 60 s), sem plataformas;
+  cooldown gravado (relógio do mundo); barco fica para trás; nada criado/consumido. Sem relógio: parado olhando reto para o céu 15 s
+  (terra, água ou barco) leva ao **ponto de entrada** (sem escala). Sem dormir nem ponto de renascimento no Time
+  Warp; portal do Nether não acende lá. **Exposição:** ticks no Time Warp (vivo, não espectador), gravados em
+  `persistentData["respectcraft_time_warp"]` (copiado na morte); fora cai `recoveryRate`/tick só online; estágios
+  0–60–120–180 s (`stageSeconds`); nunca mata. Acontecimentos raros pelo servidor (individuais: porta/passos/neblina/
+  silêncio/mensagens; compartilhado: ruído numa construção próxima para todos por perto); nunca mudam blocos nem criam
+  entidades. Avisos só por `HoloNotices` (`NoticeKind.TIME_WARP`, estilos existentes + `SYSTEM_ERROR`; modificadores
+  `time_warp`/`phenomenon:*` = ganchos do Holographic UI Phenomena). Nunca contador regressivo na tela. Quests: conquistas
+  ocultas `respectcraft:time_warp/{entered,found_island,found_house,explored_settlement,lingered,returned}` (sem display;
+  `QuestService.onAdvancementProgress` as entrega ao motor) e a secreta `respectcraft:secret/echoes_of_an_old_world`. Não
+  implemente Herobrine, criatura observadora, chefe, perseguição, jumpscare, invasões nem instâncias privadas sem pedido.
 - **Inverted Realm (Etapa 4.9, MVP):** `respectcraft:inverted_realm` (tipo, gerador e `noise_settings` com o mesmo id),
   bioma único `respectcraft:twisted_wilds`. Céu roxo = `sky_color` do bioma + `fixed_time` 12400 (crepúsculo eterno) +
   `InvertedRealmEffects` (id = `effects` do tipo). Terreno: chão de 3D noise com saliências (y ≈ 60–115, mar em 60) e uma
@@ -339,6 +366,7 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 | finalizações `respectcraft:strawberry_crusher`, `fruit_punch`, `ground_smasher`, `shut_up`, `strawberry_blender`; som `respectcraft:entity.strawberry.music` | catálogo/estado de animação e `sounds.json` (Etapa 4.13.3) |
 | attachment `respectcraft:quests` (campos `version`, `quests`, e de cada missão `state`, `progress`, `discovered_at`, `accepted_at`, `finished_at`, `cooldown_until`, `completions`, `tracked`, `signature`), ids das missões (`respectcraft:journey/a_journey_begins`, `respectcraft:secret/a_fruitful_encounter`, `respectcraft:journey/beyond_the_unknown`) e ids dos objetivos delas | jogador (Etapa 4.14; `respectcraft:quest_requests` não é salvo) |
 | tipo de dano `respectcraft:finisher_execution` (mensagens `death.attack.respectcraft.finisher_execution*`), tag de entidade `respectcraft:bosses` | dados (Etapa 4.10.1) |
+| dimensão `respectcraft:time_warp`, biomas `respectcraft:time_warp_ocean`/`time_warp_island`, estruturas `respectcraft:time_warp_house`/`time_warp_settlement`, tipo de estrutura `respectcraft:time_warp_dwelling`, peças `respectcraft:time_warp_building` (NBT `Kind`, `Seed`) e `respectcraft:time_warp_path`, conquistas `respectcraft:time_warp/*`, missão `respectcraft:secret/echoes_of_an_old_world`, `persistentData["respectcraft_time_warp"]` (`exposure`, `stage`, `last_travel`, `last_event`, `entered_at`, `anchor`) | pasta do mundo, chunks e jogador (Etapa 4.15); o attachment `respectcraft:time_warp_session` não é salvo |
 | dimensão `respectcraft:inverted_realm`, bioma `respectcraft:twisted_wilds`, `WoodType`/`BlockSetType` e `Boat.Type` `respectcraft:twisted` (enum `RESPECTCRAFT_TWISTED`) | pasta do mundo, chunks e NBT de barcos (Etapa 4.9) |
 
 - Id de origem aposentado: adicione o alias em `profile.LegacyOriginIds` (lido pelo Codec da ficha e regravado com o
@@ -376,6 +404,8 @@ python3 tools/rigkit/validate_rig.py --repo  # famílias e bindings do repositó
 python3 tools/scenekit/strawberry_finishers.py --check  # clips das 5 cenas do morango == separação da fonte (CI)
 python3 tools/scenekit/test_scenekit.py     # kit de autoria de cenas: composição, separação, proteção (roda no CI)
 python3 tools/scenekit/make_templates.py --check  # templates, exemplos e clips da cena de teste em dia
+# Time Warp no servidor: /respectcraft warp survey [raio] [seed] (água/ilhas), census [raio] [seed] (estruturas),
+# check (chegada e blocos estranhos), status/exposure/happen <jogador> (exposição e atmosfera), enter|leave (admin)
 bash tools/scenekit/blockbench/check_scene.sh # templates no Blockbench web real (job do CI; precisa de github.com)
 ./gradlew runClient                      # cliente de desenvolvimento
 ./gradlew runServer                      # servidor dedicado (aceita comandos no console)
@@ -431,6 +461,8 @@ bash tools/scenekit/blockbench/check_scene.sh # templates no Blockbench web real
   externos e morango → 4.13.1 (`HANDOFF_STAGE4_13_1_STRAWBERRY.md`); autoria conjunta de finalizações (kit de cenas,
   templates, separação) → 4.13.2 (`HANDOFF_STAGE4_13_2_FINISHER_SCENE_KIT.md`); morango de gameplay (spawn, IA, XP,
   música), política de seleção e finalizações do morango → 4.13.3 (`HANDOFF_STAGE4_13_3_STRAWBERRY_GAMEPLAY.md`); missões,
-  Notification HUD V2, seção Quests e rastreador → 4.14 (`HANDOFF_STAGE4_14_QUEST_ENGINE.md`; formato `docs/QUESTS.md`).
+  Notification HUD V2, seção Quests e rastreador → 4.14 (`HANDOFF_STAGE4_14_QUEST_ENGINE.md`; formato `docs/QUESTS.md`);
+  dimensão Time Warp (worldgen oceânico, casas/assentamentos, neblina, relógio 3,33:1, exposição, atmosfera, quest
+  secreta) → 4.15 (`HANDOFF_STAGE4_15_TIME_WARP.md`).
 - **Roadmap** (funcionalidades futuras, só registro — não implemente sem pedido): [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

@@ -190,10 +190,22 @@ servidor. Sem networking ou sistemas especulativos de invasão até ser pedido.
 
 ## 15. Time Warp Dimension
 
-Dimensão de viagem acelerada (deslocamento ≈ 3,33 : 1 em relação ao Overworld): predominantemente aquática, neblina
-extremamente densa, ilhas isoladas, casas misteriosas com estética antiga do Minecraft, sensação de estar sendo
-observado, permanência acima de três minutos desaconselhada, entrada e saída por um relógio (ou item equivalente),
-fenômenos crescentes de interferência no sistema holográfico (item 10). Não implementar nesta fase.
+**Base implementada na Etapa 4.15** (`HANDOFF_STAGE4_15_TIME_WARP.md`): dimensão `respectcraft:time_warp` independente
+do Inverted Realm — oceano com ≈95% de água, ilhas raras, casas e assentamentos abandonados (sem habitantes), neblina
+densa por estágio, viagem pelo relógio 3,33 : 1 com chegada segura e recuperação sem relógio, exposição individual em
+quatro estágios (nunca mata), acontecimentos sonoros/visuais raros, avisos do Sistema pela Notification HUD V2 e a
+missão secreta *Echoes of an Old World*.
+
+Futuro (não implementar sem pedido):
+- **Texturas antigas só no Time Warp** (Alpha/Beta): hoje é aproximação por cores de bioma, luz e neblina; trocar o
+  atlas por dimensão exige mudança no renderer (ou pacote de recursos opcional do jogador).
+- **Fenômenos holográficos** (item 10) dentro do Time Warp: os avisos já levam os modificadores `time_warp` e
+  `phenomenon:*`; `client.holo.HoloPhenomena` é quem os desenharia.
+- **Missões secretas avançadas** usando as conquistas ocultas já existentes (`explored_settlement`, `lingered`) e
+  acontecimentos que só ocorrem em estágios altos; portais de missão (item 13) com destino ao Time Warp.
+- **Acontecimentos desconhecidos** maiores (eventos de mundo compartilhados, mudanças físicas em construções), sempre
+  sem confirmar a presença de alguém; nada de Herobrine/criatura observadora explícita sem decisão do dono.
+- Relógio próprio/artefato com modelo artístico; portal físico; invasões multiplayer (item 14) partindo do Time Warp.
 
 ## 16. Advanced Progression
 
