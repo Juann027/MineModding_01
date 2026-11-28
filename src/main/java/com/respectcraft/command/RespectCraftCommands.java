@@ -121,6 +121,7 @@ public final class RespectCraftCommands {
                 // Etapa 4.11: avisos holograficos (teste) e caca a recompensa.
                 .then(com.respectcraft.notice.NoticeCommands.node())
                 .then(com.respectcraft.bounty.BountyCommands.node())
+                .then(com.respectcraft.quest.QuestCommands.node())
                 // Etapa 4.12: diagnostico do Custom Rig Framework.
                 .then(com.respectcraft.rig.RigCommands.node())
                 .then(com.respectcraft.entity.fruit.FruitCommands.node()));

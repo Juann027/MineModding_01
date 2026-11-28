@@ -141,6 +141,18 @@ public final class RespectCraft {
         NeoForge.EVENT_BUS.addListener(com.respectcraft.bounty.BountyService::onServerTick);
         NeoForge.EVENT_BUS.addListener(com.respectcraft.bounty.BountyService::onLogin);
         NeoForge.EVENT_BUS.addListener(com.respectcraft.bounty.BountyService::onLogout);
+        // Etapa 4.14.2: Quest Engine (definicoes por datapack, progresso no attachment respectcraft:quests).
+        modBus.addListener(com.respectcraft.network.QuestNetworking::register);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestRegistry::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestRegistry::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onAdvancement);
+        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, com.respectcraft.quest.QuestService::onDeath);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onFinisherCompleted);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onBossDefeat);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onChangedDimension);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onLogin);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onDatapackSync);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onServerTick);
     }
 
     public static ResourceLocation id(String path) {

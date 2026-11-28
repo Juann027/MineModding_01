@@ -69,6 +69,7 @@ public final class SelfTest {
             noticesV2(f);
             bounties(f);
             RigSelfTest.run(f);
+            QuestSelfTest.run(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
