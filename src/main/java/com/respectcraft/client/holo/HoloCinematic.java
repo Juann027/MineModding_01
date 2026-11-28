@@ -77,7 +77,7 @@ public final class HoloCinematic {
         }
         List<String> body = Ui.wrap(font, look.text.apply(n.body().getString()), (int) inner, 4);
         boolean bar = seconds >= 1.2F;
-        float h = 12F + 10F + 6F + 13F * titleScale + (subtitle == null ? 0F : 11F) + 6F + body.size() * 10F + 8F + (bar ? 4F : 0F);
+        float h = 14F + 10F + 6F + 13F * titleScale + (subtitle == null ? 0F : 11F) + 6F + body.size() * 10F + 8F + (bar ? 4F : 0F);
 
         // posicao da config, mantida inteira dentro da tela
         float pw = w * scale, ph = h * scale;
@@ -157,7 +157,7 @@ public final class HoloCinematic {
         }
 
         if (content > 0.01F) {
-            float y = -h / 2F + 7F;
+            float y = -h / 2F + 9F;
             // cabecalho: glifo + estilo, centralizado
             String head = style.glyph() + "  " + label;
             int hwid = font.width(head);

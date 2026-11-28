@@ -41,7 +41,7 @@ final class HoloSettings {
         for (int i = pages.length - 1; i >= 0; i--) {
             Page p = pages[i];
             String label = HoloView.tr(KEY + "page." + p.name().toLowerCase(Locale.ROOT));
-            float bw = c.font.width(label) + 8F;
+            float bw = c.font.width(label) + 14F;
             tx -= bw;
             c.button("settings.page." + p.name(), label, tx, 6F, bw, 12F, null, HoloStyle.VIOLET, true, page == p, "", () -> {
                 page = p;

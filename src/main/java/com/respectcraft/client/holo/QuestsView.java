@@ -106,7 +106,7 @@ final class QuestsView extends HoloView {
         float fx = x;
         for (Filter f : Filter.values()) {
             String label = tr("gui.respectcraft.holo.quests.filter." + f.name().toLowerCase(Locale.ROOT));
-            float bw = c.font.width(label) + 8F;
+            float bw = c.font.width(label) + 14F;
             if (fx + bw > x + iw) {
                 fx = x;
                 y += 15F;
@@ -251,7 +251,7 @@ final class QuestsView extends HoloView {
             y += 12F;
             for (Component r : v.rewards()) {
                 c.text("✦", tx, y, HoloStyle.GOLD, false);
-                c.text(Ui.fit(c.font, r.getString(), (int) (tw - 10F)), tx + 9F, y, v.state() == QuestState.CLAIMED ? c.dim() : c.text(), false);
+                c.text(Ui.fit(c.font, r.getString(), (int) (tw - 12F)), tx + 11F, y, v.state() == QuestState.CLAIMED ? c.dim() : c.text(), false);
                 y += 10F;
             }
         }
