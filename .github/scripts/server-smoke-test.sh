@@ -131,7 +131,7 @@ grep -A9 'Fruit spawns (CREATURE):' "$log" | grep -E 'minecraft:(sunflower_plain
   && fail "morango com spawn fora de plains/savanna"
 grep -q 'Fruit music cut for' "$log" && grep -q 'Fruit music on for' "$log" || fail "música do morango sem controle"
 grep -q 'a finisher needs a player participant' "$log" || fail "rig check mob x mob não recusou"
-# Etapa 4.10: Calamidade_Awakening da versao de gradle.properties (hoje 0.14.0) carregado no servidor dedicado, efeitos das
+# Etapa 4.10: Calamidade_Awakening da versao de gradle.properties (hoje 0.15.0) carregado no servidor dedicado, efeitos das
 # finalizacoes registrados no lado comum e nenhuma instancia ativa sem sessao (a recusa mob x mob acima nao comeca efeito
 # nenhum). O zero e conferido qualquer que seja o limite exibido depois da barra (64 hoje; pode mudar entre versoes).
 cal_version=$(sed -n 's/^calamidade_version=//p' gradle.properties | tr -d '[:space:]')
