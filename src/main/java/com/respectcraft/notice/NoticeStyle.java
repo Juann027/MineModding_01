@@ -18,7 +18,9 @@ public enum NoticeStyle {
     WARNING("warning", 0xFFFFB347, "⚠", 4, Sound.ALARM),
     DANGER("danger", 0xFFFF3B4E, "☠", 5, Sound.ALARM),
     PORTAL_AVAILABLE("portal_available", 0xFFC58BFF, "◎", 3, Sound.REVEAL),
-    MYSTERIOUS("mysterious", 0xFFC8C8D8, "∴", 2, Sound.SOFT);
+    MYSTERIOUS("mysterious", 0xFFC8C8D8, "∴", 2, Sound.SOFT),
+    /** Etapa 4.15: "SYSTEM ERROR" (falha sem explicacao; Time Warp e fenomenos futuros). */
+    SYSTEM_ERROR("system_error", 0xFFE85A6A, "×", 4, Sound.SOFT);
 
     /** Familia do som de entrada (o cliente escolhe o arquivo, o volume vem da config). */
     public enum Sound { NONE, TICK, SOFT, REVEAL, TRIUMPH, ALARM }
