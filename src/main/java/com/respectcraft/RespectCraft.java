@@ -130,6 +130,21 @@ public final class RespectCraft {
         NeoForge.EVENT_BUS.addListener(NeedsService::onRespawn);
         // Etapa 4.9: Inverted Realm (dimensao e bioma em dados; aqui so o registro de volta do /respectcraft realm).
         NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.InvertedRealm::onClone);
+        // Etapa 4.15: Time Warp (mundo, biomas e estruturas em dados; tipo de estrutura/pecas, viagem pelo relogio,
+        // exposicao e atmosfera aqui). Independente do Inverted Realm.
+        com.respectcraft.dimension.timewarp.TimeWarpStructures.register(modBus);
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER,
+                com.respectcraft.dimension.timewarp.TimeWarpConfig.SPEC, "respectcraft-timewarp-server.toml");
+        modBus.addListener(com.respectcraft.network.TimeWarpNetworking::register);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.timewarp.TimeWarp::onClone);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.timewarp.TimeWarp::onCanSleep);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.timewarp.TimeWarp::onSetSpawn);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.timewarp.TimeWarp::onPortalSpawn);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.timewarp.TimeWarpTravel::onRightClickItem);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.timewarp.TimeWarpExposure::onPlayerTick);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.timewarp.TimeWarpExposure::onLogin);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.timewarp.TimeWarpExposure::onRespawn);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.dimension.timewarp.TimeWarpExposure::onChangedDimension);
         // Etapa 4.11: avisos holograficos automaticos e caca a recompensa entre jogadores.
         modBus.addListener(com.respectcraft.network.HoloNetworking::register);
         NeoForge.EVENT_BUS.addListener(com.respectcraft.notice.HoloNotices::onEntityJoin);
@@ -146,6 +161,7 @@ public final class RespectCraft {
         NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestRegistry::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestRegistry::onServerStopped);
         NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onAdvancement);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onAdvancementProgress);
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, com.respectcraft.quest.QuestService::onDeath);
         NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onFinisherCompleted);
         NeoForge.EVENT_BUS.addListener(com.respectcraft.quest.QuestService::onBossDefeat);
