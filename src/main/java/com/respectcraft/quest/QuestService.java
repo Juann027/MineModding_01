@@ -105,6 +105,18 @@ public final class QuestService {
         fire(player, QuestEvent.advancement(event.getAdvancement().id()));
     }
 
+    /**
+     * Etapa 4.15: conquista <b>sem display</b> (oculta, ex.: {@code respectcraft:time_warp/*}) concluida agora. O
+     * NeoForge 21.1 so dispara {@code AdvancementEarnEvent} para conquistas com display; para as outras, a conclusao
+     * vem por aqui. Conquistas com display nunca passam por aqui (sem contagem dupla).
+     */
+    public static void onAdvancementProgress(AdvancementEvent.AdvancementProgressEvent event) {
+        if (event.getProgressType() != AdvancementEvent.AdvancementProgressEvent.ProgressType.GRANT) return;
+        if (event.getAdvancement().value().display().isPresent() || !event.getAdvancementProgress().isDone()) return;
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        fire(player, QuestEvent.advancement(event.getAdvancement().id()));
+    }
+
     /** Morte (LOWEST: so a que ninguem cancelou, ex. totem). Mata = {@code kill}; jogador morto = {@code fail_on_death}. */
     public static void onDeath(LivingDeathEvent event) {
         if (event.isCanceled()) return;

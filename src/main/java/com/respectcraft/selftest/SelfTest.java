@@ -70,6 +70,7 @@ public final class SelfTest {
             bounties(f);
             RigSelfTest.run(f);
             QuestSelfTest.run(f);
+            timeWarp(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
@@ -108,6 +109,59 @@ public final class SelfTest {
                 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.RARE) == 200 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.EPIC) == 100
                 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.LEGENDARY) == 30 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.BONER) == 5,
                 "roda: chances padrão aprovadas 41.5/25/20/10/3/0.5");
+    }
+
+    /**
+     * Etapa 4.15: Time Warp. Escala 3,33:1 nos dois sentidos e nos dois sinais (fator pela formula do vanilla, aplicado
+     * uma vez), borda, estagios de exposicao (0-60-120-180 s), recuperacao, carga do relogio, cooldown e o espacamento
+     * dos acontecimentos (estavel quase nunca, critico mais vezes, frequencia 0 = nunca).
+     */
+    private static void timeWarp(List<String> f) {
+        double out = com.respectcraft.dimension.timewarp.TimeWarpRules.factor(3.33, 1.0);
+        double in = com.respectcraft.dimension.timewarp.TimeWarpRules.factor(1.0, 3.33);
+        check(f, Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(100, out) - 333) < 1e-9
+                && Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(300, out) - 999) < 1e-9
+                && Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(1000, out) - 3330) < 1e-9, "time warp: 100/300/1000 -> 333/999/3330");
+        check(f, Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(-1000, out) + 3330) < 1e-9
+                && Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(-333, in) + 100) < 1e-9, "time warp: coordenadas negativas");
+        check(f, Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(12345, in), out) - 12345) < 1e-6,
+                "time warp: ida e volta sem escala dupla");
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.SCALE == 3.33, "time warp: escala = coordinate_scale do dimension_type");
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.clampToBorder(5000, -1000, 1000, 16) == 984
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.clampToBorder(-5000, -1000, 1000, 16) == -984
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.clampToBorder(10, -1000, 1000, 16) == 10, "time warp: borda do mundo");
+        int t = 20;
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.stage(0, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.STABLE
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.stage(59 * t + 19, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.STABLE
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.stage(60 * t, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.ANOMALY
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.stage(120 * t, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.INSTABILITY
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.stage(180 * t, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.CRITICAL
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.stage(3600 * t, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.CRITICAL,
+                "time warp: quatro estagios (0-60-120-180 s)");
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.recover(100, 2) == 98 && com.respectcraft.dimension.timewarp.TimeWarpRules.recover(1, 2) == 0
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.cap(999_999, 60) == 60 * t * 5, "time warp: recuperacao fora e teto");
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.chargeContinues(100, 104) && !com.respectcraft.dimension.timewarp.TimeWarpRules.chargeContinues(100, 111)
+                && !com.respectcraft.dimension.timewarp.TimeWarpRules.chargeContinues(-1, 5)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.chargeComplete(100, 160, 60) && !com.respectcraft.dimension.timewarp.TimeWarpRules.chargeComplete(100, 159, 60),
+                "time warp: carga do relogio (segurar, intervalo recomeca)");
+        check(f, !com.respectcraft.dimension.timewarp.TimeWarpRules.cooldownOver(1000, 1100, 600) && com.respectcraft.dimension.timewarp.TimeWarpRules.cooldownOver(1000, 1600, 600)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.cooldownOver(-1, 5, 600) && com.respectcraft.dimension.timewarp.TimeWarpRules.cooldownOver(5000, 10, 600)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.cooldownLeftSeconds(1000, 1100, 600) == 25, "time warp: cooldown (relogio do mundo)");
+        var st = com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.STABLE;
+        var cr = com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.CRITICAL;
+        check(f, !com.respectcraft.dimension.timewarp.TimeWarpRules.eventDue(cr, 1000, 1000 + 20, 0, 1.0)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.eventDue(cr, 1000, 1000 + 9 * t, 0, 1.0)
+                && !com.respectcraft.dimension.timewarp.TimeWarpRules.eventDue(st, 1000, 1000 + 30 * t, 0, 1.0)
+                && !com.respectcraft.dimension.timewarp.TimeWarpRules.eventDue(cr, -1, 5, 0, 0.0)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.chancePerMille(st, 1.0) < com.respectcraft.dimension.timewarp.TimeWarpRules.chancePerMille(cr, 1.0),
+                "time warp: acontecimentos raros, mais frequentes no critico, desligaveis");
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.fogEnd(st) > com.respectcraft.dimension.timewarp.TimeWarpRules.fogEnd(cr)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.fogEnd(cr) >= 20F, "time warp: neblina fecha com o estagio sem apagar o mundo");
+        for (var stage : com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.values()) {
+            check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.byOrdinal(stage.ordinal()) == stage, "time warp: estagio " + stage.id());
+        }
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpExposure.Happening.byId("steps_behind")
+                == com.respectcraft.dimension.timewarp.TimeWarpExposure.Happening.STEPS_BEHIND, "time warp: ids dos acontecimentos");
     }
 
     private static void check(List<String> f, boolean ok, String what) {
