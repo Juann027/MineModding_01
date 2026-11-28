@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "category": "journey",
+  "sort": 10,
+  "title": {"translate": "quest.respectcraft.journey.a_journey_begins.title"},
+  "description": {"translate": "quest.respectcraft.journey.a_journey_begins.description"},
+  "discover": {"type": "advancement", "advancement": "minecraft:story/root"},
+  "accept": "manual",
+  "claim": "manual",
+  "objectives": [
+    {"id": "stone_age", "type": "advancement", "target": "minecraft:story/mine_stone"},
+    {"id": "upgrade", "type": "advancement", "target": "minecraft:story/upgrade_tools"},
+    {"id": "undead", "type": "kill", "target": "#minecraft:undead", "count": 3}
+  ],
+  "rewards": [
+    {"type": "experience", "amount": 60},
+    {"type": "item", "id": "minecraft:bread", "amount": 6},
+    {"type": "skill_points", "amount": 1},
+    {"type": "quest", "id": "respectcraft:journey/beyond_the_unknown"}
+  ]
+}

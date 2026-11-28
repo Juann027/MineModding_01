@@ -193,6 +193,56 @@ final class QuestSelfTest {
                 QuestEvent.kill(rl("minecraft:zombie"), undead), ctx).log;
         r = QuestEngine.reconcile(progressed, catalog(changed), ctx);
         check(f, has(r, QuestEngine.ChangeKind.MIGRATED) && r.log.state(timed) == QuestState.COMPLETED, "quests: reload com objetivo alterado migra o progresso");
+        shipped(f);
+    }
+
+    /** Etapa 4.14.4: as tres missoes do mod (arquivos do jar) carregam e sao concluiveis do comeco ao fim. */
+    static void shipped(List<String> f) {
+        String[] files = {"journey/a_journey_begins", "secret/a_fruitful_encounter", "journey/beyond_the_unknown"};
+        Map<ResourceLocation, JsonElement> json = new LinkedHashMap<>();
+        for (String file : files) {
+            try (var in = QuestSelfTest.class.getResourceAsStream("/data/respectcraft/quest/" + file + ".json")) {
+                if (in == null) {
+                    f.add("quests do mod: arquivo ausente " + file);
+                    return;
+                }
+                json.put(com.respectcraft.RespectCraft.id(file), JsonParser.parseReader(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)));
+            } catch (java.io.IOException e) {
+                f.add("quests do mod: " + e);
+                return;
+            }
+        }
+        QuestCatalog cat = QuestRegistry.parse(json, JsonOps.INSTANCE);
+        check(f, cat.size() == 3 && cat.errors().isEmpty(), "quests do mod: tres definicoes validas " + cat.errors());
+        ResourceLocation q1 = com.respectcraft.RespectCraft.id(files[0]), q2 = com.respectcraft.RespectCraft.id(files[1]),
+                q3 = com.respectcraft.RespectCraft.id(files[2]);
+        Ctx ctx = new Ctx();
+        QuestLog log = QuestEngine.reconcile(QuestLog.EMPTY, cat, ctx).log;
+        check(f, !log.state(q1).discovered() && !log.state(q2).discovered() && !log.state(q3).discovered(), "quests do mod: nada aparece antes da hora");
+        // Quest 1: bancada -> aceitar -> pedra, ferramenta, 3 mortos-vivos -> resgate manual
+        ctx.advancements.add(rl("minecraft:story/root"));
+        log = QuestEngine.handle(log, cat, QuestEvent.advancement(rl("minecraft:story/root")), ctx).log;
+        log = QuestEngine.accept(log, cat, q1, ctx).log;
+        ctx.advancements.add(rl("minecraft:story/mine_stone"));
+        log = QuestEngine.handle(log, cat, QuestEvent.advancement(rl("minecraft:story/mine_stone")), ctx).log;
+        log = QuestEngine.handle(log, cat, QuestEvent.advancement(rl("minecraft:story/upgrade_tools")), ctx).log;
+        java.util.function.Predicate<ResourceLocation> undead = t -> t.equals(rl("minecraft:undead"));
+        for (int i = 0; i < 3; i++) log = QuestEngine.handle(log, cat, QuestEvent.kill(rl("minecraft:zombie"), undead), ctx).log;
+        check(f, log.state(q1) == QuestState.COMPLETED && !log.state(q3).discovered(), "quests do mod: Uma jornada começa concluida (falta resgatar)");
+        log = QuestEngine.claim(log, cat, q1, ctx).log;
+        check(f, log.state(q1) == QuestState.CLAIMED && log.state(q3) == QuestState.AVAILABLE, "quests do mod: resgate revela Beyond the Unknown (cadeia composta)");
+        // Quest 2: primeira finalizacao de morango revela; mais cinco concluem
+        QuestEvent straw = QuestEvent.finisher(rl("respectcraft:strawberry"), t -> false, rl("respectcraft:strawberry/fruit_punch"), "mob");
+        log = QuestEngine.handle(log, cat, straw, ctx).log;
+        check(f, log.state(q2) == QuestState.ACTIVE && log.get(q2).value("more_strawberries") == 0, "quests do mod: A Fruitful Encounter revelada (0/5)");
+        for (int i = 0; i < 5; i++) log = QuestEngine.handle(log, cat, straw, ctx).log;
+        check(f, log.state(q2) == QuestState.CLAIMED, "quests do mod: A Fruitful Encounter concluida e resgatada sozinha");
+        // Quest 3: aceitar, entrar no Inverted Realm, uma agua-viva filhote
+        log = QuestEngine.accept(log, cat, q3, ctx).log;
+        ctx.dimension = rl("respectcraft:inverted_realm");
+        log = QuestEngine.handle(log, cat, QuestEvent.dimension(ctx.dimension), ctx).log;
+        log = QuestEngine.handle(log, cat, QuestEvent.kill(rl("respectcraft:agua_viva_filhote"), t -> false), ctx).log;
+        check(f, log.state(q3) == QuestState.COMPLETED, "quests do mod: Beyond the Unknown concluida");
     }
 
     interface Predicate extends java.util.function.Predicate<ResourceLocation> {}
