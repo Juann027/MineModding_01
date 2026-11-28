@@ -133,7 +133,7 @@ final class HoloMenu {
         this.section = initial == null ? Section.OVERVIEW : initial;
         this.carousel = section.ordinal();
         this.views = new HoloView[]{new OverviewView(this), new CharacterView(this), new BodyView(this),
-                new SpecialityView(this), new SkillsView(this), new NoticesView(this), new BountyView(this)};
+                new SpecialityView(this), new SkillsView(this), new NoticesView(this), new BountyView(this), new QuestsView(this)};
         for (Section s : Section.values()) {
             plates[s.ordinal()] = new HoloPanel("plate_" + s.id, true);
             chips[s.ordinal()] = new HoloPanel("chip_" + s.id, true);
@@ -170,7 +170,7 @@ final class HoloMenu {
         headerW = Math.min(plateW + 80F, layoutW - 20F);
         chipH = small ? 16F : 18F;
         chipsY = oy + effH - chipH - (small ? 7F : 16F);
-        // Etapa 4.11: sete secoes; a fileira pode passar um pouco da placa e o chip estreito vira so icone (HoloNav).
+        // Etapa 4.11: sete secoes (4.14.3: oito); a fileira pode passar um pouco da placa e o chip estreito vira so icone (HoloNav).
         chipW = Math.min(74F, (Math.min(layoutW - 30F, plateW + 130F)) / Section.values().length - 5F);
         plateTop = headerY + headerH + (small ? 8F : 12F);
         plateMaxH = chipsY - (small ? 8F : 14F) - plateTop;
