@@ -1,0 +1,4 @@
+{
+  "structures": [{"structure": "respectcraft:time_warp_settlement", "weight": 1}],
+  "placement": {"type": "minecraft:random_spread", "spacing": 40, "separation": 16, "salt": 1510415}
+}

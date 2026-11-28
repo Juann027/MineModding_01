@@ -51,5 +51,28 @@ public final class ModAttachments {
             ATTACHMENT_TYPES.register("rig_visual",
                     () -> AttachmentType.builder(com.respectcraft.rig.RigVisuals.State::new).build());
 
+    /**
+     * Etapa 4.15: sessao transitoria do Time Warp (carga do relogio, recuperacao sem relogio, dicas ja mostradas).
+     * Sem serializador: nada disso e salvo; a exposicao e o ponto de entrada ficam no persistentData
+     * ({@code respectcraft_time_warp}).
+     */
+    public static final Supplier<AttachmentType<com.respectcraft.dimension.timewarp.TimeWarpSession>> TIME_WARP_SESSION =
+            ATTACHMENT_TYPES.register("time_warp_session",
+                    () -> AttachmentType.builder(com.respectcraft.dimension.timewarp.TimeWarpSession::new).build());
+
+    /**
+     * Etapa 4.14.2: missoes do jogador (Quest Engine). Salvo e copiado na morte; ids desconhecidos ficam guardados.
+     * Id estavel.
+     */
+    public static final Supplier<AttachmentType<com.respectcraft.quest.QuestLog>> QUESTS =
+            ATTACHMENT_TYPES.register("quests",
+                    () -> AttachmentType.builder(() -> com.respectcraft.quest.QuestLog.EMPTY)
+                            .serialize(com.respectcraft.quest.QuestLog.CODEC).copyOnDeath().build());
+
+    /** Etapa 4.14.2: limite de pedidos de missao por segundo. Sem serializador: nunca salvo. */
+    public static final Supplier<AttachmentType<com.respectcraft.quest.QuestService.Limiter>> QUEST_REQUESTS =
+            ATTACHMENT_TYPES.register("quest_requests",
+                    () -> AttachmentType.builder(com.respectcraft.quest.QuestService.Limiter::new).build());
+
     private ModAttachments() {}
 }

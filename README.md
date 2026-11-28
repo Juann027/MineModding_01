@@ -68,6 +68,20 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
   cabeça de outro jogador online usando a pilha da mão principal como recompensa, por 1, 3 ou 7 dias de jogo. Caçadores
   aceitam o contrato, veem a distância aproximada e a direção do alvo e recebem a recompensa ao matá-lo ou finalizá-lo.
   Ao expirar (ou se for cancelado antes de alguém aceitar), os itens voltam a quem pagou.
+- **Missões e janelas do sistema (Etapa 4.14):** o sistema revela missões quando as coisas certas acontecem (conquistas,
+  mortes, finalizações, dimensões, outras missões) — algumas secretas. Janelas cinematográficas diante da visão
+  anunciam descobertas, objetivos, conclusões e perigos sem travar os controles (tamanho, posição, opacidade, volume,
+  duração, animação e efeitos no painel Display, com botão Preview). Seção **Quests** no menu K (filtros, objetivos,
+  recompensas, Accept/Track/Abandon/Claim) e rastreador compacto na tela. Missões são dados de datapack: formato e
+  exemplos em [`docs/QUESTS.md`](docs/QUESTS.md). Três iniciais: *A Journey Begins*, *A Fruitful Encounter* (secreta) e
+  *Beyond the Unknown*.
+- **Time Warp (Etapa 4.15):** uma dimensão que parece um mundo antigo do Minecraft esquecido há anos — um oceano quase
+  sem fim sob neblina densa, grama de verde forte, ilhas raras e, às vezes, casas de madeira, pedregulho ou terra e até
+  um raro "servidor abandonado" com caminhos, plantações e docas. Ninguém mora lá. **Segure o botão de usar com um
+  relógio** (3 s) no Overworld para entrar e no Time Warp para sair; cada bloco andado lá vale **3,33 blocos** no
+  Overworld. Leve um barco. Ficar mais de três minutos não é recomendado: o Sistema avisa, a neblina fecha e coisas
+  estranhas começam a acontecer. Sem relógio, fique parado olhando para o céu por 15 s para voltar ao ponto de entrada.
+  Admin: `/respectcraft warp` (`enter|leave`, `status`, `exposure`, `happen`, `survey`, `census`, `pieces`, `check`).
 - **Inverted Realm (Etapa 4.9, MVP de teste):** dimensão de **céu roxo** em crepúsculo eterno (horizonte magenta,
   estrelas fracas, sem nuvens, luz levemente violeta), bioma Twisted Wilds com grama violeta, árvores retorcidas de copa
   carmesim, penhascos de terracota roxa, brotos de ametista que brilham, lagos violeta e ilhas flutuantes no alto.

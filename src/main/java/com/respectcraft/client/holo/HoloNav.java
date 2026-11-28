@@ -115,6 +115,8 @@ final class HoloNav {
         return switch (s) {
             case ALERTS -> com.respectcraft.network.NoticeClientCache.unread();
             case BOUNTY -> com.respectcraft.network.BountyClientCache.onMe();
+            // Etapa 4.14.3: missoes novas/mudadas desde a ultima visita + recompensas por resgatar
+            case QUESTS -> com.respectcraft.network.QuestClientCache.unseenCount() + QuestTrackerHud.claimable();
             default -> 0;
         };
     }

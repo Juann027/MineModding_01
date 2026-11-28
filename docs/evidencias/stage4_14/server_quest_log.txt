@@ -1,0 +1,103 @@
+server_session1.log:[03:24:19] [main/INFO] [co.re.RespectCraft/]: RespectCraft quests: 3 loaded, 0 invalid
+server_session1.log:[03:27:24] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:journey/a_journey_begins discovered by Ana
+server_session1.log:[03:28:22] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (1):
+server_session1.log: respectcraft:journey/a_journey_begins: active {} completions 0
+server_session1.log:[03:28:48] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (1):
+server_session1.log: respectcraft:journey/a_journey_begins: active {stone_age=1, upgrade=1} completions 0 tracked
+server_session1.log:[03:29:02] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:journey/a_journey_begins completed by Ana
+server_session1.log:[03:29:04] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (1):
+server_session1.log: respectcraft:journey/a_journey_begins: completed {upgrade=1, undead=3, stone_age=1} completions 1 tracked
+server_session1.log:[03:29:23] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:journey/beyond_the_unknown discovered by Ana
+server_session1.log:[03:29:23] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:journey/a_journey_begins rewards granted to Ana (3 reward(s))
+server_session1.log:[03:29:23] [Server thread/DEBUG] [co.re.RespectCraft/]: Quest request CLAIM respectcraft:journey/a_journey_begins from Ana refused: nothing_to_claim
+server_session1.log:[03:29:27] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (2):
+server_session1.log: respectcraft:journey/a_journey_begins: claimed {upgrade=1, undead=3, stone_age=1} completions 1
+server_session1.log: respectcraft:journey/beyond_the_unknown: available {} completions 0
+server_session1.log:[03:29:50] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:strawberry_crusher by minecraft:player on respectcraft:strawberry (Strawberry): SUCCESS (killed)
+server_session1.log:[03:29:50] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:secret/a_fruitful_encounter discovered by Ana
+server_session1.log:[03:29:54] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (3):
+server_session1.log: respectcraft:secret/a_fruitful_encounter: active {} completions 0
+server_session1.log: respectcraft:journey/beyond_the_unknown: available {} completions 0
+server_session1.log: respectcraft:journey/a_journey_begins: claimed {upgrade=1, undead=3, stone_age=1} completions 1
+server_session1.log:[03:30:08] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:shut_up by minecraft:player on respectcraft:strawberry (Strawberry): FAILED (damage was prevented)
+server_session1.log:[03:30:17] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:shut_up by minecraft:player on respectcraft:strawberry: CANCELLED (player request)
+server_session1.log:[03:30:21] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (3):
+server_session1.log: respectcraft:secret/a_fruitful_encounter: active {} completions 0
+server_session1.log: respectcraft:journey/beyond_the_unknown: available {} completions 0
+server_session1.log: respectcraft:journey/a_journey_begins: claimed {upgrade=1, undead=3, stone_age=1} completions 1
+server_session1.log:[03:30:35] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:strawberry_crusher by minecraft:player on respectcraft:strawberry (Strawberry): SUCCESS (killed)
+server_session1.log:[03:30:42] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:strawberry_blender by minecraft:player on respectcraft:strawberry: CANCELLED (interrupted by damage)
+server_session1.log:[03:32:10] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (3):
+server_session1.log: respectcraft:secret/a_fruitful_encounter: active {more_strawberries=1} completions 0
+server_session1.log: respectcraft:journey/beyond_the_unknown: available {} completions 0
+server_session1.log: respectcraft:journey/a_journey_begins: claimed {upgrade=1, undead=3, stone_age=1} completions 1
+server_session1.log:[03:32:31] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (3):
+server_session1.log: respectcraft:secret/a_fruitful_encounter: active {more_strawberries=1} completions 0
+server_session1.log: respectcraft:journey/beyond_the_unknown: available {} completions 0
+server_session1.log: respectcraft:journey/a_journey_begins: claimed {upgrade=1, undead=3, stone_age=1} completions 1
+server_session1.log:[03:32:40] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:fruit_punch by minecraft:player on respectcraft:strawberry (Strawberry): SUCCESS (killed)
+server_session1.log:[03:32:49] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:strawberry_crusher by minecraft:player on respectcraft:strawberry (Strawberry): SUCCESS (killed)
+server_session1.log:[03:33:00] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:strawberry_blender by minecraft:player on respectcraft:strawberry (Strawberry): SUCCESS (killed)
+server_session1.log:[03:33:09] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:strawberry_crusher by minecraft:player on respectcraft:strawberry (Strawberry): SUCCESS (killed)
+server_session1.log:[03:33:09] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:secret/a_fruitful_encounter completed by Ana
+server_session1.log:[03:33:09] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:secret/a_fruitful_encounter rewards granted to Ana (1 reward(s))
+server_session1.log:[03:33:12] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (3):
+server_session1.log: respectcraft:secret/a_fruitful_encounter: claimed {more_strawberries=5} completions 1
+server_session1.log: respectcraft:journey/beyond_the_unknown: available {} completions 0
+server_session1.log: respectcraft:journey/a_journey_begins: claimed {upgrade=1, undead=3, stone_age=1} completions 1
+server_session1.log:[03:33:31] [Server thread/INFO] [co.re.RespectCraft/]: Finisher respectcraft:strawberry_blender by minecraft:player on respectcraft:strawberry (Strawberry): SUCCESS (killed)
+server_session1.log:[03:33:31] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:secret/a_fruitful_encounter discovered by Ana
+server_session1.log:[03:34:03] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:journey/beyond_the_unknown completed by Ana
+server_session1.log:[03:34:05] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (3):
+server_session1.log: respectcraft:secret/a_fruitful_encounter: active {} completions 0
+server_session1.log: respectcraft:journey/beyond_the_unknown: completed {jellyfish=1, enter_realm=1} completions 1
+server_session1.log: respectcraft:journey/a_journey_begins: claimed {upgrade=1, undead=3, stone_age=1} completions 1
+server.log:[03:34:54] [main/INFO] [co.re.RespectCraft/]: RespectCraft quests: 3 loaded, 0 invalid
+server.log:[03:35:45] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (3):
+server.log: respectcraft:journey/a_journey_begins: claimed {stone_age=1, undead=3, upgrade=1} completions 1
+server.log: respectcraft:journey/beyond_the_unknown: completed {enter_realm=1, jellyfish=1} completions 1
+server.log: respectcraft:secret/a_fruitful_encounter: active {} completions 0
+server.log:[03:36:01] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:journey/beyond_the_unknown rewards granted to Ana (2 reward(s))
+server.log:[03:36:53] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Beto (0):
+server.log:[03:36:58] [Server thread/INFO] [co.re.RespectCraft/]: Quest respectcraft:journey/a_journey_begins discovered by Beto
+server.log:[03:37:00] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Beto (1):
+server.log: respectcraft:journey/a_journey_begins: available {} completions 0
+server.log:[03:37:14] [Server thread/INFO] [co.re.RespectCraft/]: RespectCraft quests: 4 loaded, 1 invalid
+server.log:[03:37:14] [Server thread/ERROR] [co.re.RespectCraft/]: RespectCraft quest definition refused: qtest:broken: objective a: unknown type teleport
+server.log:[03:37:15] [Server thread/INFO] [co.re.RespectCraft/]: Quest qtest:daily discovered by Ana
+server.log:[03:37:15] [Server thread/INFO] [co.re.RespectCraft/]: Quest qtest:daily discovered by Beto
+server.log:[03:37:20] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (4):
+server.log: respectcraft:secret/a_fruitful_encounter: active {} completions 0
+server.log: respectcraft:journey/a_journey_begins: claimed {stone_age=1, undead=3, upgrade=1} completions 1
+server.log: respectcraft:journey/beyond_the_unknown: claimed {enter_realm=1, jellyfish=1} completions 1
+server.log: qtest:daily: active {} completions 0
+server.log:[03:37:28] [Server thread/INFO] [co.re.RespectCraft/]: Quest qtest:daily completed by Ana
+server.log:[03:37:28] [Server thread/INFO] [co.re.RespectCraft/]: Quest qtest:daily rewards granted to Ana (1 reward(s))
+server.log:[03:37:30] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (4):
+server.log: respectcraft:secret/a_fruitful_encounter: active {} completions 0
+server.log: respectcraft:journey/a_journey_begins: claimed {stone_age=1, undead=3, upgrade=1} completions 1
+server.log: qtest:daily: claimed {z=1} completions 1
+server.log: respectcraft:journey/beyond_the_unknown: claimed {enter_realm=1, jellyfish=1} completions 1
+server.log:[03:37:43] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (4):
+server.log: respectcraft:secret/a_fruitful_encounter: active {} completions 0
+server.log: respectcraft:journey/a_journey_begins: claimed {stone_age=1, undead=3, upgrade=1} completions 1
+server.log: qtest:daily: active {} completions 1
+server.log: respectcraft:journey/beyond_the_unknown: claimed {enter_realm=1, jellyfish=1} completions 1
+server.log:[03:37:45] [Server thread/INFO] [co.re.RespectCraft/]: Quest qtest:daily completed by Ana
+server.log:[03:37:45] [Server thread/INFO] [co.re.RespectCraft/]: Quest qtest:daily rewards granted to Ana (1 reward(s))
+server.log:[03:37:47] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (4):
+server.log: respectcraft:secret/a_fruitful_encounter: active {} completions 0
+server.log: respectcraft:journey/a_journey_begins: claimed {stone_age=1, undead=3, upgrade=1} completions 1
+server.log: respectcraft:journey/beyond_the_unknown: claimed {enter_realm=1, jellyfish=1} completions 1
+server.log: qtest:daily: claimed {z=1} completions 2
+server.log:[03:37:59] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (4):
+server.log: respectcraft:secret/a_fruitful_encounter: active {} completions 0
+server.log: respectcraft:journey/a_journey_begins: claimed {stone_age=1, undead=3, upgrade=1} completions 1
+server.log: respectcraft:journey/beyond_the_unknown: claimed {enter_realm=1, jellyfish=1} completions 1
+server.log: qtest:daily: active {} completions 2
+server.log:[03:38:02] [Server thread/INFO] [co.re.RespectCraft/]: RespectCraft quests: 3 loaded, 0 invalid
+server.log:[03:38:09] [Server thread/INFO] [minecraft/MinecraftServer]: Quests of Ana (4):
+server.log: respectcraft:secret/a_fruitful_encounter: active {} completions 0
+server.log: respectcraft:journey/a_journey_begins: claimed {stone_age=1, undead=3, upgrade=1} completions 1
+server.log: respectcraft:journey/beyond_the_unknown: claimed {enter_realm=1, jellyfish=1} completions 1
+server.log: qtest:daily: active {} completions 2 (no definition loaded; kept)

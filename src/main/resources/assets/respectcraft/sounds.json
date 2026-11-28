@@ -159,5 +159,15 @@
       }
     ],
     "subtitle": "subtitles.respectcraft.needs.effect_late"
+  },
+  "entity.strawberry.music": {
+    "sounds": [
+      {
+        "name": "respectcraft:entity/strawberry_music",
+        "stream": true,
+        "attenuation_distance": 20
+      }
+    ],
+    "subtitle": "subtitles.respectcraft.entity.strawberry.music"
   }
 }

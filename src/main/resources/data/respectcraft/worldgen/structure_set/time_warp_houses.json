@@ -1,0 +1,7 @@
+{
+  "structures": [{"structure": "respectcraft:time_warp_house", "weight": 1}],
+  "placement": {
+    "type": "minecraft:random_spread", "spacing": 9, "separation": 4, "salt": 1510416,
+    "exclusion_zone": {"other_set": "respectcraft:time_warp_settlements", "chunk_count": 4}
+  }
+}

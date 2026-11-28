@@ -5,9 +5,12 @@ nascimento, habilidades, necessidades e consumíveis, rig GeckoLib do jogador co
 finalizações cinematográficas que **executam** o alvo de verdade (Etapa 4.10.1; efeitos visuais pelo motor
 **Calamidade_Awakening**, Etapa 4.10), contador de derrotas, infraestrutura de chefes personalizados (Etapa 4.11),
 avisos holográficos automáticos e caça a recompensa entre jogadores (Etapa 4.11), o Custom Rig Framework com o kit
-Blockbench (Etapa 4.12), o Finisher Scene Authoring Kit (Etapa 4.13.2) e
+Blockbench (Etapa 4.12), o Finisher Scene Authoring Kit (Etapa 4.13.2), o morango de gameplay com cinco
+finalizações exclusivas e música própria (Etapa 4.13.3), o **Quest Engine** com a Notification HUD V2 e a seção Quests
+(Etapa 4.14),
 (Etapa 4.9, MVP) a dimensão **Inverted Realm**
-(céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
+(céu roxo, Madeira Retorcida, agua-vivas) e (Etapa 4.15) a dimensão **Time Warp** (oceano antigo sob neblina densa,
+ilhas raras com casas abandonadas, viagem pelo relógio em escala 3,33:1, exposição e atmosfera). Versão atual: `0.5.7` (`gradle.properties`).
 
 **Nome: RespectCraft**, público e interno (Etapa 4.7.1): mod id `respectcraft`, pacote `com.respectcraft`, classes
 `RespectCraft*`, namespace de recursos `respectcraft`, comando `/respectcraft`, configs `respectcraft-*-server.toml` e
@@ -28,7 +31,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | GeckoLib | **4.9.3** (`software.bernie.geckolib:geckolib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Não use a 5. |
 | SmartBrainLib | 1.16.11 (`net.tslat.smartbrainlib:SmartBrainLib-neoforge-1.21.1`, Cloudsmith) — cliente e servidor. Sem uso no código desde a remoção do Leão do Fim (4.9.1); continua declarada até o dono decidir |
 | Rimulib | **1.3.0** NeoForge (Etapa 4.8; sem Maven público: `curse.maven:rimulib-1753907:9676532` pelo CurseMaven) — cliente e servidor, não embutido. Conectado em `RespectCraft.RIMULIB`. Só `cyou.rimuru.rimulib.mc1211.api` no código comum; `...mc1211.client.api` (ex.: `FxApi`) só em `client` |
-| Calamidade_Awakening | **0.14.0** (Etapa 4.10, obrigatório; aceita `[0.14.0,0.15.0)`: a API `api.v1` da 0.14 é a da 0.10 + adições, compila sem mudança de código; NeoForge 21.1.265 e RimuLib 1.3.0 atendem ao que ela pede; `calamidade_fx.glsl` copiado da 0.14.0, versão 3). Sem Maven: a tarefa `baixarCalamidade` baixa o jar do release do GitHub para `libs/` (fora do git) e confere o SHA-256 (`gradle.properties`); `compileOnly` + `runtimeOnly`, nunca embutido. A RimuLib dele é a do CurseMaven acima (não baixe de novo). Servidor e clientes na **mesma versão**. Só `dev.calamidade_awakening.api.v1` no código comum; `api.v1.client` (`AddonLayers`) só em `client` |
+| Calamidade_Awakening | **0.15.0** (Etapa 4.10, obrigatório; aceita `[0.15.0,0.16.0)`: a API `api.v1` da 0.15 é a da 0.14 + adições (luzes), compila sem mudança de código; NeoForge 21.1.265 e RimuLib 1.3.0 atendem ao que ela pede; `calamidade_fx.glsl` idêntico ao da 0.15.0, versão 3; a 0.15.0 ainda não tem release: `calamidade_url` aponta o jar do `dist/` da branch dela, fixado pelo commit). Sem Maven: a tarefa `baixarCalamidade` baixa o jar do release do GitHub para `libs/` (fora do git) e confere o SHA-256 (`gradle.properties`); `compileOnly` + `runtimeOnly`, nunca embutido. A RimuLib dele é a do CurseMaven acima (não baixe de novo). Servidor e clientes na **mesma versão**. Só `dev.calamidade_awakening.api.v1` no código comum; `api.v1.client` (`AddonLayers`) só em `client` |
 | UI Lib / Architectury | **Não são dependências.** As telas usam o framework próprio `client.ui`. Não reintroduza. |
 
 - Versões em `gradle.properties`; `neoforge.mods.toml` é gerado de `src/main/templates/`.
@@ -45,7 +48,7 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `client.playergeo` | **Rig GeckoLib do jogador.** `PlayerRigLayer` é a primeira camada do `PlayerRenderer` vanilla: lê a pose vanilla, desenha o rig e devolve a pose ao `PlayerModel` (armadura, itens e camadas acompanham). F8 = modo de teste, F9 = aceno. |
 | `client.bodylayer` | **Body Layers**: busto, cabelo, pele, rosto e acessórios como `BodyLayerDefinition` em `BodyLayers`. |
 | `animation` | **Animation Manager.** Animações são dados (`PlayerAnimations`, `PlayerAnimationDef`, `AnimationSequence`); `PlayerAnimationService` é o único que inicia/para; estado sincronizado `PlayerAnimationState` (attachment). Comando `/respectcraft anim`. |
-| `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Execuções reais (Etapa 4.10.1): `FinisherTargeting` (quem cada finalização pode executar; chefes só pela exclusiva) e `FinisherExecution` (golpe final = dano comum `respectcraft:finisher_execution`, resultado `SUCCESS`/`CANCELLED`/`FAILED`). Comandos `/respectcraft test` (e `/stopitstopnow`), `/respectcraft finishers <alvo>` (elegibilidade). |
+| `finisher`, `testgame`, `client.cinematic` | **Finisher Engine**: `Finishers` (dados), `FinisherTestMechanic` (sessão no servidor), `CameraTrack` + `CinematicCamera` (câmera dos participantes). Vários rigs (Etapa 4.8): `FinisherParticipants` (tipo, interação, clip por participante), `EntityFinisherClip` (clip no rig GeckoLib do mob), `FinisherSessionEvent`, `BossDefeats`/`BossDefeatEvent` (só preparação). `DefeatCounter` + `client.testgame.DefeatCounterNameplate` (contador 🍆💦). Execuções reais (Etapa 4.10.1): `FinisherTargeting` (quem cada finalização pode executar; chefes só pela exclusiva) e `FinisherExecution` (golpe final = dano comum `respectcraft:finisher_execution`, resultado `SUCCESS`/`CANCELLED`/`FAILED`). Política de seleção por categoria de vítima `FinisherSelection` e pools de NPC `FruitFinishers` (Etapa 4.13.3). Comandos `/respectcraft test` (e `/stopitstopnow`), `/respectcraft finishers <alvo>` (elegibilidade). |
 | `fx`, `client.fx` | **Ponte com o Calamidade_Awakening** (Etapa 4.10). `FinisherFx` é o **único dono** dos efeitos de finalização (registro no construtor do mod, HERO da cena, golpes/quedas nos marcadores, fim/abort); dados em `FinisherFxDef` (campo opcional `FinisherDef.fx()`), regras puras em `FinisherFxRules` (no `SelfTest`). Gancho de mobs `GeoFxKeyframes` (keyframe `calamidade:<efeito>`, lido no servidor). Passes de pós e shaders só em `client.fx.FinisherFxClient` + `assets/respectcraft/shaders/fx/finisher_*.fsh` (com a cópia de `calamidade_fx.glsl`). |
 | `character`, `client.character` | **Character Creator** (primeira vez na tecla K): aparência (`CharacterAppearance`, `CharacterAppearanceService`), só Body, Hairstyle e Hair Color (Etapa 4.8.4-C); rascunho sem desenho `AppearanceDraft`. |
 | `client.holo`, `ui` | **Menu holográfico da tecla K** (Etapas 4.8.1, 4.8.4-A, 4.8.4-B e 4.8.4-C). Criador e roleta são **janelas** do mesmo arco (`HoloPopup`: `CreatorView`, `RouletteView`); roleta sem desenho em `ui.RouletteMachine` (pura, no `SelfTest`) + `client.roulette.RouletteSession`; desenho da roda só em `client.roulette.PrizeWheel` (janela e tela de reserva). Núcleo `HoloMenu` (arco das seções Overview, Character, Body & Traits, Speciality, Skills, superfícies por painel, passada 3D `Holo3D`, `press` comum de clique) com duas cascas: **`HoloWorld`** (padrão: placas paradas no mundo, `RenderFrameEvent.Pre` + `RenderLevelStageEvent` AFTER_LEVEL, K/Recall, posição sem paredes `ui.HoloPlacement`, mira/clique/arrasto/roda/dica) e `HoloCharacterScreen` (tela da 4.8.1, reserva temporária `mode = "SCREEN"`). Entrada no mundo: **`HoloWorldInput`** (dono por aperto com `ui.HoloInputArbiter`, modo cursor). Geometria pura em `ui.HoloGeometry` (no `SelfTest`); config de cliente `respectcraft-holomenu-client.toml`. |
@@ -55,13 +58,15 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `network` | Payloads (`GameplayNetworking`, `TestGameNetworking`) e caches de cliente. |
 | `entity`, `client.render`, `command` | Mobs **agua-vivas** (`AguaVivaEntity`, Etapa 4.9) e renderers. O Leão do Fim foi removido na Etapa 4.9.1 (não o reintroduza). `RespectCraftCommands` = árvore única `/respectcraft` (inclui os ramos `anim`, `test` e `realm`). |
 | `dimension`, `client.dimension` | **Inverted Realm** (Etapa 4.9, MVP): dimensão, bioma e features são **dados** (`data/respectcraft/dimension*`, `worldgen/...`); `InvertedRealm` (chave, viagem de teste, chão seguro) e `InvertedRealmCommands` (`/respectcraft realm`); céu/neblina/luz em `client.dimension.InvertedRealmEffects`. |
+| `dimension.timewarp`, `client.dimension` | **Time Warp** (Etapa 4.15), independente do Inverted Realm. Dimensão, biomas (`time_warp_ocean`, `time_warp_island`), ruído (`worldgen/noise/time_warp_*`, `density_function/time_warp/*`), estruturas e loot são **dados**. Código: `TimeWarp` (chaves, estado salvo, viagem segura, regras da dimensão), `TimeWarpTravel` (relógio, recuperação sem relógio), `TimeWarpExposure` (exposição, estágios, acontecimentos, avisos), regras puras `TimeWarpRules` (no `SelfTest`), `TimeWarpConfig` (`respectcraft-timewarp-server.toml`), estrutura `TimeWarpStructure` + peças `TimeWarpPiece`/`TimeWarpPathPiece` (registro `TimeWarpStructures`), `/respectcraft warp` (`TimeWarpCommands`). Rede `network.TimeWarpNetworking`; cliente `client.dimension.TimeWarpEffects` (céu/nuvens/luz) e `TimeWarpClient` (neblina, pistas de som, silêncio, `respectcraft-timewarp-client.toml`). |
 | `block.wood`, `registry.ModBlocks` | **Madeira Retorcida** (Etapa 4.9, do pacote "O Avesso — Fase 2, Etapa A"): blocos em `ModBlocks`, itens em `ModItems`, placas/bancada em `TwistedFurniture`, barco por `enumextensions.json`; placas no cliente em `client.render.TwistedWoodRenderers`. |
 | `boss` | **Chefes personalizados** (Etapa 4.11): `Bosses` (registro em código, **vazio**), `BossProfile` (tipo, exclusivas, condições), `BossCondition` (`HealthBelow`, `RequiresSkill`, `RequiresProgress`), `BossExecutionCheckEvent` (só recusa). Avaliado em `FinisherTestMechanic.eligibility` antes da cena. |
 | `notice`, `client.holo.HoloToasts` | **Avisos holográficos automáticos** (Etapa 4.11). `HoloNotices` é o **único** caminho de um aviso (audiência, `HoloNoticeEvent` cancelável, pacote, farol); dados `HoloNotice` (`NoticeKind`, `NoticeSeverity`), regras puras `NoticeRules` (no `SelfTest`); faróis no Calamidade em `NoticeFx` (único dono). Fontes de hoje: chefe que aparece, chefe derrotado, portal do Nether aceso, chegada ao Inverted Realm, caça a recompensa; API pronta para chefes/portais/eventos futuros (`bossAppeared`, `portalOpened`, `worldEvent`). Cliente: `network.NoticeClientCache` (fila + histórico), cartões na tela `HoloToasts`, seção Alerts `client.holo.NoticesView`. Comando `/respectcraft notice`. |
+| `quest`, `client.holo.QuestsView` | **Quest Engine** (Etapa 4.14.2–4.14.4). Missões = dados de datapack `data/<ns>/quest/*.json` (formato em `docs/QUESTS.md`), carregadas por `QuestRegistry` → `QuestCatalog` (índice por gatilho). Motor **puro** `QuestEngine` (no `SelfTest` via `QuestSelfTest`); `QuestService` é o **único dono** do progresso (`QuestLog`/`QuestProgress`, attachment `respectcraft:quests`). Tipos extensíveis: `QuestCondition.register`, `QuestObjective.register`; recompensas `QuestReward`. Rede individual `network.QuestNetworking` + `QuestClientCache`; seção 08 Quests e `client.holo.QuestTrackerHud`; comando `/respectcraft quest`. |
 | `bounty` | **Caça a recompensa** contra jogadores (Etapa 4.11). `BountyService` é o único dono do quadro `BountyBoard` (SavedData do Overworld); contrato `Bounty`; regras puras `BountyRules` (no `SelfTest`); aba Bounty Hunt `client.holo.BountyView` + cache `network.BountyClientCache`; pacotes em `network.HoloNetworking`; comando `/respectcraft bounty`. |
-| `rig`, `client.rig` | **Custom Rig Framework** (Etapa 4.12). Famílias de rig = manifesto `assets/<ns>/rigs/<id>.rig.json` (`RigDefinition`); entidade → família = `rigs/entities/<entidade>.json` (`RigBinding`); catálogo `CustomRigRegistry.GLOBAL` preenchido por `Rigs.bootstrap()` (os dois lados). Clips por família e requisitos de participante em `FinisherDef.rigs()` (`finisher.FinisherRigs`); elegibilidade única `finisher.FinisherEligibility` (+ `FinisherTestMechanic.check`). Partes (ocultar/expor) só por `RigVisuals` (attachment sem save, pacote `network.RigNetworking`); sockets em pose de repouso `RigSockets`. Cliente: `RigGeoModel`/`RigGeoRenderer` genéricos. Base de mob `entity.rig.CustomRigMob`; fixtures `entity.dev.RigMannequinEntity` (`dev_rig_mannequin_a/b`); morango `entity.fruit.StrawberryEntity` (4.13.1). Comando `/respectcraft rig`. Kit externo em `rigkit/` + `tools/rigkit/`. |
+| `rig`, `client.rig` | **Custom Rig Framework** (Etapa 4.12). Famílias de rig = manifesto `assets/<ns>/rigs/<id>.rig.json` (`RigDefinition`); entidade → família = `rigs/entities/<entidade>.json` (`RigBinding`); catálogo `CustomRigRegistry.GLOBAL` preenchido por `Rigs.bootstrap()` (os dois lados). Clips por família e requisitos de participante em `FinisherDef.rigs()` (`finisher.FinisherRigs`); elegibilidade única `finisher.FinisherEligibility` (+ `FinisherTestMechanic.check`). Partes (ocultar/expor) só por `RigVisuals` (attachment sem save, pacote `network.RigNetworking`); sockets em pose de repouso `RigSockets`. Cliente: `RigGeoModel`/`RigGeoRenderer` genéricos. Base de mob `entity.rig.CustomRigMob`; fixtures `entity.dev.RigMannequinEntity` (`dev_rig_mannequin_a/b`); morango `entity.fruit.StrawberryEntity` (4.13.1) sobre a base de frutas `entity.fruit.FruitMob` (4.13.3: IA neutra, música, spawn; `FruitCommands` = `/respectcraft fruit`; som no cliente `client.fruit.FruitMusicClient`). Comando `/respectcraft rig`. Kit externo em `rigkit/` + `tools/rigkit/`. |
 | `scenekit/`, `tools/scenekit` | **Finisher Scene Authoring Kit** (Etapa 4.13.2, ferramenta externa, nada roda no jogo): projeto conjunto do Blockbench com ATTACKER (jogador, `ATK_`) e VICTIM (CustomRig ou jogador, `VIC_`) no palco do Finisher Engine (`compose_scene.py`), separação em um clip por participante + relatório de eventos (`split_scene.py`), templates/exemplos gerados por `make_templates.py` (protegido por hash). Contrato em `scenekit/CONTRACT.md`. Cena de teste `rig.Rigs.AUTHORING_DEMO` (`respectcraft:dev/authoring_demo`, fixture: só manequim B, `/respectcraft rig demo <alvo> authoring`). |
-| `selftest` | `SelfTest` (+ `RigSelfTest`): regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
+| `selftest` | `SelfTest` (+ `RigSelfTest`, `QuestSelfTest`): regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
 | `biome`, `npc` | Só `LEIA-ME.md`: sem código (biomas são dados desde a 4.9). |
 
 ## Regras importantes
@@ -145,9 +150,22 @@ sistema em que vai mexer; veja o fim deste arquivo).
   `entity.rig.CustomRigMob`, a mesma dos manequins) é o primeiro mob de gameplay da família, feito **fora** do
   repositório: `geo/entity/strawberry.geo.json`, `textures/entity/strawberry.png` e o binding
   `rigs/entities/strawberry.json` são os arquivos do artista **sem regeneração** (fonte em
-  `model_sources/rig/strawberry/`, com `strawberry_visual_states.md`); não os passe pelo `make_assets.py`. Papel:
-  **vítima** (Takedown pela animação compartilhada; nunca executor); comportamento e atributos provisórios (passeia,
-  foge ferido, sem ataque); ovo, **sem spawn natural**, sem drop/XP. Expressões são partes do binding: trocar de
+  `model_sources/rig/strawberry/`, com `strawberry_visual_states.md`); não os passe pelo `make_assets.py`. No binding só
+  `animation_file` + `clip_overrides` foram acrescentados (4.13.3, pedido do dono). Papel: **vítima** (nunca executor).
+  **Etapa 4.13.3:** NPC neutro (`FruitMob`: passeia, olha, revida quem o fere com 2 de dano, larga o alvo perdido; golpes
+  desligados durante uma cena), 12 HP, 3–5 XP, sem drops; spawn natural **só** em `minecraft:plains` e
+  `minecraft:savanna` (biome modifier `neoforge/biome_modifier/strawberry_spawns.json`, peso 5, grupo 1–2, CREATURE);
+  nascidos pelo mundo somem longe dos jogadores, ovo/`/summon` ficam persistentes. Cinco finalizações exclusivas
+  (`FruitFinishers`: `strawberry_crusher`, `fruit_punch`, `ground_smasher`, `shut_up`, `strawberry_blender`); clips do
+  jogador em `animations/player/respectcraft_authored_scenes.animation.json` e do morango em
+  `animations/entity/strawberry.animation.json`, gerados **só** por `tools/scenekit/strawberry_finishers.py --install`
+  a partir de `model_sources/rig/strawberry/finishers/` (conferido no CI com `--check`; não edite os clips à mão).
+  Música `respectcraft:entity.strawberry.music` (OGG mono de `model_sources/sounds/strawberry_music.mp3`), tocada só no
+  cliente por `FruitMusicClient` (loop preso à entidade, uma instância por fruta, limite/volume/desligar em
+  `respectcraft-fruits-client.toml`); o servidor só liga o corte seco (`FruitMob.setMusicSilenced`, dado sincronizado,
+  nunca salvo) no `Finishers.EVENT_SILENCE` da cena e o devolve no cancelamento/fruta viva. Fruta nova = subclasse de
+  `FruitMob` + binding + som + pool, sem sistema paralelo. **Reprodução entre frutas** é decisão futura (roadmap): não
+  implemente. Expressões são partes do binding: trocar de
   expressão = esconder `face_normal` + mostrar um olho, `brows_panic` e uma boca (exclusões e estados no
   `strawberry_visual_states.md`, conferidos no `RigSelfTest`); no meio de uma cena de destruição troque por
   `hide/show` explícitos — `rig:reset` devolve **todas** as partes (casca, folhas) ao padrão. `shell` cobre cabeça e
@@ -164,6 +182,17 @@ sistema em que vai mexer; veja o fim deste arquivo).
   (`respectcraft_dev_scenes`/`respectcraft_authored_scenes`), nunca para a biblioteca de combate; `--install` recusa
   arquivos de outros geradores, fontes e arquivos editados fora do kit. Não regenere o binding/geo/png do morango:
   dar um clip ao morango (`animation_file` + `clip_overrides`) é decisão do dono.
+- **Política de seleção de finalizações (Etapa 4.13.3, permanente):** `finisher.FinisherSelection` (regra pura, usada
+  por `Finishers.pickFor`), separada da compatibilidade técnica (`FinisherTargeting`/`FinisherEligibility`). **PLAYER:** só
+  comuns (`FinisherTargeting.Category.GENERIC`) com desbloqueio; consentimento/PvP/times como antes; o futuro seletor
+  Random/Preset/Manual (roadmap 4) escolhe dentro delas — não implemente o seletor sem pedido. **BOSS:** só a exclusiva
+  do chefe, nunca fallback. **MOB/NPC:** o servidor sorteia a cena completa; tipo com pool próprio
+  (`FinisherTargeting.npcExclusive(tipos)`) usa só ele, sem desbloqueio pessoal; sem pool, as comuns compatíveis com mob;
+  nada elegível = recusa antes de mexer no mundo. Exclusivas de NPC nunca contra jogador, chefe ou outro tipo e nunca no
+  loadout de PvP (`FinisherSelection.pvpLoadoutAllowed`). Cena só PvE pode ter `FinisherDef.victim() == null` (sem clip
+  PvP falso; só exclusiva de NPC) e eventos da vítima entidade em `entityVictimEvents` (quedas, `EVENT_SILENCE`),
+  disparados pelo relógio da sessão. Suco/sementes/lascas de fruta saem do `FinisherFx` (partículas vanilla com a cor de
+  `FruitMob.juice()`), sem framework de fluidos paralelo.
 - **Câmera cinematográfica** segue o estado de animação sincronizado e restaura a perspectiva em qualquer saída.
 - **Regra permanente de chefes (Etapa 4.10.1):** chefes podem ser derrotados normalmente (dano comum, armas,
   habilidades; nunca imunes à morte), mas **só a finalização exclusiva designada para aquele chefe pode executá-lo pelo
@@ -236,8 +265,8 @@ sistema em que vai mexer; veja o fim deste arquivo).
   `AppearanceDraft` e da roleta só em `RouletteSession`/`RouletteMachine` (as telas de reserva usam os mesmos): não
   duplique pedido, `requestId`, erro ou timeout da 4.8.2. Novo giro e Continuar com giro sobrando pedem segundo clique.
   As telas antigas saem na 4.8.5.
-- **Seções do menu K (Etapa 4.11):** sete — Overview, Character, Body & Traits, Speciality, Skills, **Alerts** e
-  **Bounty Hunt** (`HoloCharacterScreen.Section`, ids/ordem fazem parte das teclas 1–7 da tela de reserva). Seção nova =
+- **Seções do menu K (Etapas 4.11 e 4.14.3):** oito — Overview, Character, Body & Traits, Speciality, Skills, **Alerts**,
+  **Bounty Hunt** e **Quests** (`HoloCharacterScreen.Section`, ids/ordem fazem parte das teclas 1–8 da tela de reserva). Seção nova =
   valor no enum + `HoloView` no array de `HoloMenu` (o arco, os chips e as teclas se ajustam ao número de seções; chip
   estreito vira só ícone com a dica). Ponto aceso no chip por `HoloNav.badge`; a fita tem o botão ✉ (não lidos).
 - **Avisos holográficos (Etapa 4.11):** só `notice.HoloNotices` manda aviso (nunca mande o pacote direto) e só
@@ -247,6 +276,23 @@ sistema em que vai mexer; veja o fim deste arquivo).
   cliente (`HISTORY_LIMIT`), limpo no logout. Cartões no canto superior esquerdo (somem com F3 ou com `noticeToasts`
   desligado na config/Display; continuam na seção Alerts). Sistemas futuros (chefes do mod, portais, eventos) chamam a
   API de `HoloNotices`; categoria nova entra no **fim** de `NoticeKind` (o pacote usa o ordinal).
+- **Notification HUD V2 (Etapa 4.14.1):** a mesma infraestrutura dos avisos: `HoloNotice` escolhe apresentação
+  (`NoticePresentation` cartão/janela/ambos), estilo (`NoticeStyle`, novos só no **fim**, o pacote usa o ordinal),
+  subtítulo, duração (0,5–20 s), grupo e `modifiers`. Janela `client.holo.HoloCinematic` = camada da GUI (nunca
+  `Screen`, nunca captura o mouse); fila pura `NoticeQueue` + regras em `NoticeRules` (no `SelfTest`). Janela desligada
+  na config vira cartão; nada do jogo depende das preferências de exibição. Fenômenos visuais só por
+  `client.holo.HoloPhenomena` (hoje vazio); efeito real de gameplay é decidido no servidor.
+- **Quest Engine (Etapa 4.14.2):** servidor autoritativo em `QuestService`; o cliente só pede Accept/Abandon/Claim/
+  Track/Untrack/Refresh. Condições de **estado** (`advancement`, `quest`, `in_dimension`) × **acontecimento**
+  (`advancement_earned`, `entered_dimension`, `kill`, `finisher`, `boss_defeat`); `requires` só estado. Eventos
+  indexados (nada por tick além da varredura de 5 s do registro dos jogadores online). `finisher` conta só
+  `FinisherSessionEvent.Completed` com `SUCCESS` e morte confirmada; a morte vanilla da execução conta só para `kill`.
+  Objetivos das ativas antes da descoberta (o evento revelador não conta). Resgate grava `claimed` antes de entregar;
+  recompensa nunca executa comando. Missão oculta nunca vai ao cliente (pista `hint` sem id). Ids de missão = caminho
+  do arquivo (estáveis); ids sem definição ficam no registro; objetivos alterados migram sem apagar. Missão/objetivo/
+  condição/recompensa novos = **dados** ou um tipo registrado, nunca subclasse de missão. Não implemente portais,
+  invasões nem progressão compartilhada sem pedido (roadmap 13–16; o Time Warp veio na 4.15). Conquista sem display
+  conta pelo `AdvancementProgressEvent` (o NeoForge 21.1 só dispara `AdvancementEarnEvent` com display).
 - **Caça a recompensa (Etapa 4.11):** servidor autoritativo em `BountyService`. Recompensa = a pilha inteira da mão
   principal de quem paga, guardada no quadro (sem moeda/economia); paga ao caçador que **aceitou** o contrato quando ele
   mata o alvo (inclusive pela execução real de uma finalização jogador × jogador, `SUCCESS`; totem/`FAILED` e
@@ -258,12 +304,37 @@ sistema em que vai mexer; veja o fim deste arquivo).
 - **Telas** herdam `client.ui.RespectScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
   Texto nunca passa da coluna/painel: quebre ou encurte com `Ui.wrap`/`Ui.fit` e ofereça a dica com o texto inteiro
   (Etapa 4.7.2). Confira GUI 2, GUI 3 e a menor GUI (320×240).
-- **Textos visíveis ao jogador em inglês** (Etapa 4.6) via `Component`/lang: `en_us.json` é o único arquivo de idioma
-  (não recrie `pt_br.json`; outros idiomas caem no inglês). Mensagens de comando/chat também em inglês. Código,
+- **Textos visíveis ao jogador em inglês** (Etapa 4.6) via `Component`/lang: `en_us.json` é o arquivo completo. A
+  Etapa 4.14 (pedido do dono) criou `pt_br.json` **só com as chaves novas** (avisos V2, missões, seção Quests); o resto
+  cai no inglês. Chave nova da 4.14 em diante: `en_us` sempre, `pt_br` quando o pedido incluir. Mensagens de comando/chat também em inglês. Código,
   comentários, docs e ids internos seguem como estão.
 - **Mobs:** recursos `geo/entity/<nome>.geo.json`, `animations/entity/<nome>.animation.json`,
   `textures/entity/<nome>.png`; GeckoLib só anima, dano/alvo/IA no servidor. Registre em `ModEntities` + atributos,
   renderer em `client.render` registrado em `RespectCraftClient`.
+- **Time Warp (Etapa 4.15):** `respectcraft:time_warp` (tipo, gerador e `noise_settings` com o mesmo id), dimensão
+  **separada** do Inverted Realm (não reaproveite blocos, céu, geometria nem a viagem dele). Mundo oceânico (≈94,5–95,7%
+  de água nas seeds medidas; mar até y 63, `sea_level` 64), ilhas 2D raras (sem ilhas flutuantes), blocos vanilla de
+  aparência antiga (grama/folhas com cor própria do bioma, areia, cascalho, pedregulho, carvalho); **sem** texturas
+  trocadas (limitação documentada). Mobs não nascem (solidão). Estruturas `respectcraft:time_warp_house` (casa de
+  madeira/pedregulho/abrigo de terra, às vezes plantação e doca) e `respectcraft:time_warp_settlement` (área comum, 3–6
+  casas, obra inacabada, caminhos, plantações, docas) — tipo `respectcraft:time_warp_dwelling`, peças
+  `time_warp_building`/`time_warp_path` (ids nos chunks; tipos novos de construção só no **fim** de `TimeWarpPiece.Kind`).
+  Peças usam o `seed` próprio (iguais em todos os chunks); **nunca** acesse `Level` na geração (ex.: placa por codec, não
+  `setText`). Sem aldeões/NPCs/entidades. **Viagem:** segurar usar com um relógio na mão principal (`chargeSeconds`) no
+  Overworld ↔ Time Warp; fator **só** por `DimensionType.getTeleportationScale` (coordinate_scale 3,33) aplicado uma vez
+  em `TimeWarp.enter/exit`; saída na posição escalada (nunca volta ao ponto de entrada); borda com margem; chegada em
+  terra num raio pequeno, senão na superfície do mar (cabeça fora d'água + respiração aquática 60 s), sem plataformas;
+  cooldown gravado (relógio do mundo); barco fica para trás; nada criado/consumido. Sem relógio: parado olhando reto para o céu 15 s
+  (terra, água ou barco) leva ao **ponto de entrada** (sem escala). Sem dormir nem ponto de renascimento no Time
+  Warp; portal do Nether não acende lá. **Exposição:** ticks no Time Warp (vivo, não espectador), gravados em
+  `persistentData["respectcraft_time_warp"]` (copiado na morte); fora cai `recoveryRate`/tick só online; estágios
+  0–60–120–180 s (`stageSeconds`); nunca mata. Acontecimentos raros pelo servidor (individuais: porta/passos/neblina/
+  silêncio/mensagens; compartilhado: ruído numa construção próxima para todos por perto); nunca mudam blocos nem criam
+  entidades. Avisos só por `HoloNotices` (`NoticeKind.TIME_WARP`, estilos existentes + `SYSTEM_ERROR`; modificadores
+  `time_warp`/`phenomenon:*` = ganchos do Holographic UI Phenomena). Nunca contador regressivo na tela. Quests: conquistas
+  ocultas `respectcraft:time_warp/{entered,found_island,found_house,explored_settlement,lingered,returned}` (sem display;
+  `QuestService.onAdvancementProgress` as entrega ao motor) e a secreta `respectcraft:secret/echoes_of_an_old_world`. Não
+  implemente Herobrine, criatura observadora, chefe, perseguição, jumpscare, invasões nem instâncias privadas sem pedido.
 - **Inverted Realm (Etapa 4.9, MVP):** `respectcraft:inverted_realm` (tipo, gerador e `noise_settings` com o mesmo id),
   bioma único `respectcraft:twisted_wilds`. Céu roxo = `sky_color` do bioma + `fixed_time` 12400 (crepúsculo eterno) +
   `InvertedRealmEffects` (id = `effects` do tipo). Terreno: chão de 3D noise com saliências (y ≈ 60–115, mar em 60) e uma
@@ -292,7 +363,10 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 | ids de `BirthOrigin`, `Speciality`, `BirthTrait`, `CharacterAttribute`, `Need`, `Skills` (`combate/...`), finalizações e animações | gravados na ficha/estado |
 | itens, blocos (`twisted_*`), block entities `twisted_sign`/`twisted_hanging_sign`, `respectcraft:agua_viva`, `respectcraft:agua_viva_filhote` | registries |
 | entidades `respectcraft:dev_rig_mannequin_a`, `respectcraft:dev_rig_mannequin_b` (fixtures da 4.12), `respectcraft:strawberry` + item `respectcraft:strawberry_spawn_egg` e os nomes das partes do binding do morango (4.13.1), família `respectcraft:fruit_humanoid_v1` (nomes dos bones e animações `animation.fruit_humanoid_v1.*` fazem parte do contrato v1) | registries / manifestos (Etapa 4.12); o attachment `respectcraft:rig_visual` não é salvo |
+| finalizações `respectcraft:strawberry_crusher`, `fruit_punch`, `ground_smasher`, `shut_up`, `strawberry_blender`; som `respectcraft:entity.strawberry.music` | catálogo/estado de animação e `sounds.json` (Etapa 4.13.3) |
+| attachment `respectcraft:quests` (campos `version`, `quests`, e de cada missão `state`, `progress`, `discovered_at`, `accepted_at`, `finished_at`, `cooldown_until`, `completions`, `tracked`, `signature`), ids das missões (`respectcraft:journey/a_journey_begins`, `respectcraft:secret/a_fruitful_encounter`, `respectcraft:journey/beyond_the_unknown`) e ids dos objetivos delas | jogador (Etapa 4.14; `respectcraft:quest_requests` não é salvo) |
 | tipo de dano `respectcraft:finisher_execution` (mensagens `death.attack.respectcraft.finisher_execution*`), tag de entidade `respectcraft:bosses` | dados (Etapa 4.10.1) |
+| dimensão `respectcraft:time_warp`, biomas `respectcraft:time_warp_ocean`/`time_warp_island`, estruturas `respectcraft:time_warp_house`/`time_warp_settlement`, tipo de estrutura `respectcraft:time_warp_dwelling`, peças `respectcraft:time_warp_building` (NBT `Kind`, `Seed`) e `respectcraft:time_warp_path`, conquistas `respectcraft:time_warp/*`, missão `respectcraft:secret/echoes_of_an_old_world`, `persistentData["respectcraft_time_warp"]` (`exposure`, `stage`, `last_travel`, `last_event`, `entered_at`, `anchor`) | pasta do mundo, chunks e jogador (Etapa 4.15); o attachment `respectcraft:time_warp_session` não é salvo |
 | dimensão `respectcraft:inverted_realm`, bioma `respectcraft:twisted_wilds`, `WoodType`/`BlockSetType` e `Boat.Type` `respectcraft:twisted` (enum `RESPECTCRAFT_TWISTED`) | pasta do mundo, chunks e NBT de barcos (Etapa 4.9) |
 
 - Id de origem aposentado: adicione o alias em `profile.LegacyOriginIds` (lido pelo Codec da ficha e regravado com o
@@ -327,8 +401,11 @@ python3 tools/player_anim/test_export.py # proteção do exportador
 python3 tools/fx/check_shaders.py        # shaders fx montados como a Rimulib + glslangValidator (roda no CI)
 python3 tools/rigkit/test_rigkit.py      # validador de rigs, template e gerador em dia (roda no CI)
 python3 tools/rigkit/validate_rig.py --repo  # famílias e bindings do repositório
+python3 tools/scenekit/strawberry_finishers.py --check  # clips das 5 cenas do morango == separação da fonte (CI)
 python3 tools/scenekit/test_scenekit.py     # kit de autoria de cenas: composição, separação, proteção (roda no CI)
 python3 tools/scenekit/make_templates.py --check  # templates, exemplos e clips da cena de teste em dia
+# Time Warp no servidor: /respectcraft warp survey [raio] [seed] (água/ilhas), census [raio] [seed] (estruturas),
+# check (chegada e blocos estranhos), status/exposure/happen <jogador> (exposição e atmosfera), enter|leave (admin)
 bash tools/scenekit/blockbench/check_scene.sh # templates no Blockbench web real (job do CI; precisa de github.com)
 ./gradlew runClient                      # cliente de desenvolvimento
 ./gradlew runServer                      # servidor dedicado (aceita comandos no console)
@@ -382,6 +459,10 @@ bash tools/scenekit/blockbench/check_scene.sh # templates no Blockbench web real
   (`HANDOFF_STAGE4_11_FINISHER_CONSOLIDATION_BOSSES.md`); Custom Rig Framework, família `fruit_humanoid_v1`, kit
   Blockbench, validador e manequins → 4.12 (`HANDOFF_STAGE4_12_CUSTOM_RIG_FRAMEWORK.md`); integração de assets
   externos e morango → 4.13.1 (`HANDOFF_STAGE4_13_1_STRAWBERRY.md`); autoria conjunta de finalizações (kit de cenas,
-  templates, separação) → 4.13.2 (`HANDOFF_STAGE4_13_2_FINISHER_SCENE_KIT.md`).
+  templates, separação) → 4.13.2 (`HANDOFF_STAGE4_13_2_FINISHER_SCENE_KIT.md`); morango de gameplay (spawn, IA, XP,
+  música), política de seleção e finalizações do morango → 4.13.3 (`HANDOFF_STAGE4_13_3_STRAWBERRY_GAMEPLAY.md`); missões,
+  Notification HUD V2, seção Quests e rastreador → 4.14 (`HANDOFF_STAGE4_14_QUEST_ENGINE.md`; formato `docs/QUESTS.md`);
+  dimensão Time Warp (worldgen oceânico, casas/assentamentos, neblina, relógio 3,33:1, exposição, atmosfera, quest
+  secreta) → 4.15 (`HANDOFF_STAGE4_15_TIME_WARP.md`).
 - **Roadmap** (funcionalidades futuras, só registro — não implemente sem pedido): [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.

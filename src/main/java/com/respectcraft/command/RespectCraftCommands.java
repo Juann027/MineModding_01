@@ -118,11 +118,14 @@ public final class RespectCraftCommands {
                 .then(TestGameCommands.node())
                 // Etapa 4.9: acesso de teste ao Inverted Realm (sem portal ainda).
                 .then(com.respectcraft.dimension.InvertedRealmCommands.node())
+                .then(com.respectcraft.dimension.timewarp.TimeWarpCommands.node())
                 // Etapa 4.11: avisos holograficos (teste) e caca a recompensa.
                 .then(com.respectcraft.notice.NoticeCommands.node())
                 .then(com.respectcraft.bounty.BountyCommands.node())
+                .then(com.respectcraft.quest.QuestCommands.node())
                 // Etapa 4.12: diagnostico do Custom Rig Framework.
-                .then(com.respectcraft.rig.RigCommands.node()));
+                .then(com.respectcraft.rig.RigCommands.node())
+                .then(com.respectcraft.entity.fruit.FruitCommands.node()));
     }
 
     private static int profile(CommandContext<CommandSourceStack> c, ServerPlayer player) {
@@ -296,6 +299,9 @@ public final class RespectCraftCommands {
             if (verdict.eligible()) eligible++;
             sb.append("\n ").append(def.id()).append(": ").append(verdict);
         }
+        // Etapa 4.13.3: o que o servidor sortearia para um jogador sem desbloqueios (politica por categoria de vitima).
+        var pool = com.respectcraft.finisher.FinisherSelection.candidates(Finishers.all(), kind, type, s -> false, d -> true);
+        sb.append("\n Selection pool (no unlocks): ").append(pool.stream().map(d -> d.id().toString()).toList());
         if (kind == com.respectcraft.finisher.FinisherParticipants.Kind.BOSS) {
             // Etapa 4.11: ficha do chefe personalizado (Bosses). Sem ficha = so derrota comum.
             var profile = com.respectcraft.boss.Bosses.get(type);

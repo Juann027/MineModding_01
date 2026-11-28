@@ -49,7 +49,9 @@ public final class HoloCharacterScreen extends RespectScreen {
         /** Etapa 4.11: historico dos avisos holograficos automaticos. */
         ALERTS("alerts", "estadio", HoloStyle.MAGENTA, false),
         /** Etapa 4.11: caca a recompensa contra outros jogadores. */
-        BOUNTY("bounty", "caveira", 0xFFFF9A3C, false);
+        BOUNTY("bounty", "caveira", 0xFFFF9A3C, false),
+        /** Etapa 4.14.3: missoes descobertas (Quest Engine). */
+        QUESTS("quests", "montanha", 0xFF4FB4FF, false);
 
         final String id;
         final ResourceLocation icon;

@@ -26,6 +26,8 @@ public final class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> NEEDS_EFFECT_LATE = register("needs.effect_late");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_CLICK = register("ui.click");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_HOVER = register("ui.hover");
+    /** Etapa 4.13.3: musica do morango (loop no cliente, presa a entidade; client.fruit.FruitMusicClient). */
+    public static final DeferredHolder<SoundEvent, SoundEvent> STRAWBERRY_MUSIC = register("entity.strawberry.music");
 
     private static DeferredHolder<SoundEvent, SoundEvent> register(String path) {
         return SOUNDS.register(path, () -> SoundEvent.createVariableRangeEvent(RespectCraft.id(path)));

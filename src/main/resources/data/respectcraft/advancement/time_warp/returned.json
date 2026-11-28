@@ -1,0 +1,6 @@
+{
+  "criteria": {
+    "returned": {"trigger": "minecraft:changed_dimension", "conditions": {"from": "respectcraft:time_warp", "to": "minecraft:overworld"}}
+  },
+  "sends_telemetry_event": false
+}

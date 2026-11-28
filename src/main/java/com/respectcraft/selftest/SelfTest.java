@@ -66,8 +66,11 @@ public final class SelfTest {
             finisherFx(f);
             holoGeometry(f);
             notices(f);
+            noticesV2(f);
             bounties(f);
             RigSelfTest.run(f);
+            QuestSelfTest.run(f);
+            timeWarp(f);
         } catch (RuntimeException e) {
             f.add("exceção: " + e);
         }
@@ -106,6 +109,59 @@ public final class SelfTest {
                 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.RARE) == 200 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.EPIC) == 100
                 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.LEGENDARY) == 30 && SpecialityOdds.DEFAULT.permille(SpecialityRarity.BONER) == 5,
                 "roda: chances padrão aprovadas 41.5/25/20/10/3/0.5");
+    }
+
+    /**
+     * Etapa 4.15: Time Warp. Escala 3,33:1 nos dois sentidos e nos dois sinais (fator pela formula do vanilla, aplicado
+     * uma vez), borda, estagios de exposicao (0-60-120-180 s), recuperacao, carga do relogio, cooldown e o espacamento
+     * dos acontecimentos (estavel quase nunca, critico mais vezes, frequencia 0 = nunca).
+     */
+    private static void timeWarp(List<String> f) {
+        double out = com.respectcraft.dimension.timewarp.TimeWarpRules.factor(3.33, 1.0);
+        double in = com.respectcraft.dimension.timewarp.TimeWarpRules.factor(1.0, 3.33);
+        check(f, Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(100, out) - 333) < 1e-9
+                && Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(300, out) - 999) < 1e-9
+                && Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(1000, out) - 3330) < 1e-9, "time warp: 100/300/1000 -> 333/999/3330");
+        check(f, Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(-1000, out) + 3330) < 1e-9
+                && Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(-333, in) + 100) < 1e-9, "time warp: coordenadas negativas");
+        check(f, Math.abs(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(com.respectcraft.dimension.timewarp.TimeWarpRules.toWarp(12345, in), out) - 12345) < 1e-6,
+                "time warp: ida e volta sem escala dupla");
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.SCALE == 3.33, "time warp: escala = coordinate_scale do dimension_type");
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.clampToBorder(5000, -1000, 1000, 16) == 984
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.clampToBorder(-5000, -1000, 1000, 16) == -984
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.clampToBorder(10, -1000, 1000, 16) == 10, "time warp: borda do mundo");
+        int t = 20;
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.stage(0, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.STABLE
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.stage(59 * t + 19, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.STABLE
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.stage(60 * t, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.ANOMALY
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.stage(120 * t, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.INSTABILITY
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.stage(180 * t, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.CRITICAL
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.stage(3600 * t, 60) == com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.CRITICAL,
+                "time warp: quatro estagios (0-60-120-180 s)");
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.recover(100, 2) == 98 && com.respectcraft.dimension.timewarp.TimeWarpRules.recover(1, 2) == 0
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.cap(999_999, 60) == 60 * t * 5, "time warp: recuperacao fora e teto");
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.chargeContinues(100, 104) && !com.respectcraft.dimension.timewarp.TimeWarpRules.chargeContinues(100, 111)
+                && !com.respectcraft.dimension.timewarp.TimeWarpRules.chargeContinues(-1, 5)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.chargeComplete(100, 160, 60) && !com.respectcraft.dimension.timewarp.TimeWarpRules.chargeComplete(100, 159, 60),
+                "time warp: carga do relogio (segurar, intervalo recomeca)");
+        check(f, !com.respectcraft.dimension.timewarp.TimeWarpRules.cooldownOver(1000, 1100, 600) && com.respectcraft.dimension.timewarp.TimeWarpRules.cooldownOver(1000, 1600, 600)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.cooldownOver(-1, 5, 600) && com.respectcraft.dimension.timewarp.TimeWarpRules.cooldownOver(5000, 10, 600)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.cooldownLeftSeconds(1000, 1100, 600) == 25, "time warp: cooldown (relogio do mundo)");
+        var st = com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.STABLE;
+        var cr = com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.CRITICAL;
+        check(f, !com.respectcraft.dimension.timewarp.TimeWarpRules.eventDue(cr, 1000, 1000 + 20, 0, 1.0)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.eventDue(cr, 1000, 1000 + 9 * t, 0, 1.0)
+                && !com.respectcraft.dimension.timewarp.TimeWarpRules.eventDue(st, 1000, 1000 + 30 * t, 0, 1.0)
+                && !com.respectcraft.dimension.timewarp.TimeWarpRules.eventDue(cr, -1, 5, 0, 0.0)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.chancePerMille(st, 1.0) < com.respectcraft.dimension.timewarp.TimeWarpRules.chancePerMille(cr, 1.0),
+                "time warp: acontecimentos raros, mais frequentes no critico, desligaveis");
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.fogEnd(st) > com.respectcraft.dimension.timewarp.TimeWarpRules.fogEnd(cr)
+                && com.respectcraft.dimension.timewarp.TimeWarpRules.fogEnd(cr) >= 20F, "time warp: neblina fecha com o estagio sem apagar o mundo");
+        for (var stage : com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.values()) {
+            check(f, com.respectcraft.dimension.timewarp.TimeWarpRules.Stage.byOrdinal(stage.ordinal()) == stage, "time warp: estagio " + stage.id());
+        }
+        check(f, com.respectcraft.dimension.timewarp.TimeWarpExposure.Happening.byId("steps_behind")
+                == com.respectcraft.dimension.timewarp.TimeWarpExposure.Happening.STEPS_BEHIND, "time warp: ids dos acontecimentos");
     }
 
     private static void check(List<String> f, boolean ok, String what) {
@@ -530,9 +586,10 @@ public final class SelfTest {
         check(f, Finishers.all().size() >= 2, "finalizações: catálogo");
         for (FinisherDef def : Finishers.all()) {
             check(f, PlayerAnimations.get(def.attacker().id()) == def.attacker(), "finalizações: animação do executor não registrada " + def.id());
-            check(f, PlayerAnimations.get(def.victim().id()) == def.victim(), "finalizações: animação da vítima não registrada " + def.id());
+            check(f, def.victim() == null || PlayerAnimations.get(def.victim().id()) == def.victim(), "finalizações: animação da vítima não registrada " + def.id());
             check(f, def.attacker().blend() == PlayerAnimationDef.Blend.FULL_BODY, "finalizações: executor deve ser FULL_BODY");
-            check(f, Finishers.byAnimation(def.victim().id()) == def, "finalizações: byAnimation");
+            check(f, Finishers.byAnimation(def.attacker().id()) == def
+                    && (def.victim() == null || Finishers.byAnimation(def.victim().id()) == def), "finalizações: byAnimation");
             check(f, def.attacker().events().stream().anyMatch(e -> e.type().equals(Finishers.EVENT_HIT)), "finalizações: sem impacto " + def.id());
             CameraTrack.Sample start = def.camera().sample(-5);
             CameraTrack.Sample end = def.camera().sample(10_000);
@@ -821,6 +878,7 @@ public final class SelfTest {
             net.minecraft.resources.ResourceLocation testMob = com.respectcraft.RespectCraft.id("test_rig_mob");
             // Finalizacoes atuais: jogador toca o mesmo clip de antes; mob sem clip fica parado; nenhuma tem clip de mob.
             for (FinisherDef def : Finishers.all()) {
+                if (!def.targeting().regular()) continue; // Etapa 4.13.3: pools de NPC conferidos no RigSelfTest
                 var a = com.respectcraft.finisher.FinisherParticipants.resolve(def, ATT, P, null, false);
                 var v = com.respectcraft.finisher.FinisherParticipants.resolve(def, VIC, P, null, false);
                 check(f, a.valid() && a.clip().get() instanceof com.respectcraft.finisher.FinisherParticipants.PlayerClip pa
@@ -1010,6 +1068,62 @@ public final class SelfTest {
                 && back.dedupeKey().equals("portal:1"), "avisos: pacote ida e volta");
     }
 
+    /**
+     * Etapa 4.14.1 (Notification HUD V2): fila com limite e prioridade, grupo que substitui, interrupcao controlada,
+     * duracao minima de 0,5 s, entrada/saida proporcionais, som sem rajada e o pacote com os campos novos.
+     */
+    private static void noticesV2(List<String> f) {
+        record Item(String name, int priority, String group) {}
+        var q = new com.respectcraft.notice.NoticeQueue<Item>(3, Item::priority, Item::group);
+        q.offer(new Item("low", 0, ""));
+        q.offer(new Item("high", 5, ""));
+        q.offer(new Item("mid", 2, ""));
+        check(f, q.snapshot().stream().map(Item::name).toList().equals(List.of("high", "mid", "low")), "avisos v2: fila por prioridade");
+        check(f, q.offer(new Item("low2", 0, "")) == com.respectcraft.notice.NoticeQueue.Offer.DROPPED && q.size() == 3,
+                "avisos v2: fila cheia descarta o menos prioritario");
+        check(f, q.offer(new Item("warn", 4, "")) == com.respectcraft.notice.NoticeQueue.Offer.REPLACED_LOWER
+                && q.snapshot().stream().map(Item::name).toList().equals(List.of("high", "warn", "mid")), "avisos v2: mais prioritario toma o lugar");
+        var g = new com.respectcraft.notice.NoticeQueue<Item>(6, Item::priority, Item::group);
+        g.offer(new Item("obj 1/5", 0, "quest:a"));
+        g.offer(new Item("other", 0, ""));
+        check(f, g.offer(new Item("obj 2/5", 0, "quest:a")) == com.respectcraft.notice.NoticeQueue.Offer.MERGED && g.size() == 2
+                && g.snapshot().get(1).name().equals("obj 2/5"), "avisos v2: mesmo grupo substitui (sem acumular)");
+        check(f, g.poll().name().equals("other") && g.poll().name().equals("obj 2/5") && g.poll() == null, "avisos v2: FIFO na mesma prioridade");
+        check(f, com.respectcraft.notice.NoticeRules.shouldInterrupt(0, 5, 1F) && !com.respectcraft.notice.NoticeRules.shouldInterrupt(3, 4, 1F)
+                && !com.respectcraft.notice.NoticeRules.shouldInterrupt(0, 5, 0.1F), "avisos v2: interrupcao so por bem mais prioritario e depois de aparecer");
+        check(f, com.respectcraft.notice.NoticeRules.cinematicMillis(100, 4F) == 500 && com.respectcraft.notice.NoticeRules.cinematicMillis(0, 4F) == 4000
+                && com.respectcraft.notice.NoticeRules.cinematicMillis(99_000, 4F) == com.respectcraft.notice.NoticeRules.MAX_CINEMATIC_MILLIS,
+                "avisos v2: duracao (0,5 s minimo, padrao do jogador, teto)");
+        check(f, com.respectcraft.notice.NoticeRules.cinematicVisibility(0.25F, 0.5F, 1F) == 1F
+                && com.respectcraft.notice.NoticeRules.cinematicVisibility(0F, 0.5F, 1F) == 0F
+                && com.respectcraft.notice.NoticeRules.cinematicVisibility(0.6F, 0.5F, 1F) == 0F
+                && com.respectcraft.notice.NoticeRules.cinematicIn(0.5F, 1F) <= 0.5F / 3F + 1e-6F, "avisos v2: janela de 0,5 s abre e fecha inteira");
+        check(f, com.respectcraft.notice.NoticeRules.cinematicIn(4F, 0F) < com.respectcraft.notice.NoticeRules.cinematicIn(4F, 1F),
+                "avisos v2: menos animacao = entrada mais curta");
+        check(f, com.respectcraft.notice.NoticeRules.soundAllowed(0L, 10L) && !com.respectcraft.notice.NoticeRules.soundAllowed(1_000L, 1_100L)
+                && com.respectcraft.notice.NoticeRules.soundAllowed(1_000L, 1_000L + com.respectcraft.notice.NoticeRules.SOUND_GAP_MILLIS),
+                "avisos v2: som sem rajada");
+        for (com.respectcraft.notice.NoticeStyle st : com.respectcraft.notice.NoticeStyle.values()) {
+            check(f, com.respectcraft.notice.NoticeStyle.byId(st.id()) == st && com.respectcraft.notice.NoticeStyle.byOrdinal(st.ordinal()) == st,
+                    "avisos v2: id do estilo " + st.id());
+        }
+        var n = com.respectcraft.notice.HoloNotice.cinematic(com.respectcraft.notice.NoticeKind.QUEST,
+                        com.respectcraft.notice.NoticeStyle.SECRET_DISCOVERED, net.minecraft.network.chat.Component.literal("t"),
+                        net.minecraft.network.chat.Component.literal("b"))
+                .subtitle(net.minecraft.network.chat.Component.literal("s")).duration(500).group("quest:x")
+                .modifiers(List.of("glitch", "", "haunted", "a", "b", "c"));
+        check(f, n.modifiers().size() == com.respectcraft.notice.HoloNotice.MAX_MODIFIERS && n.showsCinematic() && !n.showsCard()
+                && n.priority() == com.respectcraft.notice.NoticeStyle.SECRET_DISCOVERED.priority(), "avisos v2: apresentacao e modificadores limitados");
+        var buf = new net.minecraft.network.RegistryFriendlyByteBuf(Unpooled.buffer(),
+                net.minecraft.core.RegistryAccess.fromRegistryOfRegistries(net.minecraft.core.registries.BuiltInRegistries.REGISTRY));
+        com.respectcraft.notice.HoloNotice.STREAM_CODEC.encode(buf, n);
+        var back = com.respectcraft.notice.HoloNotice.STREAM_CODEC.decode(buf);
+        check(f, back.equals(n), "avisos v2: pacote ida e volta com estilo, subtitulo, duracao, grupo e modificadores");
+        var plain = com.respectcraft.notice.HoloNotice.of(com.respectcraft.notice.NoticeKind.BOUNTY,
+                net.minecraft.network.chat.Component.literal("t"), net.minecraft.network.chat.Component.literal("b"));
+        check(f, plain.showsCard() && !plain.showsCinematic() && plain.durationMillis() == 0, "avisos v2: aviso antigo continua cartao");
+    }
+
     /** Etapa 4.11: regras da caca a recompensa e o Codec do contrato. */
     private static void bounties(List<String> f) {
         java.util.UUID poster = new java.util.UUID(1, 1), target = new java.util.UUID(2, 2), hunter = new java.util.UUID(3, 3),
@@ -1097,9 +1211,10 @@ public final class SelfTest {
                 "execução: exclusiva não executa mob nem jogador");
         check(f, throwsNpe(() -> com.respectcraft.finisher.FinisherTargeting.exclusiveTo(null)), "execução: exclusiva sem chefe é recusada");
 
-        // Catalogo de producao: tudo comum; Wither e Dragao do Fim recusados; nenhuma exclusiva registrada.
+        // Catalogo de producao: comuns + pools de NPC (Etapa 4.13.3); Wither e Dragao recusados; nenhuma exclusiva de chefe.
         for (FinisherDef def : Finishers.all()) {
-            check(f, def.targeting().regular(), "execução: " + def.id() + " é comum");
+            check(f, def.targeting().category() != com.respectcraft.finisher.FinisherTargeting.Category.BOSS_EXCLUSIVE,
+                    "execução: " + def.id() + " não é exclusiva de chefe");
             check(f, !def.targeting().check(B, wither).eligible() && !def.targeting().check(B, dragon).eligible(),
                     "execução: " + def.id() + " recusada contra Wither e Dragão do Fim");
         }

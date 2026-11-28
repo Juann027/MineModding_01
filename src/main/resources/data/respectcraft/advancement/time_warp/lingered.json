@@ -1,0 +1,6 @@
+{
+  "criteria": {
+    "lingered": {"trigger": "minecraft:impossible"}
+  },
+  "sends_telemetry_event": false
+}

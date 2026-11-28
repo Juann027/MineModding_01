@@ -38,11 +38,23 @@ import net.neoforged.neoforge.common.NeoForge;
 public final class RespectCraftClient {
     public RespectCraftClient(IEventBus modBus, ModContainer container) {
         modBus.addListener(RespectCraftClient::registerRenderers);
+        // Etapa 4.13.3: musica das frutas (loop por entidade, so no cliente).
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT,
+                com.respectcraft.client.fruit.FruitMusicClient.SPEC, "respectcraft-fruits-client.toml");
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.client.fruit.FruitMusicClient::onClientTick);
         // Etapa 4.9: placas da Madeira Retorcida.
         modBus.addListener(TwistedWoodRenderers::onClientSetup);
         modBus.addListener(TwistedWoodRenderers::registerRenderers);
         // Etapa 4.9: ceu roxo, neblina e luz do Inverted Realm (id = "effects" do dimension_type).
         modBus.addListener(InvertedRealmEffects::register);
+        // Etapa 4.15: Time Warp (ceu/nuvens, neblina densa por estagio, pistas de som, silencio; limpo ao sair).
+        modBus.addListener(com.respectcraft.client.dimension.TimeWarpEffects::register);
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT,
+                com.respectcraft.client.dimension.TimeWarpClient.SPEC, "respectcraft-timewarp-client.toml");
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.client.dimension.TimeWarpClient::onClientTick);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.client.dimension.TimeWarpClient::onRenderFog);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.client.dimension.TimeWarpClient::onFogColor);
+        NeoForge.EVENT_BUS.addListener(com.respectcraft.client.dimension.TimeWarpClient::onPlaySound);
         // Etapa 4.8.1: menu holografico da tecla K (config de cliente, fundo do Rimulib, limpeza no logout).
         HoloClient.register(modBus, container);
         modBus.addListener(CharacterCreatorKeybinds::register);
@@ -74,10 +86,15 @@ public final class RespectCraftClient {
             ProfileClientCache.clear();
             CinematicCamera.reset();
             com.respectcraft.network.RigVisualClientCache.clear();
+            com.respectcraft.client.fruit.FruitMusicClient.clear();
+            com.respectcraft.client.dimension.TimeWarpClient.onLogout();
         });
         // Etapa 4.12: partes de rig da entidade que saiu do nivel do cliente (o id pode ser reaproveitado).
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent event) -> {
-            if (event.getLevel().isClientSide()) com.respectcraft.network.RigVisualClientCache.forget(event.getEntity().getId());
+            if (event.getLevel().isClientSide()) {
+                com.respectcraft.network.RigVisualClientCache.forget(event.getEntity().getId());
+                com.respectcraft.client.fruit.FruitMusicClient.forget(event.getEntity().getId());
+            }
         });
         // Respawn e troca de dimensao recriam o jogador local: a camera nunca fica presa na cena.
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.Clone event) -> CinematicCamera.reset());

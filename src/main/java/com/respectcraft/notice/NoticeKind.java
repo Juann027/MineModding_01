@@ -22,7 +22,11 @@ public enum NoticeKind {
     /** Chegada a uma dimensao do mod (Inverted Realm). */
     REALM("realm", 0xFFFF5FC8, "◆", NoticeSeverity.INFO, Beacon.NONE),
     /** Caca a recompensa entre jogadores. */
-    BOUNTY("bounty", 0xFFFF9A3C, "✚", NoticeSeverity.ALERT, Beacon.NONE);
+    BOUNTY("bounty", 0xFFFF9A3C, "✚", NoticeSeverity.ALERT, Beacon.NONE),
+    /** Etapa 4.14: missoes (descoberta, objetivo, conclusao, falha, recompensa); privado para o jogador. */
+    QUEST("quest", 0xFF4FB4FF, "❖", NoticeSeverity.INFO, Beacon.NONE),
+    /** Etapa 4.15: mensagens do "Sistema" no Time Warp (entrada, exposicao, sinais); sempre privado do jogador. */
+    TIME_WARP("time_warp", 0xFFB9C6D6, "⌛", NoticeSeverity.INFO, Beacon.NONE);
 
     /** Efeito do Calamidade_Awakening aceso no local do aviso (registrado em {@link NoticeFx}). */
     public enum Beacon { NONE, EVENT, BOSS, VICTORY, PORTAL }

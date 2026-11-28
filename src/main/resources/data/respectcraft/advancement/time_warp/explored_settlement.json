@@ -1,0 +1,14 @@
+{
+  "criteria": {
+    "inside": {
+      "trigger": "minecraft:location",
+      "conditions": {
+        "player": [{
+          "condition": "minecraft:entity_properties", "entity": "this",
+          "predicate": {"location": {"dimension": "respectcraft:time_warp", "structures": "respectcraft:time_warp_settlement"}}
+        }]
+      }
+    }
+  },
+  "sends_telemetry_event": false
+}

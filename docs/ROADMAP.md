@@ -81,8 +81,20 @@ comportamento, áudio ligado à entidade, partes destacáveis, destruição visu
 sincronização, integração com Animation Manager, Finisher Engine e Calamidade. A família "fruta" é só **uma
 implementação registrada** no Custom Rig Framework e serve de validação prática dele. Pronto desde a 4.12: o contrato
 `respectcraft:fruit_humanoid_v1` (esqueleto, sockets, partes `shell`/`core`, animações compartilhadas de referência)
-e o kit de produção. Etapa 4.13.1: morango `respectcraft:strawberry` (assets do artista, vítima, sem spawn natural);
-nenhuma animação própria, outra fruta ou finalização exclusiva existe ainda.
+e o kit de produção. Etapa 4.13.1: morango `respectcraft:strawberry` (assets do artista, vítima). **Etapa 4.13.3:**
+o morango é NPC de gameplay completo — spawn natural (plains/savanna), IA neutra com retaliação, XP, música própria
+em loop (base reutilizável `entity.fruit.FruitMob` + `client.fruit.FruitMusicClient`, corte seco no impacto decisivo) e
+cinco finalizações exclusivas (pool próprio). Próximos (não implementar sem pedido):
+
+- animações próprias de locomoção, ataque e personalidade das frutas (produzidas externamente pelo dono);
+- banana, melancia e abacaxi (estendem `FruitMob`: binding, atributos, som e pool próprios);
+- **reprodução entre frutas (decisão de design do dono, 4.13.3):** as frutas humanoides poderão se reproduzir no futuro,
+  inclusive entre espécies diferentes da família (morango × morango, morango × banana, banana × melancia, abacaxi ×
+  morango...). Espécie resultante, condições, crescimento, filhotes e híbridos ficam para uma etapa futura — nada de
+  reprodução, filhotes, híbridos ou infraestrutura especulativa antes disso;
+- **Universal Fluid & Destruction FX Framework** no Calamidade_Awakening (suco, sementes e fragmentos hoje são
+  partículas vanilla pelo `FinisherFx`);
+- destruição avançada e partes destacáveis com física (hoje as partes `extra_*` só aparecem/somem, ainda presas).
 
 ## 4. Finisher Selection & Loadout
 
@@ -92,6 +104,12 @@ descrição, raridade, requisitos, compatibilidade com o alvo, bloqueadas × des
 entidades/rigs (`FinisherTargeting`). O servidor revalida a elegibilidade na confirmação; abrir o seletor não pausa o
 servidor nem dá invulnerabilidade. Reutiliza o menu holográfico (`HoloMenu`/`HoloWorldInput`) e o catálogo
 `Finishers`.
+
+**Política permanente de seleção (Etapa 4.13.3, `finisher.FinisherSelection`):** PLAYER = só finalizações comuns, com
+desbloqueio (o seletor Random/Preset/Manual escolhe dentro delas; exclusivas de NPC nunca entram no loadout); BOSS = só
+a exclusiva do chefe, nunca fallback; MOB/NPC = o servidor sorteia uma cena completa — pool próprio do tipo
+(`FinisherTargeting.npcExclusive`, sem desbloqueio pessoal) ou, sem pool, as comuns compatíveis com mob; nada elegível =
+recusa antes de mexer no mundo.
 
 ## 5. Unlock & Progression Framework
 
@@ -130,7 +148,13 @@ restrição de posição, eventos de mundo, avisos (`HoloNotices.bossAppeared`/`
 `boss.Bosses`/`BossProfile`, `BossDefeats` e os avisos. **Condição de invocar ≠ condição de executar** (`BossCondition`
 só vale para a finalização exclusiva).
 
-## 10. Holographic UI Phenomena
+## 10. Holographic UI Phenomena — **ponto de extensão preparado na Etapa 4.14.1**
+
+`client.holo.HoloPhenomena` (`Look`, `Modifier`, registro por id, globais) já é aplicado pela janela cinematográfica e
+pelo rastreador de missões; avisos carregam ids em `HoloNotice.modifiers`. Nenhum fenômeno existe ainda. Planejado:
+interferências, glitches, distorções, cores temporárias, aparência assombrada, "bateria fraca", informação
+visualmente corrompida, mensagens misteriosas, reações a dimensões e chefes. **Separar sempre** o fenômeno puramente
+estético (cliente, `HoloPhenomena`) do efeito real de gameplay (decidido no servidor e só então refletido na UI).
 
 A interface holográfica reage a mundo, dimensões, eventos, chefes e segredos: cores temporárias, tom vermelho/escuro
 em perigo, interferência, glitches, distorção, aparência assombrada, "bateria fraca", instabilidade em certas
@@ -146,6 +170,48 @@ Grupos de jogadores: criar, convidar, aceitar/recusar, liderança, identificaç�
 comunicação, fogo amigo configurável, chefes, missões cooperativas, recompensas e progressão compartilhada quando
 apropriado. Pode abrir caminho para habilidades e finalizações com vários participantes (hoje a sessão tem dois).
 Regras a definir. Interage com a caça a recompensa (ex.: membro da party como alvo/caçador) — decidir na etapa.
+
+## 12. Quest Engine — **implementado na Etapa 4.14** (base)
+
+Missões por datapack (`docs/QUESTS.md`), seção Quests e rastreador. Próximos passos registrados abaixo (13–16).
+
+## 13. Quest Portals
+
+Algumas missões secretas permitirão **invocar fisicamente um portal pelo menu holográfico**, levando a dimensões, áreas
+especiais, estruturas ou desafios. Prever condições de ativação, acesso, duração e encerramento, validação no servidor
+e aviso `portal_available` (estilo já existe). Reutilizar `HoloNotices.portalOpened` e o Quest Engine (recompensa/
+objetivo novos por tipo registrado). Não implementar sem pedido.
+
+## 14. Multiplayer Quest Invasions
+
+Missões que outros jogadores podem invadir (inspiração: Dark Souls, Deepwoken), possivelmente ligadas à Bounty Hunt
+quando o jogador está sendo procurado. Sempre dependentes das regras da missão, do PvP/times e da configuração do
+servidor. Sem networking ou sistemas especulativos de invasão até ser pedido.
+
+## 15. Time Warp Dimension
+
+**Base implementada na Etapa 4.15** (`HANDOFF_STAGE4_15_TIME_WARP.md`): dimensão `respectcraft:time_warp` independente
+do Inverted Realm — oceano com ≈95% de água, ilhas raras, casas e assentamentos abandonados (sem habitantes), neblina
+densa por estágio, viagem pelo relógio 3,33 : 1 com chegada segura e recuperação sem relógio, exposição individual em
+quatro estágios (nunca mata), acontecimentos sonoros/visuais raros, avisos do Sistema pela Notification HUD V2 e a
+missão secreta *Echoes of an Old World*.
+
+Futuro (não implementar sem pedido):
+- **Texturas antigas só no Time Warp** (Alpha/Beta): hoje é aproximação por cores de bioma, luz e neblina; trocar o
+  atlas por dimensão exige mudança no renderer (ou pacote de recursos opcional do jogador).
+- **Fenômenos holográficos** (item 10) dentro do Time Warp: os avisos já levam os modificadores `time_warp` e
+  `phenomenon:*`; `client.holo.HoloPhenomena` é quem os desenharia.
+- **Missões secretas avançadas** usando as conquistas ocultas já existentes (`explored_settlement`, `lingered`) e
+  acontecimentos que só ocorrem em estágios altos; portais de missão (item 13) com destino ao Time Warp.
+- **Acontecimentos desconhecidos** maiores (eventos de mundo compartilhados, mudanças físicas em construções), sempre
+  sem confirmar a presença de alguém; nada de Herobrine/criatura observadora explícita sem decisão do dono.
+- Relógio próprio/artefato com modelo artístico; portal físico; invasões multiplayer (item 14) partindo do Time Warp.
+
+## 16. Advanced Progression
+
+Integração futura das missões com: desbloqueio de finishers PvP (item 4), habilidades ativas (6), invocações e
+montarias raras (8, 9), condições de aparecimento de chefes e chefes exclusivos, eventos especiais e Party System (11,
+missões cooperativas e progresso compartilhado — hoje o progresso é sempre individual).
 
 ## Decisões do dono (consolidação)
 
