@@ -68,6 +68,13 @@ Preview** (pre-release: vários recursos ainda têm arte provisória).
   cabeça de outro jogador online usando a pilha da mão principal como recompensa, por 1, 3 ou 7 dias de jogo. Caçadores
   aceitam o contrato, veem a distância aproximada e a direção do alvo e recebem a recompensa ao matá-lo ou finalizá-lo.
   Ao expirar (ou se for cancelado antes de alguém aceitar), os itens voltam a quem pagou.
+- **Missões e janelas do sistema (Etapa 4.14):** o sistema revela missões quando as coisas certas acontecem (conquistas,
+  mortes, finalizações, dimensões, outras missões) — algumas secretas. Janelas cinematográficas diante da visão
+  anunciam descobertas, objetivos, conclusões e perigos sem travar os controles (tamanho, posição, opacidade, volume,
+  duração, animação e efeitos no painel Display, com botão Preview). Seção **Quests** no menu K (filtros, objetivos,
+  recompensas, Accept/Track/Abandon/Claim) e rastreador compacto na tela. Missões são dados de datapack: formato e
+  exemplos em [`docs/QUESTS.md`](docs/QUESTS.md). Três iniciais: *A Journey Begins*, *A Fruitful Encounter* (secreta) e
+  *Beyond the Unknown*.
 - **Inverted Realm (Etapa 4.9, MVP de teste):** dimensão de **céu roxo** em crepúsculo eterno (horizonte magenta,
   estrelas fracas, sem nuvens, luz levemente violeta), bioma Twisted Wilds com grama violeta, árvores retorcidas de copa
   carmesim, penhascos de terracota roxa, brotos de ametista que brilham, lagos violeta e ilhas flutuantes no alto.

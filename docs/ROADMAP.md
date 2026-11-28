@@ -148,7 +148,13 @@ restrição de posição, eventos de mundo, avisos (`HoloNotices.bossAppeared`/`
 `boss.Bosses`/`BossProfile`, `BossDefeats` e os avisos. **Condição de invocar ≠ condição de executar** (`BossCondition`
 só vale para a finalização exclusiva).
 
-## 10. Holographic UI Phenomena
+## 10. Holographic UI Phenomena — **ponto de extensão preparado na Etapa 4.14.1**
+
+`client.holo.HoloPhenomena` (`Look`, `Modifier`, registro por id, globais) já é aplicado pela janela cinematográfica e
+pelo rastreador de missões; avisos carregam ids em `HoloNotice.modifiers`. Nenhum fenômeno existe ainda. Planejado:
+interferências, glitches, distorções, cores temporárias, aparência assombrada, "bateria fraca", informação
+visualmente corrompida, mensagens misteriosas, reações a dimensões e chefes. **Separar sempre** o fenômeno puramente
+estético (cliente, `HoloPhenomena`) do efeito real de gameplay (decidido no servidor e só então refletido na UI).
 
 A interface holográfica reage a mundo, dimensões, eventos, chefes e segredos: cores temporárias, tom vermelho/escuro
 em perigo, interferência, glitches, distorção, aparência assombrada, "bateria fraca", instabilidade em certas
@@ -164,6 +170,36 @@ Grupos de jogadores: criar, convidar, aceitar/recusar, liderança, identificaç�
 comunicação, fogo amigo configurável, chefes, missões cooperativas, recompensas e progressão compartilhada quando
 apropriado. Pode abrir caminho para habilidades e finalizações com vários participantes (hoje a sessão tem dois).
 Regras a definir. Interage com a caça a recompensa (ex.: membro da party como alvo/caçador) — decidir na etapa.
+
+## 12. Quest Engine — **implementado na Etapa 4.14** (base)
+
+Missões por datapack (`docs/QUESTS.md`), seção Quests e rastreador. Próximos passos registrados abaixo (13–16).
+
+## 13. Quest Portals
+
+Algumas missões secretas permitirão **invocar fisicamente um portal pelo menu holográfico**, levando a dimensões, áreas
+especiais, estruturas ou desafios. Prever condições de ativação, acesso, duração e encerramento, validação no servidor
+e aviso `portal_available` (estilo já existe). Reutilizar `HoloNotices.portalOpened` e o Quest Engine (recompensa/
+objetivo novos por tipo registrado). Não implementar sem pedido.
+
+## 14. Multiplayer Quest Invasions
+
+Missões que outros jogadores podem invadir (inspiração: Dark Souls, Deepwoken), possivelmente ligadas à Bounty Hunt
+quando o jogador está sendo procurado. Sempre dependentes das regras da missão, do PvP/times e da configuração do
+servidor. Sem networking ou sistemas especulativos de invasão até ser pedido.
+
+## 15. Time Warp Dimension
+
+Dimensão de viagem acelerada (deslocamento ≈ 3,33 : 1 em relação ao Overworld): predominantemente aquática, neblina
+extremamente densa, ilhas isoladas, casas misteriosas com estética antiga do Minecraft, sensação de estar sendo
+observado, permanência acima de três minutos desaconselhada, entrada e saída por um relógio (ou item equivalente),
+fenômenos crescentes de interferência no sistema holográfico (item 10). Não implementar nesta fase.
+
+## 16. Advanced Progression
+
+Integração futura das missões com: desbloqueio de finishers PvP (item 4), habilidades ativas (6), invocações e
+montarias raras (8, 9), condições de aparecimento de chefes e chefes exclusivos, eventos especiais e Party System (11,
+missões cooperativas e progresso compartilhado — hoje o progresso é sempre individual).
 
 ## Decisões do dono (consolidação)
 

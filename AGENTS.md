@@ -21,7 +21,7 @@ As regras completas estão no [`CLAUDE.md`](CLAUDE.md); este arquivo é o resumo
   é traço; Specialities não têm efeito (Etapa 4.7). A roda da roleta tem fatias iguais (só visual) e mostra as chances reais
   do servidor (`SpecialityOddsSync`, Etapa 4.7.1). Traço sem efeito aprovado não ganha bônus. Elegibilidade (`BirthTrait.Eligibility`) só filtra sorteios novos
   pelo corpo do criador; traço gravado nunca é apagado (Etapa 4.6).
-- **Idioma:** texto visível ao jogador em inglês, só em `en_us.json` (não recrie `pt_br.json`). Código, comentários,
+- **Idioma:** texto visível ao jogador em inglês, em `en_us.json` (completo); `pt_br.json` existe só com as chaves da Etapa 4.14 (missões/avisos V2), o resto cai no inglês. Código, comentários,
   docs e ids continuam como estão.
 - **Tema:** eleições, política, partidos, mandatos, urna, economia e símbolos nacionais foram removidos; não
   reintroduza sem pedido explícito.

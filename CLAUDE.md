@@ -6,7 +6,8 @@ finalizações cinematográficas que **executam** o alvo de verdade (Etapa 4.10.
 **Calamidade_Awakening**, Etapa 4.10), contador de derrotas, infraestrutura de chefes personalizados (Etapa 4.11),
 avisos holográficos automáticos e caça a recompensa entre jogadores (Etapa 4.11), o Custom Rig Framework com o kit
 Blockbench (Etapa 4.12), o Finisher Scene Authoring Kit (Etapa 4.13.2), o morango de gameplay com cinco
-finalizações exclusivas e música própria (Etapa 4.13.3) e
+finalizações exclusivas e música própria (Etapa 4.13.3), o **Quest Engine** com a Notification HUD V2 e a seção Quests
+(Etapa 4.14) e
 (Etapa 4.9, MVP) a dimensão **Inverted Realm**
 (céu roxo, Madeira Retorcida, agua-vivas). Versão atual: `0.5.7` (`gradle.properties`).
 
@@ -59,10 +60,11 @@ sistema em que vai mexer; veja o fim deste arquivo).
 | `block.wood`, `registry.ModBlocks` | **Madeira Retorcida** (Etapa 4.9, do pacote "O Avesso — Fase 2, Etapa A"): blocos em `ModBlocks`, itens em `ModItems`, placas/bancada em `TwistedFurniture`, barco por `enumextensions.json`; placas no cliente em `client.render.TwistedWoodRenderers`. |
 | `boss` | **Chefes personalizados** (Etapa 4.11): `Bosses` (registro em código, **vazio**), `BossProfile` (tipo, exclusivas, condições), `BossCondition` (`HealthBelow`, `RequiresSkill`, `RequiresProgress`), `BossExecutionCheckEvent` (só recusa). Avaliado em `FinisherTestMechanic.eligibility` antes da cena. |
 | `notice`, `client.holo.HoloToasts` | **Avisos holográficos automáticos** (Etapa 4.11). `HoloNotices` é o **único** caminho de um aviso (audiência, `HoloNoticeEvent` cancelável, pacote, farol); dados `HoloNotice` (`NoticeKind`, `NoticeSeverity`), regras puras `NoticeRules` (no `SelfTest`); faróis no Calamidade em `NoticeFx` (único dono). Fontes de hoje: chefe que aparece, chefe derrotado, portal do Nether aceso, chegada ao Inverted Realm, caça a recompensa; API pronta para chefes/portais/eventos futuros (`bossAppeared`, `portalOpened`, `worldEvent`). Cliente: `network.NoticeClientCache` (fila + histórico), cartões na tela `HoloToasts`, seção Alerts `client.holo.NoticesView`. Comando `/respectcraft notice`. |
+| `quest`, `client.holo.QuestsView` | **Quest Engine** (Etapa 4.14.2–4.14.4). Missões = dados de datapack `data/<ns>/quest/*.json` (formato em `docs/QUESTS.md`), carregadas por `QuestRegistry` → `QuestCatalog` (índice por gatilho). Motor **puro** `QuestEngine` (no `SelfTest` via `QuestSelfTest`); `QuestService` é o **único dono** do progresso (`QuestLog`/`QuestProgress`, attachment `respectcraft:quests`). Tipos extensíveis: `QuestCondition.register`, `QuestObjective.register`; recompensas `QuestReward`. Rede individual `network.QuestNetworking` + `QuestClientCache`; seção 08 Quests e `client.holo.QuestTrackerHud`; comando `/respectcraft quest`. |
 | `bounty` | **Caça a recompensa** contra jogadores (Etapa 4.11). `BountyService` é o único dono do quadro `BountyBoard` (SavedData do Overworld); contrato `Bounty`; regras puras `BountyRules` (no `SelfTest`); aba Bounty Hunt `client.holo.BountyView` + cache `network.BountyClientCache`; pacotes em `network.HoloNetworking`; comando `/respectcraft bounty`. |
 | `rig`, `client.rig` | **Custom Rig Framework** (Etapa 4.12). Famílias de rig = manifesto `assets/<ns>/rigs/<id>.rig.json` (`RigDefinition`); entidade → família = `rigs/entities/<entidade>.json` (`RigBinding`); catálogo `CustomRigRegistry.GLOBAL` preenchido por `Rigs.bootstrap()` (os dois lados). Clips por família e requisitos de participante em `FinisherDef.rigs()` (`finisher.FinisherRigs`); elegibilidade única `finisher.FinisherEligibility` (+ `FinisherTestMechanic.check`). Partes (ocultar/expor) só por `RigVisuals` (attachment sem save, pacote `network.RigNetworking`); sockets em pose de repouso `RigSockets`. Cliente: `RigGeoModel`/`RigGeoRenderer` genéricos. Base de mob `entity.rig.CustomRigMob`; fixtures `entity.dev.RigMannequinEntity` (`dev_rig_mannequin_a/b`); morango `entity.fruit.StrawberryEntity` (4.13.1) sobre a base de frutas `entity.fruit.FruitMob` (4.13.3: IA neutra, música, spawn; `FruitCommands` = `/respectcraft fruit`; som no cliente `client.fruit.FruitMusicClient`). Comando `/respectcraft rig`. Kit externo em `rigkit/` + `tools/rigkit/`. |
 | `scenekit/`, `tools/scenekit` | **Finisher Scene Authoring Kit** (Etapa 4.13.2, ferramenta externa, nada roda no jogo): projeto conjunto do Blockbench com ATTACKER (jogador, `ATK_`) e VICTIM (CustomRig ou jogador, `VIC_`) no palco do Finisher Engine (`compose_scene.py`), separação em um clip por participante + relatório de eventos (`split_scene.py`), templates/exemplos gerados por `make_templates.py` (protegido por hash). Contrato em `scenekit/CONTRACT.md`. Cena de teste `rig.Rigs.AUTHORING_DEMO` (`respectcraft:dev/authoring_demo`, fixture: só manequim B, `/respectcraft rig demo <alvo> authoring`). |
-| `selftest` | `SelfTest` (+ `RigSelfTest`): regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
+| `selftest` | `SelfTest` (+ `RigSelfTest`, `QuestSelfTest`): regras puras, rodado por `/respectcraft selftest` (teste de fumaça). |
 | `biome`, `npc` | Só `LEIA-ME.md`: sem código (biomas são dados desde a 4.9). |
 
 ## Regras importantes
@@ -261,8 +263,8 @@ sistema em que vai mexer; veja o fim deste arquivo).
   `AppearanceDraft` e da roleta só em `RouletteSession`/`RouletteMachine` (as telas de reserva usam os mesmos): não
   duplique pedido, `requestId`, erro ou timeout da 4.8.2. Novo giro e Continuar com giro sobrando pedem segundo clique.
   As telas antigas saem na 4.8.5.
-- **Seções do menu K (Etapa 4.11):** sete — Overview, Character, Body & Traits, Speciality, Skills, **Alerts** e
-  **Bounty Hunt** (`HoloCharacterScreen.Section`, ids/ordem fazem parte das teclas 1–7 da tela de reserva). Seção nova =
+- **Seções do menu K (Etapas 4.11 e 4.14.3):** oito — Overview, Character, Body & Traits, Speciality, Skills, **Alerts**,
+  **Bounty Hunt** e **Quests** (`HoloCharacterScreen.Section`, ids/ordem fazem parte das teclas 1–8 da tela de reserva). Seção nova =
   valor no enum + `HoloView` no array de `HoloMenu` (o arco, os chips e as teclas se ajustam ao número de seções; chip
   estreito vira só ícone com a dica). Ponto aceso no chip por `HoloNav.badge`; a fita tem o botão ✉ (não lidos).
 - **Avisos holográficos (Etapa 4.11):** só `notice.HoloNotices` manda aviso (nunca mande o pacote direto) e só
@@ -272,6 +274,22 @@ sistema em que vai mexer; veja o fim deste arquivo).
   cliente (`HISTORY_LIMIT`), limpo no logout. Cartões no canto superior esquerdo (somem com F3 ou com `noticeToasts`
   desligado na config/Display; continuam na seção Alerts). Sistemas futuros (chefes do mod, portais, eventos) chamam a
   API de `HoloNotices`; categoria nova entra no **fim** de `NoticeKind` (o pacote usa o ordinal).
+- **Notification HUD V2 (Etapa 4.14.1):** a mesma infraestrutura dos avisos: `HoloNotice` escolhe apresentação
+  (`NoticePresentation` cartão/janela/ambos), estilo (`NoticeStyle`, novos só no **fim**, o pacote usa o ordinal),
+  subtítulo, duração (0,5–20 s), grupo e `modifiers`. Janela `client.holo.HoloCinematic` = camada da GUI (nunca
+  `Screen`, nunca captura o mouse); fila pura `NoticeQueue` + regras em `NoticeRules` (no `SelfTest`). Janela desligada
+  na config vira cartão; nada do jogo depende das preferências de exibição. Fenômenos visuais só por
+  `client.holo.HoloPhenomena` (hoje vazio); efeito real de gameplay é decidido no servidor.
+- **Quest Engine (Etapa 4.14.2):** servidor autoritativo em `QuestService`; o cliente só pede Accept/Abandon/Claim/
+  Track/Untrack/Refresh. Condições de **estado** (`advancement`, `quest`, `in_dimension`) × **acontecimento**
+  (`advancement_earned`, `entered_dimension`, `kill`, `finisher`, `boss_defeat`); `requires` só estado. Eventos
+  indexados (nada por tick além da varredura de 5 s do registro dos jogadores online). `finisher` conta só
+  `FinisherSessionEvent.Completed` com `SUCCESS` e morte confirmada; a morte vanilla da execução conta só para `kill`.
+  Objetivos das ativas antes da descoberta (o evento revelador não conta). Resgate grava `claimed` antes de entregar;
+  recompensa nunca executa comando. Missão oculta nunca vai ao cliente (pista `hint` sem id). Ids de missão = caminho
+  do arquivo (estáveis); ids sem definição ficam no registro; objetivos alterados migram sem apagar. Missão/objetivo/
+  condição/recompensa novos = **dados** ou um tipo registrado, nunca subclasse de missão. Não implemente portais,
+  invasões, Time Warp nem progressão compartilhada sem pedido (roadmap 13–16).
 - **Caça a recompensa (Etapa 4.11):** servidor autoritativo em `BountyService`. Recompensa = a pilha inteira da mão
   principal de quem paga, guardada no quadro (sem moeda/economia); paga ao caçador que **aceitou** o contrato quando ele
   mata o alvo (inclusive pela execução real de uma finalização jogador × jogador, `SUCCESS`; totem/`FAILED` e
@@ -283,8 +301,9 @@ sistema em que vai mexer; veja o fim deste arquivo).
 - **Telas** herdam `client.ui.RespectScreen` e usam os widgets de `client.ui` (texturas próprias, sem blur vanilla).
   Texto nunca passa da coluna/painel: quebre ou encurte com `Ui.wrap`/`Ui.fit` e ofereça a dica com o texto inteiro
   (Etapa 4.7.2). Confira GUI 2, GUI 3 e a menor GUI (320×240).
-- **Textos visíveis ao jogador em inglês** (Etapa 4.6) via `Component`/lang: `en_us.json` é o único arquivo de idioma
-  (não recrie `pt_br.json`; outros idiomas caem no inglês). Mensagens de comando/chat também em inglês. Código,
+- **Textos visíveis ao jogador em inglês** (Etapa 4.6) via `Component`/lang: `en_us.json` é o arquivo completo. A
+  Etapa 4.14 (pedido do dono) criou `pt_br.json` **só com as chaves novas** (avisos V2, missões, seção Quests); o resto
+  cai no inglês. Chave nova da 4.14 em diante: `en_us` sempre, `pt_br` quando o pedido incluir. Mensagens de comando/chat também em inglês. Código,
   comentários, docs e ids internos seguem como estão.
 - **Mobs:** recursos `geo/entity/<nome>.geo.json`, `animations/entity/<nome>.animation.json`,
   `textures/entity/<nome>.png`; GeckoLib só anima, dano/alvo/IA no servidor. Registre em `ModEntities` + atributos,
@@ -318,6 +337,7 @@ compatibilidade com mundos, saves e configs anteriores. A partir dela, estes ids
 | itens, blocos (`twisted_*`), block entities `twisted_sign`/`twisted_hanging_sign`, `respectcraft:agua_viva`, `respectcraft:agua_viva_filhote` | registries |
 | entidades `respectcraft:dev_rig_mannequin_a`, `respectcraft:dev_rig_mannequin_b` (fixtures da 4.12), `respectcraft:strawberry` + item `respectcraft:strawberry_spawn_egg` e os nomes das partes do binding do morango (4.13.1), família `respectcraft:fruit_humanoid_v1` (nomes dos bones e animações `animation.fruit_humanoid_v1.*` fazem parte do contrato v1) | registries / manifestos (Etapa 4.12); o attachment `respectcraft:rig_visual` não é salvo |
 | finalizações `respectcraft:strawberry_crusher`, `fruit_punch`, `ground_smasher`, `shut_up`, `strawberry_blender`; som `respectcraft:entity.strawberry.music` | catálogo/estado de animação e `sounds.json` (Etapa 4.13.3) |
+| attachment `respectcraft:quests` (campos `version`, `quests`, e de cada missão `state`, `progress`, `discovered_at`, `accepted_at`, `finished_at`, `cooldown_until`, `completions`, `tracked`, `signature`), ids das missões (`respectcraft:journey/a_journey_begins`, `respectcraft:secret/a_fruitful_encounter`, `respectcraft:journey/beyond_the_unknown`) e ids dos objetivos delas | jogador (Etapa 4.14; `respectcraft:quest_requests` não é salvo) |
 | tipo de dano `respectcraft:finisher_execution` (mensagens `death.attack.respectcraft.finisher_execution*`), tag de entidade `respectcraft:bosses` | dados (Etapa 4.10.1) |
 | dimensão `respectcraft:inverted_realm`, bioma `respectcraft:twisted_wilds`, `WoodType`/`BlockSetType` e `Boat.Type` `respectcraft:twisted` (enum `RESPECTCRAFT_TWISTED`) | pasta do mundo, chunks e NBT de barcos (Etapa 4.9) |
 
@@ -410,6 +430,7 @@ bash tools/scenekit/blockbench/check_scene.sh # templates no Blockbench web real
   Blockbench, validador e manequins → 4.12 (`HANDOFF_STAGE4_12_CUSTOM_RIG_FRAMEWORK.md`); integração de assets
   externos e morango → 4.13.1 (`HANDOFF_STAGE4_13_1_STRAWBERRY.md`); autoria conjunta de finalizações (kit de cenas,
   templates, separação) → 4.13.2 (`HANDOFF_STAGE4_13_2_FINISHER_SCENE_KIT.md`); morango de gameplay (spawn, IA, XP,
-  música), política de seleção e finalizações do morango → 4.13.3 (`HANDOFF_STAGE4_13_3_STRAWBERRY_GAMEPLAY.md`).
+  música), política de seleção e finalizações do morango → 4.13.3 (`HANDOFF_STAGE4_13_3_STRAWBERRY_GAMEPLAY.md`); missões,
+  Notification HUD V2, seção Quests e rastreador → 4.14 (`HANDOFF_STAGE4_14_QUEST_ENGINE.md`; formato `docs/QUESTS.md`).
 - **Roadmap** (funcionalidades futuras, só registro — não implemente sem pedido): [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - Os handoffs são históricos: quando contradizem este arquivo ou o código, vale o código e este arquivo.
